@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smarttravel.route.mapper.TravelRouteMapper">
+
+    <resultMap id="TravelRouteResult" type="com.smarttravel.route.domain.TravelRoute">
+        <id column="id" property="id"/>
+        <result column="route_name" property="routeName"/>
+        <result column="city_id" property="cityId"/>
+        <result column="days" property="days"/>
+        <result column="suitable_people" property="suitablePeople"/>
+        <result column="source_type" property="sourceType"/>
+        <result column="summary" property="summary"/>
+        <result column="cover_image" property="coverImage"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="favorite_count" property="favoriteCount"/>
+        <result column="use_count" property="useCount"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="del_flag" property="delFlag"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.smarttravel.route.domain.TravelRoute" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_route
+        (route_name, city_id, days, suitable_people, source_type, summary, cover_image,
+         view_count, favorite_count, use_count, create_time, update_time, del_flag)
+        VALUES
+        (#{routeName}, #{cityId}, #{days}, #{suitablePeople}, #{sourceType}, #{summary}, #{coverImage},
+         #{viewCount}, #{favoriteCount}, #{useCount}, NOW(), NOW(), 0)
+    </insert>
+
+    <select id="selectById" parameterType="long" resultMap="TravelRouteResult">
+        SELECT id, route_name, city_id, days, suitable_people, source_type, summary, cover_image,
+               view_count, favorite_count, use_count, create_time, update_time, del_flag
+        FROM travel_route
+        WHERE id = #{id} AND del_flag = 0
+    </select>
+
+    <select id="selectList" parameterType="com.smarttravel.route.domain.TravelRoute" resultMap="TravelRouteResult">
+        SELECT id, route_name, city_id, days, suitable_people, source_type, summary, cover_image,
+               view_count, favorite_count, use_count, create_time, update_time, del_flag
+        FROM travel_route
+        WHERE del_flag = 0
+        <if test="routeName != null and routeName != ''">
+            AND route_name LIKE CONCAT('%', #{routeName}, '%')
+        </if>
+        <if test="cityId != null">
+            AND city_id = #{cityId}
+        </if>
+        <if test="sourceType != null and sourceType != ''">
+            AND source_type = #{sourceType}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectListWithPage" resultMap="TravelRouteResult">
+        SELECT id, route_name, city_id, days, suitable_people, source_type, summary, cover_image,
+               view_count, favorite_count, use_count, create_time, update_time, del_flag
+        FROM travel_route
+        WHERE del_flag = 0
+        <if test="query.routeName != null and query.routeName != ''">
+            AND route_name LIKE CONCAT('%', #{query.routeName}, '%')
+        </if>
+        <if test="query.cityId != null">
+            AND city_id = #{query.cityId}
+        </if>
+        <if test="query.sourceType != null and query.sourceType != ''">
+            AND source_type = #{query.sourceType}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countList" parameterType="com.smarttravel.route.domain.TravelRoute" resultType="int">
+        SELECT COUNT(*)
+        FROM travel_route
+        WHERE del_flag = 0
+        <if test="routeName != null and routeName != ''">
+            AND route_name LIKE CONCAT('%', #{routeName}, '%')
+        </if>
+        <if test="cityId != null">
+            AND city_id = #{cityId}
+        </if>
+        <if test="sourceType != null and sourceType != ''">
+            AND source_type = #{sourceType}
+        </if>
+    </select>
+
+    <update id="update" parameterType="com.smarttravel.route.domain.TravelRoute">
+        UPDATE travel_route
+        SET route_name = #{routeName},
+            city_id = #{cityId},
+            days = #{days},
+            suitable_people = #{suitablePeople},
+            source_type = #{sourceType},
+            summary = #{summary},
+            cover_image = #{coverImage},
+            view_count = #{viewCount},
+            favorite_count = #{favoriteCount},
+            use_count = #{useCount},
+            update_time = NOW()
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="incrementFavoriteCount" parameterType="long">
+        UPDATE travel_route
+        SET favorite_count = favorite_count + 1,
+            update_time = NOW()
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="decrementFavoriteCount" parameterType="long">
+        UPDATE travel_route
+        SET favorite_count = GREATEST(favorite_count - 1, 0),
+            update_time = NOW()
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="incrementViewCount" parameterType="long">
+        UPDATE travel_route
+        SET view_count = view_count + 1,
+            update_time = NOW()
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+</mapper>
+
+
+
+
+

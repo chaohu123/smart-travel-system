@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smarttravel.content.mapper.UserBehaviorMapper">
+
+    <insert id="insert">
+        INSERT INTO user_behavior
+        (user_id, behavior_type, content_type, content_id, score, behavior_time, create_time, update_time, del_flag)
+        VALUES
+        (#{userId}, #{behaviorType}, #{contentType}, #{contentId}, #{score}, NOW(), NOW(), NOW(), 0)
+    </insert>
+
+    <select id="checkExists" resultType="int">
+        SELECT COUNT(1)
+        FROM user_behavior
+        WHERE user_id = #{userId}
+          AND behavior_type = #{behaviorType}
+          AND content_type = #{contentType}
+          AND content_id = #{contentId}
+          AND del_flag = 0
+    </select>
+
+    <update id="delete">
+        UPDATE user_behavior
+        SET del_flag = 1, update_time = NOW()
+        WHERE user_id = #{userId}
+          AND behavior_type = #{behaviorType}
+          AND content_type = #{contentType}
+          AND content_id = #{contentId}
+          AND del_flag = 0
+    </update>
+
+    <select id="selectByUserId" resultType="map">
+        SELECT behavior_type, content_type, content_id, score, behavior_time
+        FROM user_behavior
+        WHERE user_id = #{userId} AND del_flag = 0
+        ORDER BY behavior_time DESC
+        <if test="limit != null and limit > 0">
+            LIMIT #{limit}
+        </if>
+    </select>
+
+    <select id="sumScoreByUserAndContentType" resultType="int">
+        SELECT COALESCE(SUM(score), 0)
+        FROM user_behavior
+        WHERE user_id = #{userId}
+          AND content_type = #{contentType}
+          AND del_flag = 0
+    </select>
+
+    <insert id="recordView">
+        INSERT INTO user_behavior
+        (user_id, behavior_type, content_type, content_id, score, behavior_time, create_time, update_time, del_flag)
+        SELECT #{userId}, 'view', #{contentType}, #{contentId}, 1, NOW(), NOW(), NOW(), 0
+        WHERE NOT EXISTS (
+            SELECT 1 FROM user_behavior
+            WHERE user_id = #{userId}
+              AND behavior_type = 'view'
+              AND content_type = #{contentType}
+              AND content_id = #{contentId}
+              AND del_flag = 0
+              AND DATE(behavior_time) = CURDATE()
+        )
+    </insert>
+
+    <select id="countByUserAndBehavior" resultType="int">
+        SELECT COUNT(1)
+        FROM user_behavior
+        WHERE user_id = #{userId}
+          AND behavior_type = #{behaviorType}
+          <if test="contentType != null and contentType != ''">
+              AND content_type = #{contentType}
+          </if>
+          AND del_flag = 0
+    </select>
+
+    <select id="selectContentIds" resultType="long">
+        SELECT content_id
+        FROM user_behavior
+        WHERE user_id = #{userId}
+          AND behavior_type = #{behaviorType}
+          AND content_type = #{contentType}
+          AND del_flag = 0
+        ORDER BY behavior_time DESC
+        <if test="limit != null">
+            LIMIT #{limit}
+        </if>
+        <if test="offset != null">
+            OFFSET #{offset}
+        </if>
+    </select>
+
+    <select id="selectContentIdsInList" resultType="long">
+        SELECT content_id
+        FROM user_behavior
+        WHERE user_id = #{userId}
+          AND behavior_type = #{behaviorType}
+          AND content_type = #{contentType}
+          AND del_flag = 0
+          <if test="contentIds != null and contentIds.size() > 0">
+              AND content_id IN
+              <foreach collection="contentIds" item="cid" open="(" separator="," close=")">
+                  #{cid}
+              </foreach>
+          </if>
+    </select>
+
+</mapper>
+
+
+
+
+

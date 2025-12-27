@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smarttravel.user.mapper.UserTagMapper">
+
+    <insert id="batchInsert">
+        INSERT INTO user_tag (user_id, tag_id, weight, create_time, update_time, del_flag)
+        VALUES
+        <foreach collection="tagIds" item="tid" separator=",">
+            (#{userId}, #{tid}, 0, NOW(), NOW(), 0)
+        </foreach>
+    </insert>
+
+    <delete id="deleteByUserId">
+        DELETE FROM user_tag WHERE user_id = #{userId}
+    </delete>
+
+    <select id="selectTagIdsByUserId" resultType="long">
+        SELECT tag_id FROM user_tag
+        WHERE user_id = #{userId} AND del_flag = 0
+    </select>
+
+    <select id="selectTagNamesByUserId" resultType="string">
+        SELECT t.tag_name
+        FROM user_tag ut
+        LEFT JOIN tag t ON ut.tag_id = t.id
+        WHERE ut.user_id = #{userId} AND ut.del_flag = 0 AND t.del_flag = 0
+        ORDER BY ut.create_time DESC
+    </select>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smarttravel.content.mapper.CityMapper">
+
+    <resultMap id="CityResult" type="com.smarttravel.content.domain.City">
+        <id column="id" property="id"/>
+        <result column="city_name" property="cityName"/>
+        <result column="province" property="province"/>
+        <result column="country" property="country"/>
+        <result column="latitude" property="latitude"/>
+        <result column="longitude" property="longitude"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="del_flag" property="delFlag"/>
+    </resultMap>
+
+    <select id="selectList" parameterType="com.smarttravel.content.domain.City" resultMap="CityResult">
+        SELECT id, city_name, province, country, latitude, longitude, status,
+               create_time, update_time, del_flag
+        FROM city
+        WHERE del_flag = 0
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        ORDER BY city_name ASC
+    </select>
+
+    <select id="selectListWithPage" resultMap="CityResult">
+        SELECT id, city_name, province, country, latitude, longitude, status,
+               create_time, update_time, del_flag
+        FROM city
+        WHERE del_flag = 0
+        <if test="query.status != null">
+            AND status = #{query.status}
+        </if>
+        <if test="query.cityName != null and query.cityName != ''">
+            AND city_name LIKE CONCAT('%', #{query.cityName}, '%')
+        </if>
+        <if test="query.province != null and query.province != ''">
+            AND province LIKE CONCAT('%', #{query.province}, '%')
+        </if>
+        ORDER BY city_name ASC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countList" parameterType="com.smarttravel.content.domain.City" resultType="int">
+        SELECT COUNT(*)
+        FROM city
+        WHERE del_flag = 0
+        <if test="status != null">
+            AND status = #{status}
+        </if>
+        <if test="cityName != null and cityName != ''">
+            AND city_name LIKE CONCAT('%', #{cityName}, '%')
+        </if>
+        <if test="province != null and province != ''">
+            AND province LIKE CONCAT('%', #{province}, '%')
+        </if>
+    </select>
+
+    <select id="selectById" parameterType="long" resultMap="CityResult">
+        SELECT id, city_name, province, country, latitude, longitude, status,
+               create_time, update_time, del_flag
+        FROM city
+        WHERE id = #{id} AND del_flag = 0
+    </select>
+
+    <select id="selectByCityNameAndProvince" resultMap="CityResult">
+        SELECT id, city_name, province, country, latitude, longitude, status,
+               create_time, update_time, del_flag
+        FROM city
+        WHERE del_flag = 0
+        AND city_name = #{cityName}
+        <if test="province != null and province != ''">
+            AND province = #{province}
+        </if>
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.smarttravel.content.domain.City" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO city (city_name, province, country, latitude, longitude, status,
+               create_time, update_time, del_flag)
+        VALUES (#{cityName}, #{province}, #{country}, #{latitude}, #{longitude}, #{status},
+               NOW(), NOW(), 0)
+    </insert>
+
+    <update id="update" parameterType="com.smarttravel.content.domain.City">
+        UPDATE city
+        <set>
+            <if test="cityName != null">city_name = #{cityName},</if>
+            <if test="province != null">province = #{province},</if>
+            <if test="country != null">country = #{country},</if>
+            <if test="latitude != null">latitude = #{latitude},</if>
+            <if test="longitude != null">longitude = #{longitude},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+</mapper>
+

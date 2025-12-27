@@ -1,0 +1,503 @@
+
+.home-page.data-v-087d42bb {
+  min-height: 100vh;
+  background-color: #f7f8fa;
+  display: flex;
+  flex-direction: column;
+}
+.home-header.data-v-087d42bb {
+  position: relative;
+  padding-top: var(--status-bar-height, 0);
+  padding-bottom: 32rpx;
+}
+.header-bg.data-v-087d42bb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #3ba272 0%, #6fd3a5 100%);
+}
+.header-content.data-v-087d42bb {
+  position: relative;
+  padding: 24rpx 32rpx 0;
+}
+.search-bar.data-v-087d42bb {
+  padding: 20rpx 24rpx;
+  background-color: rgba(255, 255, 255, 0.95);
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10rpx);
+}
+.search-icon.data-v-087d42bb {
+  margin-right: 12rpx;
+}
+.search-input.data-v-087d42bb {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333333;
+}
+.home-scroll.data-v-087d42bb {
+  flex: 1;
+}
+.section.data-v-087d42bb {
+  padding: 8rpx 24rpx 0;
+}
+.section-title-row.data-v-087d42bb {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+  padding: 8rpx 8rpx 0;
+}
+.section-title-wrapper.data-v-087d42bb {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+.section-title.data-v-087d42bb {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+/* 省份选择器 */
+.province-picker.data-v-087d42bb {
+  margin-left: auto;
+}
+.province-selector.data-v-087d42bb {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 16rpx;
+  background-color: #f7f8fa;
+  border-radius: 20rpx;
+  border: 1rpx solid #e5e5e5;
+}
+.province-text.data-v-087d42bb {
+  font-size: 24rpx;
+  color: #666666;
+}
+.province-arrow.data-v-087d42bb {
+  font-size: 20rpx;
+  color: #999999;
+  line-height: 1;
+}
+.section-subtitle.data-v-087d42bb {
+  font-size: 22rpx;
+  color: #999999;
+}
+
+/* 智能入口区样式 */
+.smart-entry-section.data-v-087d42bb {
+  margin-top: 24rpx;
+}
+.feature-grid.data-v-087d42bb {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.feature-card.data-v-087d42bb {
+  flex: 1;
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  padding: 32rpx 20rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.06);
+  border: 2rpx solid #f0f0f0;
+  transition: all 0.2s;
+}
+.feature-card--active.data-v-087d42bb {
+  background-color: #e8f6f0;
+  border-color: #3ba272;
+  transform: translateY(-4rpx);
+  box-shadow: 0 12rpx 32rpx rgba(59, 162, 114, 0.15);
+}
+.feature-icon-wrapper.data-v-087d42bb {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(135deg, #3ba272, #6fd3a5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16rpx;
+  box-shadow: 0 4rpx 12rpx rgba(59, 162, 114, 0.2);
+}
+.feature-icon-text.data-v-087d42bb {
+  font-size: 48rpx;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1;
+}
+.feature-title.data-v-087d42bb {
+  font-size: 28rpx;
+  color: #333333;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* 推荐线路四宫格 */
+.route-grid.data-v-087d42bb {
+  margin-top: 16rpx;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+.route-card.data-v-087d42bb {
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.08);
+}
+.route-card--grid.data-v-087d42bb {
+  border: 2rpx solid #f0f0f0;
+}
+.route-cover-wrapper.data-v-087d42bb {
+  position: relative;
+  width: 100%;
+  height: 0;
+  overflow: hidden;
+}
+.route-cover-wrapper--grid.data-v-087d42bb {
+  padding-bottom: 70%;
+}
+.route-cover.data-v-087d42bb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.route-badge.data-v-087d42bb {
+  position: absolute;
+  top: 12rpx;
+  left: 12rpx;
+  padding: 6rpx 14rpx;
+  border-radius: 999rpx;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  font-size: 22rpx;
+}
+.route-content.data-v-087d42bb {
+  padding: 18rpx 16rpx 16rpx;
+}
+.route-title.data-v-087d42bb {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.route-desc.data-v-087d42bb {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #666666;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 推荐游记列表 */
+.note-list.data-v-087d42bb {
+  margin-top: 8rpx;
+}
+.note-card.data-v-087d42bb {
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  overflow: hidden;
+  margin-bottom: 24rpx;
+  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.05);
+}
+
+/* 封面图片 */
+.note-cover-wrapper.data-v-087d42bb {
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 比例 */
+  position: relative;
+  overflow: hidden;
+  background-color: #e5e5e5;
+}
+.note-cover.data-v-087d42bb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 内容区域 */
+.note-content-wrapper.data-v-087d42bb {
+  padding: 20rpx;
+  position: relative;
+}
+.note-content-header.data-v-087d42bb {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+/* 左侧区域：头像、标题和作者昵称 */
+.note-left-section.data-v-087d42bb {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  gap: 16rpx;
+}
+.note-avatar-wrapper.data-v-087d42bb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 64rpx;
+}
+.note-author-avatar.data-v-087d42bb {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 999rpx;
+  background-color: #e5e5e5;
+  margin-bottom: 8rpx;
+}
+.note-author-name.data-v-087d42bb {
+  font-size: 20rpx;
+  color: #999999;
+  line-height: 1.2;
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.note-title.data-v-087d42bb {
+  flex: 1;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333333;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* 右侧统计信息 */
+.note-stats.data-v-087d42bb {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16rpx;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+.note-stat-item.data-v-087d42bb {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.note-stat-item.data-v-087d42bb:active {
+  opacity: 0.7;
+}
+.note-icon-box.data-v-087d42bb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48rpx;
+  height: 48rpx;
+}
+.note-icon-box.is-active.data-v-087d42bb {
+  animation: pop-087d42bb 0.3s ease-out;
+}
+@keyframes pop-087d42bb {
+0% { transform: scale(1);
+}
+50% { transform: scale(1.3);
+}
+100% { transform: scale(1);
+}
+}
+.note-stat-icon.data-v-087d42bb {
+  font-size: 32rpx;
+  line-height: 1;
+  color: #666666;
+  transition: color 0.2s;
+}
+
+/* 点赞图标已点赞状态 */
+.note-icon-box .icon-icon.icon-liked.data-v-087d42bb {
+  color:rgb(162, 59, 81);
+}
+
+/* 评论图标颜色 */
+.note-icon-box .icon-pinglun.data-v-087d42bb {
+  color: #666666;
+}
+.note-stat-text.data-v-087d42bb {
+  font-size: 22rpx;
+  color: #666666;
+  transition: all 0.2s;
+}
+.note-stat-text.text-active.data-v-087d42bb {
+  color: #3ba272;
+  font-weight: 600;
+}
+.poi-list.data-v-087d42bb {
+  margin-top: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.poi-card.data-v-087d42bb {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.05);
+}
+.poi-info.data-v-087d42bb {
+  flex: 1;
+  min-width: 0;
+}
+.poi-name.data-v-087d42bb {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333333;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.poi-price.data-v-087d42bb {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+.price-text.data-v-087d42bb {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #3ba272;
+}
+.price-text.price-free.data-v-087d42bb {
+  color: #ff6b6b;
+}
+
+/* 热门景点样式 */
+.scenic-list.data-v-087d42bb {
+  margin-top: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+.scenic-card.data-v-087d42bb {
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+}
+.scenic-image-wrapper.data-v-087d42bb {
+  width: 100%;
+  height: 0;
+  padding-bottom: 35%; /* 缩小图片高度 */
+  position: relative;
+  overflow: hidden;
+  background-color: #e5e5e5;
+}
+.scenic-image.data-v-087d42bb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+.scenic-content.data-v-087d42bb {
+  padding: 24rpx;
+}
+.scenic-name.data-v-087d42bb {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+  display: block;
+  margin-bottom: 16rpx;
+  line-height: 1.4;
+}
+.scenic-meta-row.data-v-087d42bb {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+  font-size: 24rpx;
+  color: #666666;
+}
+.scenic-price.data-v-087d42bb {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #3ba272;
+}
+.scenic-price.price-free.data-v-087d42bb {
+  color: #ff6b6b;
+}
+.scenic-divider.data-v-087d42bb {
+  color: #cccccc;
+  font-size: 20rpx;
+}
+.scenic-heritage.data-v-087d42bb {
+  color: #ff9800;
+  font-size: 24rpx;
+}
+.scenic-location.data-v-087d42bb {
+  flex: 1;
+  color: #666666;
+  font-size: 24rpx;
+  margin-right: auto;
+}
+.scenic-open-time.data-v-087d42bb {
+  color: #666666;
+  font-size: 24rpx;
+  flex: 1;
+}
+.scenic-time.data-v-087d42bb {
+  color: #666666;
+  font-size: 24rpx;
+}
+.scenic-tags-row.data-v-087d42bb {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 12rpx;
+  flex-wrap: wrap;
+}
+.scenic-match.data-v-087d42bb {
+  padding: 4rpx 12rpx;
+  background-color: #e8f6f0;
+  color: #3ba272;
+  border-radius: 12rpx;
+  font-size: 22rpx;
+}
+.scenic-tags.data-v-087d42bb {
+  display: flex;
+  gap: 8rpx;
+  flex-wrap: wrap;
+}
+.scenic-tag.data-v-087d42bb {
+  padding: 4rpx 12rpx;
+  background-color: #f0f0f0;
+  color: #666666;
+  border-radius: 12rpx;
+  font-size: 22rpx;
+}

@@ -1,0 +1,22 @@
+
+.empty.data-v-b2b92118 {
+  padding: 60rpx 24rpx;
+  text-align: center;
+  color: #8a94a3;
+}
+.empty-icon.data-v-b2b92118 {
+  width: 140rpx;
+  height: 140rpx;
+  margin-bottom: 16rpx;
+}
+.empty-text.data-v-b2b92118 {
+  display: block;
+  font-size: 26rpx;
+  margin-bottom: 12rpx;
+}
+.empty-btn.data-v-b2b92118 {
+  background: linear-gradient(135deg, #3ba272, #57c18c);
+  color: #fff;
+  border-radius: 999rpx;
+  padding: 12rpx 32rpx;
+}

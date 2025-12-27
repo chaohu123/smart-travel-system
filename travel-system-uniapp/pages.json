@@ -1,0 +1,39 @@
+{
+  "pages": [
+    {
+      "path": "pages/home/home",
+      "style": {
+        "navigationBarTitleText": "智能旅游助手",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white",
+        "backgroundColor": "#F7F8FA"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationStyle": "default",
+    "backgroundColor": "#F7F8FA",
+    "backgroundTextStyle": "dark"
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

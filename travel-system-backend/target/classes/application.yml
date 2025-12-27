@@ -1,0 +1,39 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/smart_travel?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: .1.2.huchao
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+    timeout: 5000
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1
+
+mybatis:
+  mapper-locations: classpath*:mapper/**/*Mapper.xml
+  type-aliases-package: com.smarttravel.**.domain
+
+logging:
+  level:
+    com.smarttravel: debug
+
+# AI服务配置
+ai:
+  enabled: false  # 是否启用AI服务
+  provider: openai  # AI服务提供商：openai/baidu/ali
+  api-key:  # AI服务API密钥（需要配置）
+  api-url:  # AI服务API地址（可选，部分服务需要）
+
+
+

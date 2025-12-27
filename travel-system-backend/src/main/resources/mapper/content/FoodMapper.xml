@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smarttravel.content.mapper.FoodMapper">
+
+    <resultMap id="FoodResult" type="com.smarttravel.content.domain.Food">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="city_id" property="cityId"/>
+        <result column="address" property="address"/>
+        <result column="latitude" property="latitude"/>
+        <result column="longitude" property="longitude"/>
+        <result column="food_type" property="foodType"/>
+        <result column="avg_price" property="avgPrice"/>
+        <result column="intro" property="intro"/>
+        <result column="score" property="score"/>
+        <result column="hot_score" property="hotScore"/>
+        <result column="is_recommend" property="isRecommend"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="del_flag" property="delFlag"/>
+    </resultMap>
+
+    <select id="selectList" parameterType="com.smarttravel.content.domain.Food" resultMap="FoodResult">
+        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro,
+               score, hot_score, is_recommend, create_time, update_time, del_flag
+        FROM food
+        WHERE del_flag = 0
+        <if test="cityId != null">
+            AND city_id = #{cityId}
+        </if>
+        <if test="isRecommend != null">
+            AND is_recommend = #{isRecommend}
+        </if>
+        ORDER BY hot_score DESC, score DESC
+    </select>
+
+    <select id="selectById" parameterType="long" resultMap="FoodResult">
+        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro,
+               score, hot_score, is_recommend, create_time, update_time, del_flag
+        FROM food
+        WHERE id = #{id} AND del_flag = 0
+    </select>
+
+    <select id="selectHotByCityId" resultMap="FoodResult">
+        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro,
+               score, hot_score, is_recommend, create_time, update_time, del_flag
+        FROM food
+        WHERE del_flag = 0
+        <if test="cityId != null">
+            AND city_id = #{cityId}
+        </if>
+        ORDER BY hot_score DESC, score DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectRecommend" resultMap="FoodResult">
+        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro,
+               score, hot_score, is_recommend, create_time, update_time, del_flag
+        FROM food
+        WHERE del_flag = 0 AND is_recommend = 1
+        ORDER BY hot_score DESC, score DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="insert" parameterType="com.smarttravel.content.domain.Food" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO food (name, city_id, address, latitude, longitude, food_type, avg_price, intro,
+               score, hot_score, is_recommend, create_time, update_time, del_flag)
+        VALUES (#{name}, #{cityId}, #{address}, #{latitude}, #{longitude}, #{foodType}, #{avgPrice}, #{intro},
+               #{score}, #{hotScore}, #{isRecommend}, NOW(), NOW(), 0)
+    </insert>
+
+    <update id="update" parameterType="com.smarttravel.content.domain.Food">
+        UPDATE food
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="cityId != null">city_id = #{cityId},</if>
+            <if test="address != null">address = #{address},</if>
+            <if test="latitude != null">latitude = #{latitude},</if>
+            <if test="longitude != null">longitude = #{longitude},</if>
+            <if test="foodType != null">food_type = #{foodType},</if>
+            <if test="avgPrice != null">avg_price = #{avgPrice},</if>
+            <if test="intro != null">intro = #{intro},</if>
+            <if test="score != null">score = #{score},</if>
+            <if test="hotScore != null">hot_score = #{hotScore},</if>
+            <if test="isRecommend != null">is_recommend = #{isRecommend},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

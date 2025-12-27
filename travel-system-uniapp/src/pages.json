@@ -1,0 +1,142 @@
+{
+  "pages": [
+    {
+      "path": "pages/home/home",
+      "style": {
+        "navigationBarTitleText": "智能旅游助手",
+        "navigationStyle": "custom",
+        "backgroundColor": "#F7F8FA",
+        "enablePullDownRefresh": true,
+        "onReachBottomDistance": 50
+      }
+    },
+    {
+      "path": "pages/route/plan",
+      "style": {
+        "navigationBarTitleText": "智能线路规划",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/route/detail",
+      "style": {
+        "navigationBarTitleText": "行程详情",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/checkin/checkin",
+      "style": {
+        "navigationBarTitleText": "打卡",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/travel-note/list",
+      "style": {
+        "navigationBarTitleText": "游记",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/travel-note/detail",
+      "style": {
+        "navigationBarTitleText": "游记详情",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/travel-note/publish",
+      "style": {
+        "navigationBarTitleText": "发布游记",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/profile",
+      "style": {
+        "navigationBarTitleText": "我的",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/scenic/detail",
+      "style": {
+        "navigationBarTitleText": "景点详情",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/food/detail",
+      "style": {
+        "navigationBarTitleText": "美食详情",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/search/search",
+      "style": {
+        "navigationBarTitleText": "搜索",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#3BA272",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "height": "50px",
+    "fontSize": "10px",
+    "iconWidth": "25px",
+    "spacing": "3px",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/route/plan",
+        "text": "线路",
+        "iconPath": "static/tabbar/route.png",
+        "selectedIconPath": "static/tabbar/route-active.png"
+      },
+      {
+        "pagePath": "pages/checkin/checkin",
+        "text": "打卡",
+        "iconPath": "static/tabbar/checkin.png",
+        "selectedIconPath": "static/tabbar/checkin-active.png"
+      },
+      {
+        "pagePath": "pages/travel-note/list",
+        "text": "游记",
+        "iconPath": "static/tabbar/note.png",
+        "selectedIconPath": "static/tabbar/note-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "static/tabbar/profile.png",
+        "selectedIconPath": "static/tabbar/profile-active.png"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationStyle": "default",
+    "backgroundColor": "#F7F8FA",
+    "backgroundTextStyle": "dark"
+  }
+}
+

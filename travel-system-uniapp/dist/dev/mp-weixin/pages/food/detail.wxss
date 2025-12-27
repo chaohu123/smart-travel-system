@@ -1,0 +1,76 @@
+
+.food-detail-page.data-v-68d96164 {
+  min-height: 100vh;
+  background-color: #f7f8fa;
+  display: flex;
+  flex-direction: column;
+}
+.scroll.data-v-68d96164 {
+  flex: 1;
+}
+.content.data-v-68d96164 {
+  padding: 24rpx;
+}
+.header.data-v-68d96164 {
+  margin-bottom: 12rpx;
+}
+.name.data-v-68d96164 {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333333;
+}
+.city.data-v-68d96164 {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #999999;
+}
+.meta-row.data-v-68d96164 {
+  margin-top: 12rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24rpx;
+  font-size: 24rpx;
+  color: #666666;
+}
+.score.data-v-68d96164 {
+  color: #3ba272;
+  font-weight: 600;
+}
+.price.data-v-68d96164 {
+  color: #ff7d00;
+}
+.section.data-v-68d96164 {
+  margin-top: 24rpx;
+}
+.section-title.data-v-68d96164 {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
+  display: block;
+  margin-bottom: 8rpx;
+}
+.section-text.data-v-68d96164 {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.6;
+}
+.loading.data-v-68d96164 {
+  padding: 80rpx 32rpx;
+  text-align: center;
+  color: #999999;
+  font-size: 28rpx;
+}
+.bottom-bar.data-v-68d96164 {
+  padding: 16rpx 24rpx;
+  background-color: #ffffff;
+  border-top: 1rpx solid #eeeeee;
+}
+.checkin-btn.data-v-68d96164 {
+  width: 100%;
+  padding: 24rpx;
+  background-color: #3ba272;
+  color: #ffffff;
+  border-radius: 20rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}

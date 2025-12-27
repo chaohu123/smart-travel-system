@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smarttravel.travel.mapper.TravelNoteMapper">
+
+    <resultMap id="TravelNoteResult" type="com.smarttravel.travel.domain.TravelNote">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="city_id" property="cityId"/>
+        <result column="city_name" property="cityName"/>
+        <result column="status" property="status"/>
+        <result column="audit_remark" property="auditRemark"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="like_count" property="likeCount"/>
+        <result column="favorite_count" property="favoriteCount"/>
+        <result column="comment_count" property="commentCount"/>
+        <result column="is_featured" property="isFeatured"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="del_flag" property="delFlag"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, title, content, city_id, city_name, status, audit_remark,
+        view_count, like_count, favorite_count, comment_count, is_featured,
+        create_time, update_time, del_flag
+    </sql>
+
+    <select id="selectList" parameterType="com.smarttravel.travel.domain.TravelNote" resultMap="TravelNoteResult">
+        SELECT <include refid="Base_Column_List"/>
+        FROM travel_note
+        WHERE del_flag = 0
+        <if test="title != null and title != ''">
+            AND title LIKE CONCAT('%', #{title}, '%')
+        </if>
+        <if test="userId != null">
+            AND user_id = #{userId}
+        </if>
+        <if test="cityId != null">
+            AND city_id = #{cityId}
+        </if>
+        <if test="status != null and status != ''">
+            AND status = #{status}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectById" parameterType="long" resultMap="TravelNoteResult">
+        SELECT <include refid="Base_Column_List"/>
+        FROM travel_note
+        WHERE id = #{id} AND del_flag = 0
+    </select>
+
+    <insert id="insert" parameterType="com.smarttravel.travel.domain.TravelNote" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO travel_note
+        (user_id, title, content, city_id, city_name, status, audit_remark,
+         view_count, like_count, favorite_count, comment_count, is_featured,
+         create_time, update_time, del_flag)
+        VALUES
+        (#{userId}, #{title}, #{content}, #{cityId}, #{cityName}, #{status}, #{auditRemark},
+         #{viewCount}, #{likeCount}, #{favoriteCount}, #{commentCount}, #{isFeatured},
+         NOW(), NOW(), 0)
+    </insert>
+
+    <update id="update" parameterType="com.smarttravel.travel.domain.TravelNote">
+        UPDATE travel_note
+        SET
+            user_id = #{userId},
+            title = #{title},
+            content = #{content},
+            city_id = #{cityId},
+            city_name = #{cityName},
+            status = #{status},
+            audit_remark = #{auditRemark},
+            view_count = #{viewCount},
+            like_count = #{likeCount},
+            favorite_count = #{favoriteCount},
+            comment_count = #{commentCount},
+            is_featured = #{isFeatured},
+            update_time = NOW()
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="incrementViewCount" parameterType="long">
+        UPDATE travel_note
+        SET view_count = view_count + 1
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="incrementLikeCount" parameterType="long">
+        UPDATE travel_note
+        SET like_count = like_count + 1
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="decrementLikeCount" parameterType="long">
+        UPDATE travel_note
+        SET like_count = GREATEST(like_count - 1, 0)
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="incrementFavoriteCount" parameterType="long">
+        UPDATE travel_note
+        SET favorite_count = favorite_count + 1
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="decrementFavoriteCount" parameterType="long">
+        UPDATE travel_note
+        SET favorite_count = GREATEST(favorite_count - 1, 0)
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="incrementCommentCount" parameterType="long">
+        UPDATE travel_note
+        SET comment_count = comment_count + 1
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="decrementCommentCount" parameterType="long">
+        UPDATE travel_note
+        SET comment_count = GREATEST(comment_count - 1, 0)
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="updateStatusAndRemark">
+        UPDATE travel_note
+        SET status = #{status},
+            audit_remark = #{auditRemark},
+            update_time = NOW()
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="updateFeatured">
+        UPDATE travel_note
+        SET is_featured = #{isFeatured},
+            update_time = NOW()
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
+    <update id="deleteById" parameterType="long">
+        UPDATE travel_note
+        SET del_flag = 1, update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <update id="deleteByIds" parameterType="long">
+        UPDATE travel_note
+        SET del_flag = 1, update_time = NOW()
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(1) FROM travel_note
+        WHERE user_id = #{userId} AND del_flag = 0
+    </select>
+
+    <select id="selectByIds" parameterType="list" resultMap="TravelNoteResult">
+        SELECT <include refid="Base_Column_List"/>
+        FROM travel_note
+        WHERE del_flag = 0
+          <if test="ids != null and ids.size() > 0">
+              AND id IN
+              <foreach collection="ids" item="id" open="(" separator="," close=")">
+                  #{id}
+              </foreach>
+          </if>
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>
+
+
+
+
+

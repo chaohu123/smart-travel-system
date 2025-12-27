@@ -1,0 +1,300 @@
+
+.profile-page.data-v-c010c622 {
+  min-height: 100vh;
+  background-color: #f8fafb;
+  padding-bottom: 50rpx;
+}
+
+/* 顶部卡片 */
+.user-header-card.data-v-c010c622 {
+  height: 380rpx;
+  background: linear-gradient(160deg, #3ba272 0%, #2bb673 100%);
+  padding: 100rpx 40rpx 0;
+  border-radius: 0 0 60rpx 60rpx;
+}
+.login-prompt.data-v-c010c622 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20rpx;
+  text-align: center;
+}
+.avatar-placeholder.data-v-c010c622 {
+  width: 110rpx;
+  height: 110rpx;
+  border-radius: 40rpx;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 50rpx;
+}
+.login-texts.data-v-c010c622 {
+  flex: 1;
+  width: 100%;
+}
+.main-title.data-v-c010c622 {
+  display: block;
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #fff;
+}
+.sub-title.data-v-c010c622 {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+}
+.login-action-btn.data-v-c010c622 {
+  background: #fff;
+  color: #3ba272;
+  font-size: 24rpx;
+  padding: 12rpx 30rpx;
+  border-radius: 30rpx;
+  font-weight: bold;
+}
+.login-action-wrapper.data-v-c010c622 {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.user-info-box.data-v-c010c622 {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.user-avatar.data-v-c010c622 {
+  width: 130rpx;
+  height: 130rpx;
+  border-radius: 40rpx;
+  border: 6rpx solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10rpx 20rpx rgba(0, 0, 0, 0.1);
+}
+.user-details.data-v-c010c622 {
+  margin-left: 30rpx;
+  color: #fff;
+  flex: 1;
+}
+.name-row.data-v-c010c622 {
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+  margin-bottom: 12rpx;
+}
+.user-name.data-v-c010c622 {
+  font-size: 40rpx;
+  font-weight: bold;
+}
+.level-tag.data-v-c010c622 {
+  font-size: 20rpx;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.4);
+}
+.user-sign.data-v-c010c622 {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+.setting-icon.data-v-c010c622 {
+  position: absolute;
+  right: 0;
+  top: 0;
+  padding: 12rpx 20rpx;
+}
+
+/* 行程状态条 */
+.trip-status-bar.data-v-c010c622 {
+  margin: -60rpx 40rpx 40rpx;
+  background: #fff;
+  border-radius: 30rpx;
+  display: flex;
+  padding: 40rpx 0;
+  box-shadow: 0 15rpx 30rpx rgba(0, 0, 0, 0.05);
+}
+.status-item.data-v-c010c622 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.count.data-v-c010c622 {
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 8rpx;
+}
+.label.data-v-c010c622 {
+  font-size: 24rpx;
+  color: #999;
+}
+.v-line.data-v-c010c622 {
+  width: 1rpx;
+  height: 60rpx;
+  background: #eee;
+  align-self: center;
+}
+
+/* AI 工具 */
+.section-title.data-v-c010c622 {
+  padding: 0 40rpx;
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 24rpx;
+}
+.ai-tool-grid.data-v-c010c622 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20rpx;
+  padding: 0 40rpx;
+  margin-bottom: 40rpx;
+}
+.ai-tool-card.data-v-c010c622 {
+  background: #fff;
+  padding: 30rpx;
+  border-radius: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  box-shadow: 0 10rpx 24rpx rgba(0, 0, 0, 0.04);
+}
+.tool-icon.data-v-c010c622 {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 16rpx;
+  background: linear-gradient(135deg, #e4f7ef, #d1f2e5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tool-icon .iconfont.data-v-c010c622 {
+  font-size: 36rpx;
+  color: #3ba272;
+}
+.ai-pref.data-v-c010c622 {
+  background: linear-gradient(135deg, #d1f2e5, #b8e8d5);
+}
+.ai-history.data-v-c010c622 {
+  background: linear-gradient(135deg, #e5ecff, #d1dcff);
+}
+.tool-name.data-v-c010c622 {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+}
+.tool-desc.data-v-c010c622 {
+  font-size: 22rpx;
+  color: #aaa;
+}
+
+/* 功能列表 */
+.menu-container.data-v-c010c622 {
+  padding: 0 40rpx;
+}
+.menu-list.data-v-c010c622 {
+  background: #fff;
+  border-radius: 30rpx;
+  overflow: hidden;
+  box-shadow: 0 10rpx 24rpx rgba(0, 0, 0, 0.05);
+}
+.menu-item.data-v-c010c622 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 35rpx 30rpx;
+  border-bottom: 1rpx solid #f9f9f9;
+}
+.menu-item.data-v-c010c622:last-child {
+  border-bottom: none;
+}
+.menu-left.data-v-c010c622 {
+  display: flex;
+  align-items: center;
+  font-size: 28rpx;
+  color: #444;
+}
+.icon-box.data-v-c010c622 {
+  margin-right: 20rpx;
+  width: 50rpx;
+  text-align: center;
+  font-size: 32rpx;
+}
+.arrow.data-v-c010c622 {
+  color: #ccc;
+  font-size: 26rpx;
+}
+
+/* 登录弹层 */
+.login-card.data-v-c010c622 {
+  width: 640rpx;
+  padding: 24rpx;
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.login-modal.data-v-c010c622 {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32rpx;
+  z-index: 999;
+}
+.login-card-header.data-v-c010c622 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+.login-close.data-v-c010c622 {
+  font-size: 32rpx;
+  color: #8c8c8c;
+  padding: 8rpx 12rpx;
+}
+.login-title.data-v-c010c622 {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #333;
+}
+.login-field.data-v-c010c622 {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.field-label.data-v-c010c622 {
+  font-size: 26rpx;
+  color: #666;
+}
+.field-input.data-v-c010c622 {
+  padding: 18rpx 16rpx;
+  background-color: #f6f7fb;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  color: #333;
+}
+.login-btn.data-v-c010c622 {
+  background: linear-gradient(135deg, #3ba272, #57c18c);
+  color: #fff;
+  border-radius: 12rpx;
+  padding: 22rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.login-tip.data-v-c010c622 {
+  font-size: 24rpx;
+  color: #999;
+}
+.logout-footer.data-v-c010c622 {
+  margin: 24rpx 40rpx 0;
+}
+.logout-btn.data-v-c010c622 {
+  width: 100%;
+  border: 2rpx solid #f3b0b0;
+  color: #e64949;
+  background: #fff3f3;
+}
