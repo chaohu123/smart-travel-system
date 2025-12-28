@@ -41,12 +41,24 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return null;
     });
     const authorAvatar = common_vendor.computed(() => {
-      var _a, _b;
-      return ((_b = (_a = noteDetail.value) == null ? void 0 : _a.author) == null ? void 0 : _b.avatar) || "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
+      var _a, _b, _c, _d;
+      if ((_b = (_a = noteDetail.value) == null ? void 0 : _a.author) == null ? void 0 : _b.avatar) {
+        return noteDetail.value.author.avatar;
+      }
+      if ((_d = (_c = noteDetail.value) == null ? void 0 : _c.note) == null ? void 0 : _d.authorAvatar) {
+        return noteDetail.value.note.authorAvatar;
+      }
+      return "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
     });
     const authorName = common_vendor.computed(() => {
-      var _a, _b, _c, _d;
-      return ((_b = (_a = noteDetail.value) == null ? void 0 : _a.author) == null ? void 0 : _b.nickname) || `\u7528\u6237${((_d = (_c = noteDetail.value) == null ? void 0 : _c.note) == null ? void 0 : _d.userId) || ""}`;
+      var _a, _b, _c, _d, _e, _f;
+      if ((_b = (_a = noteDetail.value) == null ? void 0 : _a.author) == null ? void 0 : _b.nickname) {
+        return noteDetail.value.author.nickname;
+      }
+      if ((_d = (_c = noteDetail.value) == null ? void 0 : _c.note) == null ? void 0 : _d.authorName) {
+        return noteDetail.value.note.authorName;
+      }
+      return `\u7528\u6237${((_f = (_e = noteDetail.value) == null ? void 0 : _e.note) == null ? void 0 : _f.userId) || ""}`;
     });
     const previewImage = (index) => {
       var _a;
@@ -59,7 +71,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       });
     };
     const showLoginPromptDialog = () => {
-      showLoginPrompt.value = true;
+      console.log("showLoginPromptDialog called");
+      common_vendor.index.showModal({
+        title: "\u9700\u8981\u767B\u5F55",
+        content: "\u8BF7\u5148\u767B\u5F55",
+        confirmText: "\u53BB\u767B\u5F55",
+        cancelText: "\u53D6\u6D88",
+        success: (res) => {
+          if (res.confirm) {
+            common_vendor.index.switchTab({ url: "/pages/profile/profile" });
+          }
+        }
+      });
     };
     const handleLoginConfirm = () => {
       showLoginPrompt.value = false;
@@ -69,13 +92,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const toggleLike = async () => {
       var _a;
+      console.log("toggleLike called", noteId.value);
       if (!noteId.value)
         return;
       try {
         if (!user.value) {
+          console.log("User not logged in, showing login prompt");
           showLoginPromptDialog();
           return;
         }
+        console.log("Toggling like for note:", noteId.value, "current state:", isLiked.value);
         const res = await api_content.travelNoteInteractionApi.toggleLike(user.value.id, noteId.value);
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
@@ -107,13 +133,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const toggleFavorite = async () => {
       var _a;
+      console.log("toggleFavorite called", noteId.value);
       if (!noteId.value)
         return;
       try {
         if (!user.value) {
+          console.log("User not logged in, showing login prompt");
           showLoginPromptDialog();
           return;
         }
+        console.log("Toggling favorite for note:", noteId.value, "current state:", isFavorite.value);
         const res = await api_content.travelNoteInteractionApi.toggleFavorite(user.value.id, noteId.value);
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
@@ -140,10 +169,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const openCommentEditor = () => {
+      console.log("openCommentEditor called");
       if (!user.value) {
+        console.log("User not logged in, showing login prompt");
         showLoginPromptDialog();
         return;
       }
+      console.log("Opening comment editor");
       textareaFocus.value = false;
       commentContent.value = "";
       commentEditorVisible.value = true;
@@ -177,14 +209,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         common_vendor.index.showToast({ title: "\u8BF7\u8F93\u5165\u8BC4\u8BBA\u5185\u5BB9", icon: "none" });
         return;
       }
+      if (!user.value) {
+        closeCommentEditor();
+        showLoginPromptDialog();
+        return;
+      }
       submitting.value = true;
       try {
-        if (!user.value) {
-          common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
-          common_vendor.index.switchTab({ url: "/pages/profile/profile" });
-          submitting.value = false;
-          return;
-        }
         const res = await api_content.travelNoteInteractionApi.publishComment({
           userId: user.value.id,
           contentType: "note",
@@ -263,7 +294,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
-          comments.value = data.data || [];
+          comments.value = (data.data || []).map((comment) => ({
+            ...comment,
+            nickname: comment.nickname || comment.userName || comment.nick_name,
+            avatar: comment.avatar || comment.userAvatar || comment.user_avatar
+          }));
+          console.log("\u8BC4\u8BBA\u5217\u8868\u52A0\u8F7D\u6210\u529F:", comments.value.length, "\u6761\u8BC4\u8BBA");
+          if (comments.value.length > 0) {
+            console.log("\u7B2C\u4E00\u6761\u8BC4\u8BBA\u6570\u636E:", comments.value[0]);
+          }
         }
       } catch (error) {
         console.error("\u52A0\u8F7D\u8BC4\u8BBA\u5931\u8D25:", error);
@@ -316,8 +355,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         p: common_vendor.t(common_vendor.unref(commentCount)),
         q: common_vendor.f(comments.value, (comment, k0, i0) => {
           return {
-            a: comment.userAvatar || common_vendor.unref(authorAvatar),
-            b: common_vendor.t(comment.userName || "\u533F\u540D\u7528\u6237"),
+            a: comment.avatar || common_vendor.unref(authorAvatar),
+            b: common_vendor.t(comment.nickname || "\u533F\u540D\u7528\u6237"),
             c: common_vendor.t(comment.content),
             d: common_vendor.t(formatTime(comment.createTime)),
             e: comment.id

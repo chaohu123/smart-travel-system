@@ -99,11 +99,16 @@ public class RecommendController {
         Map<String, Object> response = new HashMap<>();
 
         try {
+            // 记录请求参数
+            System.out.println("[推荐美食API] 请求参数: userId=" + userId + ", cityId=" + cityId + ", province=" + province + ", limit=" + limit);
             List<Map<String, Object>> data = recommendService.recommendFoods(userId, cityId, province, limit);
+            System.out.println("[推荐美食API] 返回数据数量: " + (data != null ? data.size() : 0));
             response.put("code", 200);
             response.put("msg", "success");
             response.put("data", data);
         } catch (Exception e) {
+            System.err.println("[推荐美食API] 异常: " + e.getMessage());
+            e.printStackTrace();
             response.put("code", 500);
             response.put("msg", "推荐失败：" + e.getMessage());
         }

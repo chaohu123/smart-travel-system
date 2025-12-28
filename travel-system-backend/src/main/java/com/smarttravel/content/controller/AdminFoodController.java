@@ -150,14 +150,18 @@ public class AdminFoodController {
         if (foodData.get("cityId") != null) {
             food.setCityId(((Number) foodData.get("cityId")).longValue());
         } else if (cityName != null && !cityName.isEmpty() && province != null && !province.isEmpty()) {
+            // 记录查找参数，便于调试
+            System.out.println("[创建美食] 查找城市: cityName=" + cityName + ", province=" + province);
             City city = cityMapper.selectByCityNameAndProvince(cityName, province);
             if (city != null && city.getId() != null) {
+                System.out.println("[创建美食] 找到城市: id=" + city.getId() + ", cityName=" + city.getCityName() + ", province=" + city.getProvince());
                 food.setCityId(city.getId());
             } else {
                 // 如果找不到对应的城市，返回错误
+                System.out.println("[创建美食] 未找到城市: cityName=" + cityName + ", province=" + province);
                 Map<String, Object> result = new HashMap<>();
                 result.put("code", 400);
-                result.put("msg", "未找到对应的城市，请先在城市管理中创建该城市");
+                result.put("msg", "未找到对应的城市，请先在城市管理中创建该城市。查找参数：城市=" + cityName + "，省份=" + province);
                 return result;
             }
         }
@@ -206,14 +210,18 @@ public class AdminFoodController {
         if (foodData.get("cityId") != null) {
             food.setCityId(((Number) foodData.get("cityId")).longValue());
         } else if (cityName != null && !cityName.isEmpty() && province != null && !province.isEmpty()) {
+            // 记录查找参数，便于调试
+            System.out.println("[更新美食] 查找城市: cityName=" + cityName + ", province=" + province);
             City city = cityMapper.selectByCityNameAndProvince(cityName, province);
             if (city != null && city.getId() != null) {
+                System.out.println("[更新美食] 找到城市: id=" + city.getId() + ", cityName=" + city.getCityName() + ", province=" + city.getProvince());
                 food.setCityId(city.getId());
             } else {
                 // 如果找不到对应的城市，返回错误
+                System.out.println("[更新美食] 未找到城市: cityName=" + cityName + ", province=" + province);
                 Map<String, Object> result = new HashMap<>();
                 result.put("code", 400);
-                result.put("msg", "未找到对应的城市，请先在城市管理中创建该城市");
+                result.put("msg", "未找到对应的城市，请先在城市管理中创建该城市。查找参数：城市=" + cityName + "，省份=" + province);
                 return result;
             }
         }

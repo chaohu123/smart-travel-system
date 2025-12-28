@@ -159,7 +159,7 @@
               v-for="note in noteList"
               :key="note.id"
               class="note-card"
-              @click="onViewNote(note)"
+              @tap="onViewNote(note)"
             >
               <!-- 封面图片 -->
               <view class="note-cover-wrapper">
@@ -188,7 +188,7 @@
 
                   <!-- 右侧：点赞数和评论数 -->
                   <view class="note-stats">
-                    <view class="note-stat-item" @click.stop="toggleLike(note)">
+                    <view class="note-stat-item" @tap.stop="toggleLike(note)">
                       <view class="note-icon-box" :class="{ 'is-active': note.isLiked && shouldAnimateMap[note.id] }">
                         <text
                           class="iconfont note-stat-icon"
@@ -197,7 +197,7 @@
                       </view>
                       <text class="note-stat-text" :class="{ 'text-active': note.isLiked }">{{ note.likeCount || 0 }}</text>
                     </view>
-                    <view class="note-stat-item" @click.stop="handleComment(note)">
+                    <view class="note-stat-item" @tap.stop="handleComment(note)">
                       <view class="note-icon-box">
                         <text class="iconfont icon-pinglun note-stat-icon"></text>
                       </view>
@@ -260,10 +260,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app'
 import { recommendApi, scenicSpotApi, type ApiResponse } from '@/api/content'
-import { travelNoteApi } from '@/api/content'
+import { travelNoteApi, travelNoteInteractionApi } from '@/api/content'
 import { request } from '@/utils/http'
 import { useUserStore } from '@/store/user'
 import EmptyState from '@/components/EmptyState.vue'
@@ -454,49 +454,98 @@ const onViewNote = (note: NoteItem) => {
 
 // 显示登录提示
 const showLoginPromptDialog = () => {
-  showLoginPrompt.value = true
+  console.log('showLoginPromptDialog called')
+  // 直接使用 uni.showModal，更可靠
+  uni.showModal({
+    title: '需要登录',
+    content: '请先登录',
+    confirmText: '去登录',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        // 用户选择去登录
+        uni.switchTab({ url: '/pages/profile/profile' })
+      }
+      // 用户选择取消，什么都不做，留在当前页面
+    }
+  })
 }
 
 // 登录确认
 const handleLoginConfirm = () => {
   showLoginPrompt.value = false
+  // 跳转到登录页面（LoginPrompt组件内部会处理跳转）
 }
 
 // 登录取消
 const handleLoginCancel = () => {
   showLoginPrompt.value = false
+  // 用户选择取消，留在当前页面
 }
 
 // 点赞切换
-const toggleLike = (note: NoteItem) => {
+const toggleLike = async (note: NoteItem) => {
+  console.log('toggleLike called', note.id)
   // 检查登录状态
   if (!user.value) {
+    console.log('User not logged in, showing login prompt')
     showLoginPromptDialog()
     return
   }
 
-  if (!note.isLiked) {
-    note.isLiked = true
-    note.likeCount = (note.likeCount || 0) + 1
-    // 触发动画
-    shouldAnimateMap.value[note.id] = true
-    setTimeout(() => {
-      shouldAnimateMap.value[note.id] = false
-    }, 300)
-    // TODO: 调用后端API点赞
-    // travelNoteApi.like(note.id)
-  } else {
-    note.isLiked = false
-    note.likeCount = Math.max(0, (note.likeCount || 0) - 1)
-    // TODO: 调用后端API取消点赞
-    // travelNoteApi.unlike(note.id)
+  try {
+    console.log('Toggling like for note:', note.id, 'current state:', note.isLiked)
+    // 先更新UI状态（乐观更新）
+    const wasLiked = note.isLiked
+    note.isLiked = !wasLiked
+    if (!wasLiked) {
+      note.likeCount = (note.likeCount || 0) + 1
+      // 触发动画
+      shouldAnimateMap.value[note.id] = true
+      setTimeout(() => {
+        shouldAnimateMap.value[note.id] = false
+      }, 300)
+    } else {
+      note.likeCount = Math.max(0, (note.likeCount || 0) - 1)
+    }
+
+    // 调用后端API
+    const res = await travelNoteInteractionApi.toggleLike(user.value.id, note.id)
+    const data = res.data as ApiResponse<{ isLiked: boolean; likeCount?: number }>
+
+    if (res.statusCode === 200 && data.code === 200) {
+      // 使用后端返回的真实状态更新
+      note.isLiked = data.data.isLiked
+      if (data.data.likeCount !== undefined) {
+        note.likeCount = data.data.likeCount
+      }
+    } else {
+      // 如果API调用失败，回滚UI状态
+      note.isLiked = wasLiked
+      note.likeCount = wasLiked ? (note.likeCount || 0) + 1 : Math.max(0, (note.likeCount || 0) - 1)
+      uni.showToast({
+        title: data.msg || '操作失败',
+        icon: 'none',
+      })
+    }
+  } catch (error: any) {
+    console.error('点赞失败:', error)
+    // 回滚UI状态
+    note.isLiked = !note.isLiked
+    note.likeCount = note.isLiked ? (note.likeCount || 0) + 1 : Math.max(0, (note.likeCount || 0) - 1)
+    uni.showToast({
+      title: error?.message || '操作失败，请检查网络',
+      icon: 'none',
+    })
   }
 }
 
 // 评论处理
 const handleComment = (note: NoteItem) => {
+  console.log('handleComment called', note.id)
   // 检查登录状态
   if (!user.value) {
+    console.log('User not logged in, showing login prompt')
     showLoginPromptDialog()
     return
   }
@@ -533,9 +582,13 @@ const fetchHomeData = async () => {
     const scenicParams: any = { limit: 3 }
     const foodParams: any = { limit: 6 }
 
-    if (provinceValue) {
+    // 如果选择了省份（不是"全部省份"），添加省份参数
+    if (provinceValue && provinceValue !== '') {
       scenicParams.province = provinceValue
       foodParams.province = provinceValue
+      console.log('[首页] 选择省份:', provinceValue, '美食参数:', foodParams)
+    } else {
+      console.log('[首页] 未选择省份或选择全部省份，不传递province参数')
     }
 
     const [routeRes, scenicRes, foodRes] = await Promise.all([
@@ -571,6 +624,15 @@ const fetchHomeData = async () => {
 
     if (foodRes.statusCode === 200 && foodRes.data.code === 200) {
       foodList.value = foodRes.data.data || []
+      console.log('[首页] 美食数据加载成功，数量:', foodList.value.length, '省份:', provinceValue || '全部')
+      if (foodList.value.length > 0) {
+        console.log('[首页] 美食列表:', foodList.value.map(f => ({ name: f.name, address: f.address })))
+      } else if (provinceValue) {
+        console.warn('[首页] 选择了省份但未返回美食数据，可能该省份暂无美食数据')
+      }
+    } else {
+      console.error('[首页] 美食数据加载失败:', foodRes.data)
+      toastFail(foodRes.data?.msg || '推荐美食加载失败')
     }
   } catch (error) {
     toastFail('首页推荐加载失败')
@@ -992,10 +1054,21 @@ onReachBottom(() => {
   gap: 4rpx;
   cursor: pointer;
   transition: all 0.2s;
+  padding: 12rpx 8rpx;
+  margin: -12rpx -8rpx;
+  position: relative;
+  z-index: 10;
+  /* 确保可以点击 */
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 80rpx;
+  min-height: 60rpx;
+  justify-content: center;
 }
 
 .note-stat-item:active {
   opacity: 0.7;
+  transform: scale(0.95);
 }
 
 .note-icon-box {

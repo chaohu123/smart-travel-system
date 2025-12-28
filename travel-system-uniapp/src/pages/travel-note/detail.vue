@@ -67,11 +67,11 @@
           >
             <image
               class="comment-avatar"
-              :src="comment.userAvatar || authorAvatar"
+              :src="comment.avatar || authorAvatar"
               mode="aspectFill"
             />
             <view class="comment-content-wrapper">
-              <text class="comment-author">{{ comment.userName || '匿名用户' }}</text>
+              <text class="comment-author">{{ comment.nickname || '匿名用户' }}</text>
               <text class="comment-content">{{ comment.content }}</text>
               <text class="comment-time">{{ formatTime(comment.createTime) }}</text>
             </view>
@@ -89,7 +89,7 @@
       <view
         class="action-btn"
         :class="{ active: isLiked }"
-        @click="toggleLike"
+        @tap="toggleLike"
       >
         <text
           class="iconfont action-icon icon-icon"
@@ -100,7 +100,7 @@
       <view
         class="action-btn"
         :class="{ active: isFavorite }"
-        @click="toggleFavorite"
+        @tap="toggleFavorite"
       >
         <text
           class="iconfont action-icon icon-shoucang"
@@ -108,7 +108,7 @@
         ></text>
         <text class="action-text">收藏</text>
       </view>
-      <view class="action-btn" @click="openCommentEditor">
+      <view class="action-btn" @tap="openCommentEditor">
         <text class="iconfont action-icon icon-pinglun"></text>
         <text class="action-text">{{ commentCount }}</text>
       </view>
@@ -200,11 +200,29 @@ const coverImage = computed(() => {
 })
 
 const authorAvatar = computed(() => {
-  return noteDetail.value?.author?.avatar || 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200'
+  // 优先使用author对象中的avatar
+  if (noteDetail.value?.author?.avatar) {
+    return noteDetail.value.author.avatar
+  }
+  // 如果没有author信息，尝试从note中获取（兼容旧数据）
+  if (noteDetail.value?.note?.authorAvatar) {
+    return noteDetail.value.note.authorAvatar
+  }
+  // 默认头像
+  return 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200'
 })
 
 const authorName = computed(() => {
-  return noteDetail.value?.author?.nickname || `用户${noteDetail.value?.note?.userId || ''}`
+  // 优先使用author对象中的nickname
+  if (noteDetail.value?.author?.nickname) {
+    return noteDetail.value.author.nickname
+  }
+  // 如果没有author信息，尝试从note中获取（兼容旧数据）
+  if (noteDetail.value?.note?.authorName) {
+    return noteDetail.value.note.authorName
+  }
+  // 最后使用userId作为后备
+  return `用户${noteDetail.value?.note?.userId || ''}`
 })
 
 const previewImage = (index: number | string) => {
@@ -218,27 +236,46 @@ const previewImage = (index: number | string) => {
 
 // 显示登录提示
 const showLoginPromptDialog = () => {
-  showLoginPrompt.value = true
+  console.log('showLoginPromptDialog called')
+  // 直接使用 uni.showModal，更可靠
+  uni.showModal({
+    title: '需要登录',
+    content: '请先登录',
+    confirmText: '去登录',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        // 用户选择去登录
+        uni.switchTab({ url: '/pages/profile/profile' })
+      }
+      // 用户选择取消，什么都不做，留在当前页面
+    }
+  })
 }
 
 // 登录确认
 const handleLoginConfirm = () => {
   showLoginPrompt.value = false
+  // 跳转到登录页面（LoginPrompt组件内部会处理跳转）
 }
 
 // 登录取消
 const handleLoginCancel = () => {
   showLoginPrompt.value = false
+  // 用户选择取消，留在当前页面
 }
 
 const toggleLike = async () => {
+  console.log('toggleLike called', noteId.value)
   if (!noteId.value) return
 
   try {
     if (!user.value) {
+      console.log('User not logged in, showing login prompt')
       showLoginPromptDialog()
       return
     }
+    console.log('Toggling like for note:', noteId.value, 'current state:', isLiked.value)
     const res = await travelNoteInteractionApi.toggleLike(user.value.id, noteId.value)
     const data = res.data as ApiResponse<{ isLiked: boolean; likeCount?: number }>
     if (res.statusCode === 200 && data.code === 200) {
@@ -273,13 +310,16 @@ const toggleLike = async () => {
 }
 
 const toggleFavorite = async () => {
+  console.log('toggleFavorite called', noteId.value)
   if (!noteId.value) return
 
   try {
     if (!user.value) {
+      console.log('User not logged in, showing login prompt')
       showLoginPromptDialog()
       return
     }
+    console.log('Toggling favorite for note:', noteId.value, 'current state:', isFavorite.value)
     const res = await travelNoteInteractionApi.toggleFavorite(user.value.id, noteId.value)
     const data = res.data as ApiResponse<{ isFavorite: boolean; favoriteCount?: number }>
     if (res.statusCode === 200 && data.code === 200) {
@@ -308,10 +348,13 @@ const toggleFavorite = async () => {
 }
 
 const openCommentEditor = () => {
+  console.log('openCommentEditor called')
   if (!user.value) {
+    console.log('User not logged in, showing login prompt')
     showLoginPromptDialog()
     return
   }
+  console.log('Opening comment editor')
 
   // 先重置焦点状态
   textareaFocus.value = false
@@ -355,14 +398,15 @@ const submitComment = async () => {
     return
   }
 
+  // 检查登录状态
+  if (!user.value) {
+    closeCommentEditor()
+    showLoginPromptDialog()
+    return
+  }
+
   submitting.value = true
   try {
-    if (!user.value) {
-      uni.showToast({ title: '请先登录', icon: 'none' })
-      uni.switchTab({ url: '/pages/profile/profile' })
-      submitting.value = false
-      return
-    }
     const res = await travelNoteInteractionApi.publishComment({
       userId: user.value.id,
       contentType: 'note',
@@ -446,9 +490,17 @@ const loadComments = async () => {
     })
     const data = res.data as ApiResponse<any[]>
     if (res.statusCode === 200 && data.code === 200) {
-      comments.value = data.data || []
-      // 不再覆盖后端返回的 commentCount，保持后端数据的真实性
-      // 后端返回的 commentCount 是准确的评论总数
+      // 确保字段名正确映射
+      comments.value = (data.data || []).map((comment: any) => ({
+        ...comment,
+        // 兼容不同的字段名
+        nickname: comment.nickname || comment.userName || comment.nick_name,
+        avatar: comment.avatar || comment.userAvatar || comment.user_avatar,
+      }))
+      console.log('评论列表加载成功:', comments.value.length, '条评论')
+      if (comments.value.length > 0) {
+        console.log('第一条评论数据:', comments.value[0])
+      }
     }
   } catch (error) {
     console.error('加载评论失败:', error)
@@ -765,6 +817,17 @@ onMounted(() => {
   justify-content: center;
   gap: 8rpx;
   padding: 0 32rpx;
+  position: relative;
+  z-index: 10;
+  /* 确保可以点击 */
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s;
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+  opacity: 0.8;
 }
 
 .action-btn.active {

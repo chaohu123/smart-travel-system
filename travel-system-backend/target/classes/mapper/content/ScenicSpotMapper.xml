@@ -121,7 +121,14 @@
         FROM scenic_spot
         WHERE del_flag = 0
         <if test="province != null and province != ''">
-            AND province = #{province}
+            AND (
+                province = #{province}
+                OR province = CONCAT(#{province}, '市')
+                OR province = CONCAT(#{province}, '省')
+                OR province = CONCAT(#{province}, '自治区')
+                OR REPLACE(REPLACE(REPLACE(province, '市', ''), '省', ''), '自治区', '') = #{province}
+                OR REPLACE(REPLACE(REPLACE(#{province}, '市', ''), '省', ''), '自治区', '') = REPLACE(REPLACE(REPLACE(province, '市', ''), '省', ''), '自治区', '')
+            )
         </if>
         ORDER BY (hot_score * 2 + COALESCE(score, 0)) DESC
         LIMIT #{limit}

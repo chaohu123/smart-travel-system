@@ -99,7 +99,14 @@
         INNER JOIN city c ON f.city_id = c.id
         WHERE f.del_flag = 0 AND c.del_flag = 0
         <if test="province != null and province != ''">
-            AND c.province = #{province}
+            AND (
+                c.province = #{province}
+                OR c.province = CONCAT(#{province}, '市')
+                OR c.province = CONCAT(#{province}, '省')
+                OR c.province = CONCAT(#{province}, '自治区')
+                OR REPLACE(REPLACE(REPLACE(c.province, '市', ''), '省', ''), '自治区', '') = #{province}
+                OR REPLACE(REPLACE(REPLACE(#{province}, '市', ''), '省', ''), '自治区', '') = REPLACE(REPLACE(REPLACE(c.province, '市', ''), '省', ''), '自治区', '')
+            )
         </if>
         ORDER BY (f.hot_score * 2 + COALESCE(f.score, 0)) DESC
         LIMIT #{limit}
