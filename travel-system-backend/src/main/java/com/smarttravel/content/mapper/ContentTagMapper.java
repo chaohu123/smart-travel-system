@@ -19,6 +19,11 @@ public interface ContentTagMapper {
      * 批量查询内容的标签列表
      */
     java.util.List<ContentTag> selectByContentIds(@Param("contentType") String contentType, @Param("contentIds") java.util.List<Long> contentIds);
+
+    /**
+     * 根据标签ID列表查询内容ID列表
+     */
+    java.util.List<Long> selectContentIdsByTagIds(@Param("contentType") String contentType, @Param("tagIds") java.util.List<Long> tagIds);
 }
 
 

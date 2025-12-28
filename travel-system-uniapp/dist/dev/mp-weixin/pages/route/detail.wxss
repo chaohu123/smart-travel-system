@@ -6,40 +6,324 @@
   flex-direction: column;
 }
 
-/* 顶部图片 */
-.header-image.data-v-bcda044a {
-  width: 100%;
-  height: 400rpx;
-  position: relative;
-  overflow: hidden;
-}
-.header-img.data-v-bcda044a {
-  width: 100%;
-  height: 100%;
-}
-.header-overlay.data-v-bcda044a {
-  position: absolute;
-  bottom: 0;
+/* 顶部导航栏 */
+.nav-bar.data-v-bcda044a {
+  position: fixed;
+  top: 0;
   left: 0;
   right: 0;
-  height: 80rpx;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.2), transparent);
+  height: 88rpx;
+  padding-top: var(--status-bar-height, 0);
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24rpx;
+  z-index: 1000;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+.nav-back.data-v-bcda044a {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.back-icon.data-v-bcda044a {
+  font-size: 48rpx;
+  color: #333333;
+  font-weight: 300;
+}
+.nav-title.data-v-bcda044a {
+  flex: 1;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+}
+.nav-actions.data-v-bcda044a {
+  width: 64rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+.nav-favorite.data-v-bcda044a {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.favorite-icon.data-v-bcda044a {
+  font-size: 36rpx;
+}
+.favorite-icon.favorited.data-v-bcda044a {
+  animation: scale-bcda044a 0.3s;
+}
+@keyframes scale-bcda044a {
+0% { transform: scale(1);
+}
+50% { transform: scale(1.2);
+}
+100% { transform: scale(1);
+}
 }
 .scroll.data-v-bcda044a {
   flex: 1;
+  margin-top: 88rpx;
 }
 .content.data-v-bcda044a {
-  padding: 0 24rpx 160rpx;
+  padding: 24rpx;
+  padding-bottom: 160rpx;
 }
 
-/* 头部信息区域 */
-.header-section.data-v-bcda044a {
+/* 行程摘要卡片 */
+.summary-card.data-v-bcda044a {
   background-color: #ffffff;
   border-radius: 24rpx;
   padding: 32rpx;
-  margin-top: 24rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
   margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+}
+.summary-title.data-v-bcda044a {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #333333;
+  margin-bottom: 20rpx;
+  display: block;
+}
+.summary-rating-row.data-v-bcda044a {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+.rating-text.data-v-bcda044a {
+  font-size: 28rpx;
+  color: #ff9800;
+  font-weight: 600;
+}
+.summary-tag.data-v-bcda044a {
+  padding: 8rpx 16rpx;
+  background-color: #3ba272;
+  border-radius: 999rpx;
+}
+.summary-tag text.data-v-bcda044a {
+  font-size: 22rpx;
+  color: #ffffff;
+}
+.summary-features.data-v-bcda044a {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.feature-item.data-v-bcda044a {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+.feature-icon.data-v-bcda044a {
+  color: #3ba272;
+  font-size: 28rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+}
+.feature-text.data-v-bcda044a {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* 天数选择标签 */
+.day-tabs.data-v-bcda044a {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+  padding: 0 4rpx;
+}
+.day-tab.data-v-bcda044a {
+  flex: 1;
+  padding: 20rpx;
+  background-color: #f7f8fa;
+  border-radius: 16rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #666666;
+  transition: all 0.2s;
+}
+.day-tab.active.data-v-bcda044a {
+  background-color: #3ba272;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* 每日详情卡片 */
+.day-detail-card.data-v-bcda044a {
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+}
+.day-detail-header.data-v-bcda044a {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+}
+.day-detail-icon.data-v-bcda044a {
+  font-size: 48rpx;
+  flex-shrink: 0;
+}
+.day-detail-info.data-v-bcda044a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+.day-detail-title.data-v-bcda044a {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #333333;
+}
+.day-detail-theme.data-v-bcda044a {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.5;
+}
+.day-detail-meta.data-v-bcda044a {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+.intensity-rating.data-v-bcda044a {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.intensity-label.data-v-bcda044a {
+  font-size: 24rpx;
+  color: #999999;
+}
+.intensity-stars.data-v-bcda044a {
+  font-size: 24rpx;
+  color: #ff9800;
+}
+.day-duration.data-v-bcda044a {
+  font-size: 24rpx;
+  color: #666666;
+}
+.progress-bars.data-v-bcda044a {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.progress-item.data-v-bcda044a {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.progress-label.data-v-bcda044a {
+  width: 80rpx;
+  font-size: 24rpx;
+  color: #666666;
+  flex-shrink: 0;
+}
+.progress-bar.data-v-bcda044a {
+  flex: 1;
+  height: 8rpx;
+  background-color: #f0f0f0;
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+.progress-fill.data-v-bcda044a {
+  height: 100%;
+  background: linear-gradient(90deg, #3ba272, #6fd3a5);
+  border-radius: 4rpx;
+  transition: width 0.3s;
+}
+
+/* 活动卡片 */
+.activities-section.data-v-bcda044a {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin-bottom: 24rpx;
+}
+.activity-card.data-v-bcda044a {
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+.activity-header.data-v-bcda044a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+.activity-name.data-v-bcda044a {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333333;
+  flex: 1;
+}
+.activity-rating.data-v-bcda044a {
+  font-size: 26rpx;
+  color: #ff9800;
+  font-weight: 600;
+}
+.activity-info-row.data-v-bcda044a {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+.activity-price.data-v-bcda044a {
+  font-size: 26rpx;
+  color: #3ba272;
+  font-weight: 600;
+}
+.activity-location.data-v-bcda044a {
+  font-size: 24rpx;
+  color: #999999;
+}
+.activity-tips.data-v-bcda044a,
+.activity-suggestion.data-v-bcda044a {
+  display: flex;
+  gap: 8rpx;
+  margin-bottom: 12rpx;
+}
+.tips-label.data-v-bcda044a,
+.suggestion-label.data-v-bcda044a {
+  font-size: 24rpx;
+  color: #666666;
+  flex-shrink: 0;
+}
+.tips-text.data-v-bcda044a,
+.suggestion-text.data-v-bcda044a {
+  font-size: 24rpx;
+  color: #666666;
+  line-height: 1.5;
+  flex: 1;
+}
+.activity-actions.data-v-bcda044a {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+.action-btn-small.data-v-bcda044a {
+  flex: 1;
+  padding: 16rpx;
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  color: #333333;
+  border: none;
+  text-align: center;
+}
+.action-btn-small.data-v-bcda044a:active {
+  background-color: #eeeeee;
 }
 .title-row.data-v-bcda044a {
   margin-bottom: 24rpx;
@@ -303,41 +587,40 @@
   align-items: center;
   gap: 16rpx;
 }
-.favorite-btn.data-v-bcda044a {
-  width: 88rpx;
-  height: 88rpx;
+.bottom-btn.data-v-bcda044a {
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f5f5f5;
-  border-radius: 44rpx;
-  flex-shrink: 0;
-  transition: all 0.3s;
+  gap: 8rpx;
 }
-.favorite-btn.data-v-bcda044a:active {
-  transform: scale(0.95);
-  background-color: #eeeeee;
-}
-.favorite-icon.data-v-bcda044a {
-  font-size: 44rpx;
-  transition: transform 0.3s;
-}
-.favorite-icon.favorited.data-v-bcda044a {
-  transform: scale(1.1);
-}
-.action-btn.data-v-bcda044a {
+.edit-btn.data-v-bcda044a {
   flex: 1;
-  padding: 28rpx;
-  border-radius: 24rpx;
-  font-size: 28rpx;
-  font-weight: 600;
-  border: none;
+  background-color: #f7f8fa;
+  color: #333333;
 }
-.use-btn.data-v-bcda044a {
+.save-btn.data-v-bcda044a {
+  flex: 1;
+  background-color: #f7f8fa;
+  color: #333333;
+}
+.generate-btn.data-v-bcda044a {
+  flex: 2;
   background: linear-gradient(135deg, #3ba272, #6fd3a5);
   color: #ffffff;
   box-shadow: 0 8rpx 24rpx rgba(59, 162, 114, 0.3);
 }
-.btn-text.data-v-bcda044a {
+.generate-icon.data-v-bcda044a {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+.loading.data-v-bcda044a {
+  padding: 80rpx 32rpx;
+  text-align: center;
+  color: #999999;
   font-size: 28rpx;
 }

@@ -1,121 +1,131 @@
 <template>
   <view class="route-detail-page">
-    <!-- 顶部封面图 -->
-    <view class="header-image" v-if="routeDetail?.route?.coverImage">
-      <image
-        class="header-img"
-        :src="routeDetail.route.coverImage"
-        mode="aspectFill"
-      />
-      <view class="header-overlay"></view>
+    <!-- 顶部导航栏 -->
+    <view class="nav-bar">
+      <view class="nav-back" @click="goBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text class="nav-title">{{ routeTitle }}</text>
+      <view class="nav-actions">
+        <view class="nav-favorite" @click="toggleFavorite">
+          <text class="favorite-icon" :class="{ 'favorited': isFavorite }">
+            {{ isFavorite ? '❤️' : '🤍' }}
+          </text>
+        </view>
+      </view>
     </view>
 
-    <scroll-view scroll-y class="scroll">
+    <scroll-view scroll-y="true" class="scroll">
       <view v-if="loading" class="loading">
         <text>加载中...</text>
       </view>
 
       <view v-else-if="routeDetail" class="content">
-        <!-- 路线基本信息 -->
-        <view class="header-section">
-          <view class="title-row">
-            <text class="name">{{ routeDetail.route?.routeName || '未命名路线' }}</text>
-          </view>
-
-          <view class="meta-row">
-            <view class="meta-item">
-              <text class="meta-icon">📅</text>
-              <text class="meta-text">{{ routeDetail.route?.days || 0 }}天</text>
-            </view>
-            <view class="meta-item" v-if="routeDetail.route?.suitablePeople">
-              <text class="meta-icon">👥</text>
-              <text class="meta-text">{{ routeDetail.route.suitablePeople }}</text>
-            </view>
-            <view class="meta-item">
-              <text class="meta-icon">👁️</text>
-              <text class="meta-text">{{ routeDetail.route?.viewCount || 0 }}次浏览</text>
+        <!-- 行程摘要卡片 -->
+        <view class="summary-card">
+          <text class="summary-title">{{ routeDetail.route?.routeName || '未命名路线' }}</text>
+          <view class="summary-rating-row">
+            <text class="rating-text">★4.8</text>
+            <view class="summary-tag">
+              <text>适合首次到访</text>
             </view>
           </view>
-
-          <!-- 统计信息 -->
-          <view class="stats-row">
-            <view class="stat-item">
-              <text class="stat-label">收藏</text>
-              <text class="stat-value">{{ routeDetail.route?.favoriteCount || 0 }}</text>
-            </view>
-            <view class="stat-divider"></view>
-            <view class="stat-item">
-              <text class="stat-label">使用</text>
-              <text class="stat-value">{{ routeDetail.route?.useCount || 0 }}</text>
+          <view class="summary-features">
+            <view class="feature-item" v-for="(feature, idx) in summaryFeatures" :key="idx">
+              <text class="feature-icon">✓</text>
+              <text class="feature-text">{{ feature }}</text>
             </view>
           </view>
         </view>
 
-        <!-- 路线简介 -->
-        <view class="intro-card" v-if="routeDetail.route?.summary">
-          <view class="card-title">
-            <text class="title-icon">📖</text>
-            <text class="title-text">路线简介</text>
-          </view>
-          <text class="intro-text">{{ routeDetail.route.summary }}</text>
-        </view>
-
-        <!-- 行程安排 -->
-        <view class="days-section" v-if="routeDetail.days && routeDetail.days.length > 0">
-          <view class="section-header">
-            <text class="section-title">行程安排</text>
-            <text class="section-subtitle">{{ routeDetail.days.length }}天行程</text>
-          </view>
-
+        <!-- 天数选择标签 -->
+        <view class="day-tabs" v-if="routeDetail.days && routeDetail.days.length > 0">
           <view
-            v-for="(dayData, dayIndex) in routeDetail.days"
-            :key="dayIndex"
-            class="day-card"
+            v-for="(day, index) in routeDetail.days"
+            :key="index"
+            class="day-tab"
+            :class="{ active: selectedDayIndex === index }"
+            @click="selectDay(index)"
           >
-            <view class="day-header">
-              <view class="day-number">
-                <text class="day-number-text">第{{ dayIndex + 1 }}天</text>
-              </view>
-              <view class="day-info" v-if="dayData.day">
-                <text class="day-date" v-if="dayData.day.date">{{ formatDate(dayData.day.date) }}</text>
-                <text class="day-summary" v-if="dayData.day.summary">{{ dayData.day.summary }}</text>
+            <text>Day {{ index + 1 }}</text>
+          </view>
+        </view>
+
+        <!-- 每日详情 -->
+        <view
+          v-if="selectedDayData"
+          class="day-detail-card"
+        >
+          <view class="day-detail-header">
+            <text class="day-detail-icon">🏛️</text>
+            <view class="day-detail-info">
+              <text class="day-detail-title">Day {{ selectedDayIndex + 1 }}: {{ getDayTitle(selectedDayData) }}</text>
+              <text class="day-detail-theme" v-if="selectedDayData.day?.intro">
+                今日主题: {{ selectedDayData.day.intro }}
+              </text>
+              <view class="day-detail-meta">
+                <view class="intensity-rating">
+                  <text class="intensity-label">强度</text>
+                  <text class="intensity-stars">★★★★★</text>
+                </view>
+                <text class="day-duration">总时长: {{ getDayDuration(selectedDayData) }}h</text>
               </view>
             </view>
-
-            <!-- 当天的POI列表 -->
-            <view class="poi-list" v-if="dayData.pois && dayData.pois.length > 0">
-              <view
-                v-for="(poiData, poiIndex) in dayData.pois"
-                :key="poiIndex"
-                class="poi-item"
-                @click="viewPoiDetail(poiData)"
-              >
-                <view class="poi-order">
-                  <text class="poi-order-text">{{ poiIndex + 1 }}</text>
-                </view>
-                <view class="poi-content">
-                  <view class="poi-header">
-                    <text class="poi-type-badge" :class="getPoiTypeClass(poiData.poi?.poiType)">
-                      {{ getPoiTypeName(poiData.poi?.poiType) }}
-                    </text>
-                    <text class="poi-name">{{ getPoiName(poiData) }}</text>
-                  </view>
-                  <view class="poi-info" v-if="poiData.detail">
-                    <text class="poi-address" v-if="getPoiAddress(poiData)">
-                      📍 {{ getPoiAddress(poiData) }}
-                    </text>
-                    <text class="poi-score" v-if="getPoiScore(poiData)">
-                      评分：{{ getPoiScore(poiData) }}
-                    </text>
-                  </view>
-                  <text class="poi-time" v-if="poiData.poi?.visitTime">
-                    ⏱️ 建议游览：{{ poiData.poi.visitTime }}
-                  </text>
-                </view>
-                <view class="poi-arrow">
-                  <text>›</text>
-                </view>
+          </view>
+          <view class="progress-bars">
+            <view class="progress-item">
+              <text class="progress-label">景点</text>
+              <view class="progress-bar">
+                <view class="progress-fill" style="width: 90%"></view>
               </view>
+            </view>
+            <view class="progress-item">
+              <text class="progress-label">美食</text>
+              <view class="progress-bar">
+                <view class="progress-fill" style="width: 70%"></view>
+              </view>
+            </view>
+            <view class="progress-item">
+              <text class="progress-label">体验</text>
+              <view class="progress-bar">
+                <view class="progress-fill" style="width: 85%"></view>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 活动列表 -->
+        <view class="activities-section" v-if="selectedDayData && selectedDayData.pois">
+          <view
+            v-for="(poiData, poiIndex) in selectedDayData.pois"
+            :key="poiIndex"
+            class="activity-card"
+            :class="getPoiTypeClass(poiData.poi?.poiType)"
+            @click="viewPoiDetail(poiData)"
+          >
+            <view class="activity-header">
+              <text class="activity-name">{{ getPoiName(poiData) }}</text>
+              <text class="activity-rating" v-if="getPoiScore(poiData)">★{{ getPoiScore(poiData) }}</text>
+            </view>
+            <view class="activity-info-row">
+              <text class="activity-price" v-if="getPoiPrice(poiData)">
+                {{ getPoiPrice(poiData) }}
+              </text>
+              <text class="activity-location" v-if="getPoiAddress(poiData)">
+                {{ getPoiAddress(poiData) }}
+              </text>
+            </view>
+            <view class="activity-tips" v-if="getPoiTips(poiData)">
+              <text class="tips-label">必看:</text>
+              <text class="tips-text">{{ getPoiTips(poiData) }}</text>
+            </view>
+            <view class="activity-suggestion" v-if="getPoiSuggestion(poiData)">
+              <text class="suggestion-label">建议:</text>
+              <text class="suggestion-text">{{ getPoiSuggestion(poiData) }}</text>
+            </view>
+            <view class="activity-actions">
+              <button class="action-btn-small" @click.stop="checkPoi(poiData)">查看详情</button>
+              <button class="action-btn-small" @click.stop="navigatePoi(poiData)">导航</button>
             </view>
           </view>
         </view>
@@ -128,14 +138,11 @@
 
     <!-- 底部操作栏 -->
     <view class="bottom-bar">
-      <view class="favorite-btn" @click="toggleFavorite">
-        <text
-          class="favorite-icon"
-          :class="{ 'favorited': isFavorite }"
-        >{{ isFavorite ? '❤️' : '🤍' }}</text>
-      </view>
-      <button class="action-btn use-btn" @click="useRoute">
-        <text class="btn-text">使用此路线</text>
+      <button class="bottom-btn edit-btn" @click="editRoute">编辑行程</button>
+      <button class="bottom-btn save-btn" @click="saveRoute">保存行程</button>
+      <button class="bottom-btn generate-btn" @click="regenerateRoute">
+        <text class="generate-icon">✓</text>
+        <text>智能规划生成</text>
       </button>
     </view>
   </view>
@@ -189,8 +196,36 @@ const routeId = ref<number | null>(null)
 const loading = ref(false)
 const routeDetail = ref<RouteDetail | null>(null)
 const isFavorite = ref(false)
+const selectedDayIndex = ref(0)
 const store = useUserStore()
 const user = computed(() => store.state.profile)
+
+// 计算属性
+const routeTitle = computed(() => {
+  if (!routeDetail.value?.route) return '智能规划结果'
+  const routeName = routeDetail.value.route.routeName
+  const days = routeDetail.value.route.days
+  return `${routeName}·${days}日游`
+})
+
+const selectedDayData = computed(() => {
+  if (!routeDetail.value?.days || routeDetail.value.days.length === 0) return null
+  return routeDetail.value.days[selectedDayIndex.value] || null
+})
+
+const summaryFeatures = computed(() => {
+  const features: string[] = []
+  if (routeDetail.value?.route) {
+    const route = routeDetail.value.route
+    if (route.days) {
+      features.push(`覆盖${route.days}天经典行程`)
+    }
+    features.push('每日步行<1.5万步,节奏舒适')
+    features.push('穿插当地美食体验')
+    features.push('预算:人均约800元(不含住宿)')
+  }
+  return features
+})
 
 // 格式化日期
 const formatDate = (dateStr: string) => {
@@ -242,6 +277,110 @@ const getPoiScore = (poiData: any) => {
   return null
 }
 
+// 获取POI价格
+const getPoiPrice = (poiData: any) => {
+  if (poiData.detail?.price) {
+    const price = typeof poiData.detail.price === 'number'
+      ? poiData.detail.price
+      : Number(poiData.detail.price)
+    if (price === 0) return '免费'
+    return `¥${price}`
+  }
+  if (poiData.detail?.avgPrice) {
+    return `人均¥${poiData.detail.avgPrice}`
+  }
+  return null
+}
+
+// 获取POI提示
+const getPoiTips = (poiData: any) => {
+  if (poiData.detail?.intro) {
+    return poiData.detail.intro.substring(0, 50) + '...'
+  }
+  return null
+}
+
+// 获取POI建议
+const getPoiSuggestion = (poiData: any) => {
+  if (poiData.detail?.suggestion) {
+    return poiData.detail.suggestion
+  }
+  return null
+}
+
+// 获取天数标题
+const getDayTitle = (dayData: any) => {
+  if (dayData.day?.title) {
+    return dayData.day.title
+  }
+  return '经典之旅'
+}
+
+// 获取天数时长
+const getDayDuration = (dayData: any) => {
+  if (dayData.pois && dayData.pois.length > 0) {
+    let totalMinutes = 0
+    dayData.pois.forEach((poi: any) => {
+      if (poi.poi?.stayTime) {
+        totalMinutes += poi.poi.stayTime
+      }
+    })
+    return Math.ceil(totalMinutes / 60)
+  }
+  return 8
+}
+
+// 选择天数
+const selectDay = (index: number) => {
+  selectedDayIndex.value = index
+}
+
+// 返回
+const goBack = () => {
+  uni.navigateBack()
+}
+
+// 查看POI
+const checkPoi = (poiData: any) => {
+  viewPoiDetail(poiData)
+}
+
+// 导航到POI
+const navigatePoi = (poiData: any) => {
+  if (poiData.detail?.address) {
+    uni.openLocation({
+      address: poiData.detail.address,
+      success: () => {
+        console.log('打开地图成功')
+      }
+    })
+  }
+}
+
+// 编辑行程
+const editRoute = () => {
+  uni.showToast({
+    title: '编辑功能开发中',
+    icon: 'none'
+  })
+}
+
+// 保存行程
+const saveRoute = () => {
+  uni.showToast({
+    title: '保存成功',
+    icon: 'success'
+  })
+}
+
+// 重新生成路线
+const regenerateRoute = () => {
+  uni.showToast({
+    title: '重新生成功能开发中',
+    icon: 'none'
+  })
+}
+
 // 查看POI详情
 const viewPoiDetail = (poiData: any) => {
   if (!poiData.poi || !poiData.detail) return
@@ -264,20 +403,41 @@ const viewPoiDetail = (poiData: any) => {
 const loadDetail = async () => {
   if (!routeId.value) return
   loading.value = true
+
+  console.log('========== 开始加载路线详情 ==========')
+  console.log('路线ID:', routeId.value)
+
   try {
     const res = await routeApi.getDetail(routeId.value)
+    console.log('API响应状态码:', res.statusCode)
+    console.log('API响应数据:', JSON.stringify(res.data, null, 2))
+
     const data = res.data as ApiResponse<RouteDetail>
     if (res.statusCode === 200 && data.code === 200) {
       routeDetail.value = data.data
+      console.log('路线详情加载成功')
+      console.log('路线基本信息:', JSON.stringify(data.data.route, null, 2))
+      console.log('天数数据:', data.data.days?.length || 0, '天')
+      if (data.data.days && data.data.days.length > 0) {
+        data.data.days.forEach((day, index) => {
+          console.log(`第${index + 1}天数据:`, JSON.stringify(day, null, 2))
+        })
+      }
+
       // 加载收藏状态
       loadFavoriteStatus()
+      console.log('========== 路线详情加载完成 ==========')
     } else {
+      console.error('API返回错误:', data.msg || '未知错误')
       uni.showToast({
         title: data.msg || '加载失败',
         icon: 'none',
       })
     }
-  } catch (error) {
+  } catch (error: any) {
+    console.error('========== 加载路线详情失败 ==========')
+    console.error('错误信息:', error.message)
+    console.error('错误堆栈:', error.stack)
     uni.showToast({
       title: '网络错误',
       icon: 'none',
@@ -367,44 +527,370 @@ onMounted(() => {
   flex-direction: column;
 }
 
-/* 顶部图片 */
-.header-image {
-  width: 100%;
-  height: 400rpx;
-  position: relative;
-  overflow: hidden;
-}
-
-.header-img {
-  width: 100%;
-  height: 100%;
-}
-
-.header-overlay {
-  position: absolute;
-  bottom: 0;
+/* 顶部导航栏 */
+.nav-bar {
+  position: fixed;
+  top: 0;
   left: 0;
   right: 0;
-  height: 80rpx;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.2), transparent);
+  height: 88rpx;
+  padding-top: var(--status-bar-height, 0);
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24rpx;
+  z-index: 1000;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.nav-back {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-icon {
+  font-size: 48rpx;
+  color: #333333;
+  font-weight: 300;
+}
+
+.nav-title {
+  flex: 1;
+  text-align: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.nav-actions {
+  width: 64rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.nav-favorite {
+  width: 48rpx;
+  height: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favorite-icon {
+  font-size: 36rpx;
+}
+
+.favorite-icon.favorited {
+  animation: scale 0.3s;
+}
+
+@keyframes scale {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
 .scroll {
   flex: 1;
+  margin-top: 88rpx;
 }
 
 .content {
-  padding: 0 24rpx 160rpx;
+  padding: 24rpx;
+  padding-bottom: 160rpx;
 }
 
-/* 头部信息区域 */
-.header-section {
+/* 行程摘要卡片 */
+.summary-card {
   background-color: #ffffff;
   border-radius: 24rpx;
   padding: 32rpx;
-  margin-top: 24rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
   margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+}
+
+.summary-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #333333;
+  margin-bottom: 20rpx;
+  display: block;
+}
+
+.summary-rating-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.rating-text {
+  font-size: 28rpx;
+  color: #ff9800;
+  font-weight: 600;
+}
+
+.summary-tag {
+  padding: 8rpx 16rpx;
+  background-color: #3ba272;
+  border-radius: 999rpx;
+}
+
+.summary-tag text {
+  font-size: 22rpx;
+  color: #ffffff;
+}
+
+.summary-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.feature-icon {
+  color: #3ba272;
+  font-size: 28rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+}
+
+.feature-text {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* 天数选择标签 */
+.day-tabs {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+  padding: 0 4rpx;
+}
+
+.day-tab {
+  flex: 1;
+  padding: 20rpx;
+  background-color: #f7f8fa;
+  border-radius: 16rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #666666;
+  transition: all 0.2s;
+}
+
+.day-tab.active {
+  background-color: #3ba272;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* 每日详情卡片 */
+.day-detail-card {
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+}
+
+.day-detail-header {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 24rpx;
+}
+
+.day-detail-icon {
+  font-size: 48rpx;
+  flex-shrink: 0;
+}
+
+.day-detail-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.day-detail-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #333333;
+}
+
+.day-detail-theme {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.5;
+}
+
+.day-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.intensity-rating {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.intensity-label {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.intensity-stars {
+  font-size: 24rpx;
+  color: #ff9800;
+}
+
+.day-duration {
+  font-size: 24rpx;
+  color: #666666;
+}
+
+.progress-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.progress-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.progress-label {
+  width: 80rpx;
+  font-size: 24rpx;
+  color: #666666;
+  flex-shrink: 0;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8rpx;
+  background-color: #f0f0f0;
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3ba272, #6fd3a5);
+  border-radius: 4rpx;
+  transition: width 0.3s;
+}
+
+/* 活动卡片 */
+.activities-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.activity-card {
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.activity-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333333;
+  flex: 1;
+}
+
+.activity-rating {
+  font-size: 26rpx;
+  color: #ff9800;
+  font-weight: 600;
+}
+
+.activity-info-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.activity-price {
+  font-size: 26rpx;
+  color: #3ba272;
+  font-weight: 600;
+}
+
+.activity-location {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.activity-tips,
+.activity-suggestion {
+  display: flex;
+  gap: 8rpx;
+  margin-bottom: 12rpx;
+}
+
+.tips-label,
+.suggestion-label {
+  font-size: 24rpx;
+  color: #666666;
+  flex-shrink: 0;
+}
+
+.tips-text,
+.suggestion-text {
+  font-size: 24rpx;
+  color: #666666;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.activity-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.action-btn-small {
+  flex: 1;
+  padding: 16rpx;
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  color: #333333;
+  border: none;
+  text-align: center;
+}
+
+.action-btn-small:active {
+  background-color: #eeeeee;
 }
 
 .title-row {
@@ -711,48 +1197,46 @@ onMounted(() => {
   gap: 16rpx;
 }
 
-.favorite-btn {
-  width: 88rpx;
-  height: 88rpx;
+.bottom-btn {
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f5f5f5;
-  border-radius: 44rpx;
-  flex-shrink: 0;
-  transition: all 0.3s;
+  gap: 8rpx;
 }
 
-.favorite-btn:active {
-  transform: scale(0.95);
-  background-color: #eeeeee;
-}
-
-.favorite-icon {
-  font-size: 44rpx;
-  transition: transform 0.3s;
-}
-
-.favorite-icon.favorited {
-  transform: scale(1.1);
-}
-
-.action-btn {
+.edit-btn {
   flex: 1;
-  padding: 28rpx;
-  border-radius: 24rpx;
-  font-size: 28rpx;
-  font-weight: 600;
-  border: none;
+  background-color: #f7f8fa;
+  color: #333333;
 }
 
-.use-btn {
+.save-btn {
+  flex: 1;
+  background-color: #f7f8fa;
+  color: #333333;
+}
+
+.generate-btn {
+  flex: 2;
   background: linear-gradient(135deg, #3ba272, #6fd3a5);
   color: #ffffff;
   box-shadow: 0 8rpx 24rpx rgba(59, 162, 114, 0.3);
 }
 
-.btn-text {
+.generate-icon {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.loading {
+  padding: 80rpx 32rpx;
+  text-align: center;
+  color: #999999;
   font-size: 28rpx;
 }
 </style>

@@ -43,7 +43,32 @@ public class RoutePlanController {
         Boolean useAi = request.get("useAi") != null ?
             Boolean.valueOf(request.get("useAi").toString()) : true;
 
-        Long routeId = routePlanService.generateRoute(cityId, days, tagIds, budget, suitablePeople, useAi);
+        // 获取用户选择的景点ID列表
+        List<Long> selectedScenicIds = null;
+        Object scenicObj = request.get("selectedScenicIds");
+        if (scenicObj instanceof List) {
+            selectedScenicIds = new java.util.ArrayList<>();
+            for (Object o : (List<?>) scenicObj) {
+                if (o != null) {
+                    selectedScenicIds.add(Long.valueOf(o.toString()));
+                }
+            }
+        }
+
+        // 获取用户选择的美食ID列表
+        List<Long> selectedFoodIds = null;
+        Object foodObj = request.get("selectedFoodIds");
+        if (foodObj instanceof List) {
+            selectedFoodIds = new java.util.ArrayList<>();
+            for (Object o : (List<?>) foodObj) {
+                if (o != null) {
+                    selectedFoodIds.add(Long.valueOf(o.toString()));
+                }
+            }
+        }
+
+        Long routeId = routePlanService.generateRoute(cityId, days, tagIds, budget, suitablePeople, useAi,
+            selectedScenicIds, selectedFoodIds);
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
         response.put("msg", "success");

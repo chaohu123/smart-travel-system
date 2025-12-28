@@ -10,7 +10,12 @@ public interface TravelRoutePoiMapper {
     int insert(TravelRoutePoi poi);
     List<TravelRoutePoi> selectByRouteDayId(Long routeDayId);
     int deleteByRouteDayId(Long routeDayId);
+    int deleteByRouteId(Long routeId);
 }
+
+
+
+
 
 
 

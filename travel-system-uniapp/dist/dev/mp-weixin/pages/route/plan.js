@@ -7,33 +7,61 @@ require("../../utils/storage.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const cityList = common_vendor.ref([]);
-    const selectedCity = common_vendor.ref(null);
-    const selectedDays = common_vendor.ref(3);
+    const destination = common_vendor.ref("\u5317\u4EAC");
+    const selectedDayIndex = common_vendor.ref(1);
     const selectedTags = common_vendor.ref([]);
+    const selectedCompanion = common_vendor.ref(1);
     const loading = common_vendor.ref(false);
     const recentRoutes = common_vendor.ref([]);
-    const canSubmit = common_vendor.computed(() => {
-      return selectedCity.value !== null && selectedTags.value.length > 0;
-    });
-    const decreaseDays = () => {
-      if (selectedDays.value > 1) {
-        selectedDays.value--;
-      }
-    };
-    const increaseDays = () => {
-      if (selectedDays.value < 7) {
-        selectedDays.value++;
-      }
-    };
-    const tagList = common_vendor.ref([
-      { id: 1, name: "\u7F8E\u98DF" },
-      { id: 2, name: "\u5386\u53F2" },
-      { id: 3, name: "\u81EA\u7136" },
-      { id: 4, name: "\u4EB2\u5B50" },
-      { id: 5, name: "\u8D2D\u7269" }
+    const dayOptions = common_vendor.ref([
+      { label: "2\u5929", value: 2 },
+      { label: "3\u5929", value: 3 },
+      { label: "4\u5929", value: 4 },
+      { label: "5\u5929", value: 5 },
+      { label: "6\u5929", value: 6 },
+      { label: "7\u5929", value: 7 },
+      { label: "2\u59291\u665A", value: 2 },
+      { label: "3\u59292\u665A", value: 3 },
+      { label: "5\u59294\u665A", value: 5 }
     ]);
-    const onCityChange = (e) => {
-      selectedCity.value = cityList.value[e.detail.value];
+    const tagList = common_vendor.ref([]);
+    const tagColors = [
+      "#3ba272",
+      "#ff6b9d",
+      "#ff9800",
+      "#9c27b0",
+      "#2196f3",
+      "#f44336",
+      "#00bcd4",
+      "#ffc107"
+    ];
+    const companionList = common_vendor.ref([
+      { id: 1, name: "\u72EC\u884C" },
+      { id: 2, name: "\u60C5\u4FA3" },
+      { id: 3, name: "\u5BB6\u5EAD" },
+      { id: 4, name: "\u670B\u53CB" },
+      { id: 5, name: "\u4EB2\u5B50" }
+    ]);
+    const canSubmit = common_vendor.computed(() => {
+      return destination.value.trim() !== "" && selectedTags.value.length > 0;
+    });
+    const onDestinationInput = (e) => {
+      const input = e.detail.value;
+      destination.value = input;
+      const dayMatch = input.match(/(\d+)[日天]/);
+      if (dayMatch) {
+        const days = parseInt(dayMatch[1]);
+        const dayOption = dayOptions.value.find((opt) => opt.value === days);
+        if (dayOption) {
+          selectedDayIndex.value = dayOptions.value.indexOf(dayOption);
+        }
+      }
+    };
+    const onDayChange = (e) => {
+      selectedDayIndex.value = e.detail.value;
+    };
+    const selectCompanion = (companionId) => {
+      selectedCompanion.value = companionId;
     };
     const viewRoute = (routeId) => {
       common_vendor.index.navigateTo({
@@ -48,7 +76,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         selectedTags.value.push(tagId);
       }
     };
+    const extractCityFromDestination = (dest) => {
+      const cleaned = dest.replace(/\d+[日天]游?/g, "").trim();
+      return cleaned || dest;
+    };
+    const findCityId = (cityName) => {
+      const city = cityList.value.find(
+        (c) => c.name.includes(cityName) || cityName.includes(c.name)
+      );
+      return city ? city.id : null;
+    };
     const generateRoute = async () => {
+      var _a;
       if (!canSubmit.value) {
         common_vendor.index.showToast({
           title: "\u8BF7\u5B8C\u6210\u5FC5\u586B\u9879",
@@ -58,10 +97,28 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
       loading.value = true;
       try {
+        const cityName = extractCityFromDestination(destination.value);
+        let cityId = findCityId(cityName);
+        if (!cityId && cityList.value.length > 0) {
+          cityId = cityList.value[0].id;
+        }
+        if (!cityId) {
+          common_vendor.index.showToast({
+            title: "\u672A\u627E\u5230\u5BF9\u5E94\u57CE\u5E02\uFF0C\u8BF7\u68C0\u67E5\u76EE\u7684\u5730\u8F93\u5165",
+            icon: "none",
+            duration: 2e3
+          });
+          loading.value = false;
+          return;
+        }
+        const selectedDays = ((_a = dayOptions.value[selectedDayIndex.value]) == null ? void 0 : _a.value) || 3;
+        const companion = companionList.value.find((c) => c.id === selectedCompanion.value);
+        const suitablePeople = companion ? companion.name : "\u72EC\u884C";
         const res = await api_route.routeApi.generate({
-          cityId: selectedCity.value.id,
-          days: selectedDays.value,
+          cityId,
+          days: selectedDays,
           tagIds: selectedTags.value,
+          suitablePeople,
           useAi: true
         });
         if (res.statusCode === 200 && res.data.code === 200) {
@@ -99,34 +156,62 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         console.error("\u52A0\u8F7D\u57CE\u5E02\u5217\u8868\u5931\u8D25", error);
       }
     };
+    const loadTags = async () => {
+      try {
+        const res = await api_content.tagApi.list();
+        const response = res.data;
+        if (res.statusCode === 200 && response.code === 200) {
+          const tags = response.data || [];
+          tagList.value = tags.map((tag, index) => ({
+            id: tag.id,
+            name: tag.tagName || tag.name,
+            color: tagColors[index % tagColors.length]
+          }));
+          console.log("\u6807\u7B7E\u5217\u8868\u52A0\u8F7D\u6210\u529F:", tagList.value);
+        }
+      } catch (error) {
+        console.error("\u52A0\u8F7D\u6807\u7B7E\u5217\u8868\u5931\u8D25", error);
+        tagList.value = [];
+      }
+    };
     common_vendor.onMounted(() => {
       loadCities();
+      loadTags();
     });
     return (_ctx, _cache) => {
       var _a;
       return common_vendor.e({
-        a: common_vendor.t(((_a = selectedCity.value) == null ? void 0 : _a.name) || "\u8BF7\u9009\u62E9\u57CE\u5E02"),
-        b: !selectedCity.value ? 1 : "",
-        c: cityList.value,
-        d: common_vendor.o(onCityChange),
-        e: selectedDays.value <= 1 ? 1 : "",
-        f: common_vendor.o(decreaseDays),
-        g: common_vendor.t(selectedDays.value),
-        h: selectedDays.value >= 7 ? 1 : "",
-        i: common_vendor.o(increaseDays),
-        j: common_vendor.f(tagList.value, (tag, k0, i0) => {
+        a: common_vendor.o([($event) => destination.value = $event.detail.value, onDestinationInput]),
+        b: destination.value,
+        c: common_vendor.t(((_a = dayOptions.value[selectedDayIndex.value]) == null ? void 0 : _a.label) || "3\u5929"),
+        d: dayOptions.value,
+        e: selectedDayIndex.value,
+        f: common_vendor.o(onDayChange),
+        g: common_vendor.f(tagList.value, (tag, k0, i0) => {
           return {
             a: common_vendor.t(tag.name),
             b: tag.id,
             c: selectedTags.value.includes(tag.id) ? 1 : "",
-            d: common_vendor.o(($event) => toggleTag(tag.id))
+            d: common_vendor.s(selectedTags.value.includes(tag.id) ? {
+              backgroundColor: tag.color,
+              borderColor: tag.color
+            } : {}),
+            e: common_vendor.o(($event) => toggleTag(tag.id))
           };
         }),
-        k: !common_vendor.unref(canSubmit) ? 1 : "",
-        l: common_vendor.o(generateRoute),
-        m: recentRoutes.value.length > 0
+        h: common_vendor.f(companionList.value, (companion, k0, i0) => {
+          return {
+            a: common_vendor.t(companion.name),
+            b: companion.id,
+            c: selectedCompanion.value === companion.id ? 1 : "",
+            d: common_vendor.o(($event) => selectCompanion(companion.id))
+          };
+        }),
+        i: !common_vendor.unref(canSubmit) ? 1 : "",
+        j: common_vendor.o(generateRoute),
+        k: recentRoutes.value.length > 0
       }, recentRoutes.value.length > 0 ? {
-        n: common_vendor.f(recentRoutes.value, (route, k0, i0) => {
+        l: common_vendor.f(recentRoutes.value, (route, k0, i0) => {
           return {
             a: common_vendor.t(route.title),
             b: route.id,
@@ -134,7 +219,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           };
         })
       } : {}, {
-        o: loading.value
+        m: loading.value
       }, loading.value ? {} : {});
     };
   }

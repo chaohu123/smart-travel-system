@@ -20,5 +20,7 @@ public interface TravelRouteMapper {
     int decrementFavoriteCount(@Param("id") Long id);
 
     int incrementViewCount(@Param("id") Long id);
+
+    int deleteById(@Param("id") Long id);
 }
 

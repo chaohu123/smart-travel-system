@@ -13,6 +13,8 @@ export const routeApi = {
     budget?: string
     suitablePeople?: string
     useAi?: boolean
+    selectedScenicIds?: number[]  // 用户选择的景点ID列表（必选内容）
+    selectedFoodIds?: number[]    // 用户选择的美食ID列表（必选内容）
   }) => {
     return request({
       url: '/route/generate',

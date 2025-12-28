@@ -29,11 +29,16 @@
         ORDER BY sort ASC
     </select>
 
-    <update id="deleteByRouteDayId" parameterType="long">
-        UPDATE travel_route_poi
-        SET del_flag = 1, update_time = NOW()
+    <delete id="deleteByRouteDayId" parameterType="long">
+        DELETE FROM travel_route_poi
         WHERE route_day_id = #{routeDayId}
-    </update>
+    </delete>
+
+    <delete id="deleteByRouteId" parameterType="long">
+        DELETE trp FROM travel_route_poi trp
+        INNER JOIN travel_route_day trd ON trp.route_day_id = trd.id
+        WHERE trd.route_id = #{routeId}
+    </delete>
 
 </mapper>
 

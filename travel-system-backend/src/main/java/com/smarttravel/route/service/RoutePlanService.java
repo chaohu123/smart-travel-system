@@ -16,10 +16,13 @@ public interface RoutePlanService {
      * @param budget 预算范围（可选）
      * @param suitablePeople 适合人群（可选）
      * @param useAi 是否使用AI生成文案
+     * @param selectedScenicIds 用户选择的景点ID列表（必选内容）
+     * @param selectedFoodIds 用户选择的美食ID列表（必选内容）
      * @return 线路ID
      */
     Long generateRoute(Long cityId, Integer days, List<Long> tagIds,
-                      String budget, String suitablePeople, Boolean useAi);
+                      String budget, String suitablePeople, Boolean useAi,
+                      List<Long> selectedScenicIds, List<Long> selectedFoodIds);
 
     /**
      * 查询线路详情（含每日安排）

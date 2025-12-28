@@ -87,18 +87,24 @@
 
     <update id="update" parameterType="com.smarttravel.route.domain.TravelRoute">
         UPDATE travel_route
-        SET route_name = #{routeName},
-            city_id = #{cityId},
-            days = #{days},
-            suitable_people = #{suitablePeople},
-            source_type = #{sourceType},
-            summary = #{summary},
-            cover_image = #{coverImage},
-            view_count = #{viewCount},
-            favorite_count = #{favoriteCount},
-            use_count = #{useCount},
+        <set>
+            <if test="routeName != null">route_name = #{routeName},</if>
+            <if test="cityId != null">city_id = #{cityId},</if>
+            <if test="days != null">days = #{days},</if>
+            <if test="suitablePeople != null">suitable_people = #{suitablePeople},</if>
+            <if test="sourceType != null">source_type = #{sourceType},</if>
+            <if test="summary != null">summary = #{summary},</if>
+            <if test="coverImage != null">cover_image = #{coverImage},</if>
+            <if test="viewCount != null">view_count = #{viewCount},</if>
+            <if test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
+            <if test="useCount != null">use_count = #{useCount},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
             update_time = NOW()
-        WHERE id = #{id} AND del_flag = 0
+        </set>
+        WHERE id = #{id}
+        <if test="delFlag == null">
+            AND del_flag = 0
+        </if>
     </update>
 
     <update id="incrementFavoriteCount" parameterType="long">
@@ -121,6 +127,11 @@
             update_time = NOW()
         WHERE id = #{id} AND del_flag = 0
     </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM travel_route
+        WHERE id = #{id}
+    </delete>
 
 </mapper>
 

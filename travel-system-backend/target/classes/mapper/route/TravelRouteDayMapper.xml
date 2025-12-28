@@ -27,11 +27,10 @@
         ORDER BY day_no ASC
     </select>
 
-    <update id="deleteByRouteId" parameterType="long">
-        UPDATE travel_route_day
-        SET del_flag = 1, update_time = NOW()
+    <delete id="deleteByRouteId" parameterType="long">
+        DELETE FROM travel_route_day
         WHERE route_id = #{routeId}
-    </update>
+    </delete>
 
     <update id="update" parameterType="com.smarttravel.route.domain.TravelRouteDay">
         UPDATE travel_route_day

@@ -10,27 +10,37 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const loading = common_vendor.ref(false);
     const routeDetail = common_vendor.ref(null);
     const isFavorite = common_vendor.ref(false);
+    const selectedDayIndex = common_vendor.ref(0);
     const store = store_user.useUserStore();
     const user = common_vendor.computed(() => store.state.profile);
-    const formatDate = (dateStr) => {
-      if (!dateStr)
-        return "";
-      try {
-        const date = new Date(dateStr);
-        const month = date.getMonth() + 1;
-        const day = date.getDate();
-        return `${month}\u6708${day}\u65E5`;
-      } catch (e) {
-        return dateStr;
+    const routeTitle = common_vendor.computed(() => {
+      var _a;
+      if (!((_a = routeDetail.value) == null ? void 0 : _a.route))
+        return "\u667A\u80FD\u89C4\u5212\u7ED3\u679C";
+      const routeName = routeDetail.value.route.routeName;
+      const days = routeDetail.value.route.days;
+      return `${routeName}\xB7${days}\u65E5\u6E38`;
+    });
+    const selectedDayData = common_vendor.computed(() => {
+      var _a;
+      if (!((_a = routeDetail.value) == null ? void 0 : _a.days) || routeDetail.value.days.length === 0)
+        return null;
+      return routeDetail.value.days[selectedDayIndex.value] || null;
+    });
+    const summaryFeatures = common_vendor.computed(() => {
+      var _a;
+      const features = [];
+      if ((_a = routeDetail.value) == null ? void 0 : _a.route) {
+        const route = routeDetail.value.route;
+        if (route.days) {
+          features.push(`\u8986\u76D6${route.days}\u5929\u7ECF\u5178\u884C\u7A0B`);
+        }
+        features.push("\u6BCF\u65E5\u6B65\u884C<1.5\u4E07\u6B65,\u8282\u594F\u8212\u9002");
+        features.push("\u7A7F\u63D2\u5F53\u5730\u7F8E\u98DF\u4F53\u9A8C");
+        features.push("\u9884\u7B97:\u4EBA\u5747\u7EA6800\u5143(\u4E0D\u542B\u4F4F\u5BBF)");
       }
-    };
-    const getPoiTypeName = (type) => {
-      if (type === "scenic")
-        return "\u666F\u70B9";
-      if (type === "food")
-        return "\u7F8E\u98DF";
-      return "\u5730\u70B9";
-    };
+      return features;
+    });
     const getPoiTypeClass = (type) => {
       if (type === "scenic")
         return "poi-type-scenic";
@@ -58,6 +68,91 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
       return null;
     };
+    const getPoiPrice = (poiData) => {
+      var _a, _b;
+      if ((_a = poiData.detail) == null ? void 0 : _a.price) {
+        const price = typeof poiData.detail.price === "number" ? poiData.detail.price : Number(poiData.detail.price);
+        if (price === 0)
+          return "\u514D\u8D39";
+        return `\xA5${price}`;
+      }
+      if ((_b = poiData.detail) == null ? void 0 : _b.avgPrice) {
+        return `\u4EBA\u5747\xA5${poiData.detail.avgPrice}`;
+      }
+      return null;
+    };
+    const getPoiTips = (poiData) => {
+      var _a;
+      if ((_a = poiData.detail) == null ? void 0 : _a.intro) {
+        return poiData.detail.intro.substring(0, 50) + "...";
+      }
+      return null;
+    };
+    const getPoiSuggestion = (poiData) => {
+      var _a;
+      if ((_a = poiData.detail) == null ? void 0 : _a.suggestion) {
+        return poiData.detail.suggestion;
+      }
+      return null;
+    };
+    const getDayTitle = (dayData) => {
+      var _a;
+      if ((_a = dayData.day) == null ? void 0 : _a.title) {
+        return dayData.day.title;
+      }
+      return "\u7ECF\u5178\u4E4B\u65C5";
+    };
+    const getDayDuration = (dayData) => {
+      if (dayData.pois && dayData.pois.length > 0) {
+        let totalMinutes = 0;
+        dayData.pois.forEach((poi) => {
+          var _a;
+          if ((_a = poi.poi) == null ? void 0 : _a.stayTime) {
+            totalMinutes += poi.poi.stayTime;
+          }
+        });
+        return Math.ceil(totalMinutes / 60);
+      }
+      return 8;
+    };
+    const selectDay = (index) => {
+      selectedDayIndex.value = index;
+    };
+    const goBack = () => {
+      common_vendor.index.navigateBack();
+    };
+    const checkPoi = (poiData) => {
+      viewPoiDetail(poiData);
+    };
+    const navigatePoi = (poiData) => {
+      var _a;
+      if ((_a = poiData.detail) == null ? void 0 : _a.address) {
+        common_vendor.index.openLocation({
+          address: poiData.detail.address,
+          success: () => {
+            console.log("\u6253\u5F00\u5730\u56FE\u6210\u529F");
+          }
+        });
+      }
+    };
+    const editRoute = () => {
+      common_vendor.index.showToast({
+        title: "\u7F16\u8F91\u529F\u80FD\u5F00\u53D1\u4E2D",
+        icon: "none"
+      });
+    };
+    const saveRoute = () => {
+      common_vendor.index.showToast({
+        title: "\u4FDD\u5B58\u6210\u529F",
+        icon: "success"
+      });
+    };
+    const regenerateRoute = () => {
+      common_vendor.index.showToast({
+        title: "\u91CD\u65B0\u751F\u6210\u529F\u80FD\u5F00\u53D1\u4E2D",
+        icon: "none"
+      });
+    };
     const viewPoiDetail = (poiData) => {
       if (!poiData.poi || !poiData.detail)
         return;
@@ -74,22 +169,40 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const loadDetail = async () => {
+      var _a;
       if (!routeId.value)
         return;
       loading.value = true;
+      console.log("========== \u5F00\u59CB\u52A0\u8F7D\u8DEF\u7EBF\u8BE6\u60C5 ==========");
+      console.log("\u8DEF\u7EBFID:", routeId.value);
       try {
         const res = await api_route.routeApi.getDetail(routeId.value);
+        console.log("API\u54CD\u5E94\u72B6\u6001\u7801:", res.statusCode);
+        console.log("API\u54CD\u5E94\u6570\u636E:", JSON.stringify(res.data, null, 2));
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
           routeDetail.value = data.data;
+          console.log("\u8DEF\u7EBF\u8BE6\u60C5\u52A0\u8F7D\u6210\u529F");
+          console.log("\u8DEF\u7EBF\u57FA\u672C\u4FE1\u606F:", JSON.stringify(data.data.route, null, 2));
+          console.log("\u5929\u6570\u6570\u636E:", ((_a = data.data.days) == null ? void 0 : _a.length) || 0, "\u5929");
+          if (data.data.days && data.data.days.length > 0) {
+            data.data.days.forEach((day, index) => {
+              console.log(`\u7B2C${index + 1}\u5929\u6570\u636E:`, JSON.stringify(day, null, 2));
+            });
+          }
           loadFavoriteStatus();
+          console.log("========== \u8DEF\u7EBF\u8BE6\u60C5\u52A0\u8F7D\u5B8C\u6210 ==========");
         } else {
+          console.error("API\u8FD4\u56DE\u9519\u8BEF:", data.msg || "\u672A\u77E5\u9519\u8BEF");
           common_vendor.index.showToast({
             title: data.msg || "\u52A0\u8F7D\u5931\u8D25",
             icon: "none"
           });
         }
       } catch (error) {
+        console.error("========== \u52A0\u8F7D\u8DEF\u7EBF\u8BE6\u60C5\u5931\u8D25 ==========");
+        console.error("\u9519\u8BEF\u4FE1\u606F:", error.message);
+        console.error("\u9519\u8BEF\u5806\u6808:", error.stack);
         common_vendor.index.showToast({
           title: "\u7F51\u7EDC\u9519\u8BEF",
           icon: "none"
@@ -138,13 +251,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
       }
     };
-    const useRoute = () => {
-      if (!routeId.value)
-        return;
-      common_vendor.index.navigateTo({
-        url: `/pages/route/plan?routeId=${routeId.value}`
-      });
-    };
     common_vendor.onMounted(() => {
       const pages = getCurrentPages();
       const currentPage = pages[pages.length - 1];
@@ -155,80 +261,81 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     });
     return (_ctx, _cache) => {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m;
+      var _a, _b, _c;
       return common_vendor.e({
-        a: (_b = (_a = routeDetail.value) == null ? void 0 : _a.route) == null ? void 0 : _b.coverImage
-      }, ((_d = (_c = routeDetail.value) == null ? void 0 : _c.route) == null ? void 0 : _d.coverImage) ? {
-        b: routeDetail.value.route.coverImage
-      } : {}, {
-        c: loading.value
+        a: common_vendor.o(goBack),
+        b: common_vendor.t(common_vendor.unref(routeTitle)),
+        c: common_vendor.t(isFavorite.value ? "\u2764\uFE0F" : "\u{1F90D}"),
+        d: isFavorite.value ? 1 : "",
+        e: common_vendor.o(toggleFavorite),
+        f: loading.value
       }, loading.value ? {} : routeDetail.value ? common_vendor.e({
-        e: common_vendor.t(((_e = routeDetail.value.route) == null ? void 0 : _e.routeName) || "\u672A\u547D\u540D\u8DEF\u7EBF"),
-        f: common_vendor.t(((_f = routeDetail.value.route) == null ? void 0 : _f.days) || 0),
-        g: (_g = routeDetail.value.route) == null ? void 0 : _g.suitablePeople
-      }, ((_h = routeDetail.value.route) == null ? void 0 : _h.suitablePeople) ? {
-        h: common_vendor.t(routeDetail.value.route.suitablePeople)
-      } : {}, {
-        i: common_vendor.t(((_i = routeDetail.value.route) == null ? void 0 : _i.viewCount) || 0),
-        j: common_vendor.t(((_j = routeDetail.value.route) == null ? void 0 : _j.favoriteCount) || 0),
-        k: common_vendor.t(((_k = routeDetail.value.route) == null ? void 0 : _k.useCount) || 0),
-        l: (_l = routeDetail.value.route) == null ? void 0 : _l.summary
-      }, ((_m = routeDetail.value.route) == null ? void 0 : _m.summary) ? {
-        m: common_vendor.t(routeDetail.value.route.summary)
-      } : {}, {
-        n: routeDetail.value.days && routeDetail.value.days.length > 0
+        h: common_vendor.t(((_a = routeDetail.value.route) == null ? void 0 : _a.routeName) || "\u672A\u547D\u540D\u8DEF\u7EBF"),
+        i: common_vendor.f(common_vendor.unref(summaryFeatures), (feature, idx, i0) => {
+          return {
+            a: common_vendor.t(feature),
+            b: idx
+          };
+        }),
+        j: routeDetail.value.days && routeDetail.value.days.length > 0
       }, routeDetail.value.days && routeDetail.value.days.length > 0 ? {
-        o: common_vendor.t(routeDetail.value.days.length),
-        p: common_vendor.f(routeDetail.value.days, (dayData, dayIndex, i0) => {
+        k: common_vendor.f(routeDetail.value.days, (day, index, i0) => {
+          return {
+            a: common_vendor.t(index + 1),
+            b: index,
+            c: selectedDayIndex.value === index ? 1 : "",
+            d: common_vendor.o(($event) => selectDay(index))
+          };
+        })
+      } : {}, {
+        l: common_vendor.unref(selectedDayData)
+      }, common_vendor.unref(selectedDayData) ? common_vendor.e({
+        m: common_vendor.t(selectedDayIndex.value + 1),
+        n: common_vendor.t(getDayTitle(common_vendor.unref(selectedDayData))),
+        o: (_b = common_vendor.unref(selectedDayData).day) == null ? void 0 : _b.intro
+      }, ((_c = common_vendor.unref(selectedDayData).day) == null ? void 0 : _c.intro) ? {
+        p: common_vendor.t(common_vendor.unref(selectedDayData).day.intro)
+      } : {}, {
+        q: common_vendor.t(getDayDuration(common_vendor.unref(selectedDayData)))
+      }) : {}, {
+        r: common_vendor.unref(selectedDayData) && common_vendor.unref(selectedDayData).pois
+      }, common_vendor.unref(selectedDayData) && common_vendor.unref(selectedDayData).pois ? {
+        s: common_vendor.f(common_vendor.unref(selectedDayData).pois, (poiData, poiIndex, i0) => {
+          var _a2;
           return common_vendor.e({
-            a: common_vendor.t(dayIndex + 1),
-            b: dayData.day
-          }, dayData.day ? common_vendor.e({
-            c: dayData.day.date
-          }, dayData.day.date ? {
-            d: common_vendor.t(formatDate(dayData.day.date))
+            a: common_vendor.t(getPoiName(poiData)),
+            b: getPoiScore(poiData)
+          }, getPoiScore(poiData) ? {
+            c: common_vendor.t(getPoiScore(poiData))
           } : {}, {
-            e: dayData.day.summary
-          }, dayData.day.summary ? {
-            f: common_vendor.t(dayData.day.summary)
-          } : {}) : {}, {
-            g: dayData.pois && dayData.pois.length > 0
-          }, dayData.pois && dayData.pois.length > 0 ? {
-            h: common_vendor.f(dayData.pois, (poiData, poiIndex, i1) => {
-              var _a2, _b2, _c2, _d2;
-              return common_vendor.e({
-                a: common_vendor.t(poiIndex + 1),
-                b: common_vendor.t(getPoiTypeName((_a2 = poiData.poi) == null ? void 0 : _a2.poiType)),
-                c: common_vendor.n(getPoiTypeClass((_b2 = poiData.poi) == null ? void 0 : _b2.poiType)),
-                d: common_vendor.t(getPoiName(poiData)),
-                e: poiData.detail
-              }, poiData.detail ? common_vendor.e({
-                f: getPoiAddress(poiData)
-              }, getPoiAddress(poiData) ? {
-                g: common_vendor.t(getPoiAddress(poiData))
-              } : {}, {
-                h: getPoiScore(poiData)
-              }, getPoiScore(poiData) ? {
-                i: common_vendor.t(getPoiScore(poiData))
-              } : {}) : {}, {
-                j: (_c2 = poiData.poi) == null ? void 0 : _c2.visitTime
-              }, ((_d2 = poiData.poi) == null ? void 0 : _d2.visitTime) ? {
-                k: common_vendor.t(poiData.poi.visitTime)
-              } : {}, {
-                l: poiIndex,
-                m: common_vendor.o(($event) => viewPoiDetail(poiData))
-              });
-            })
+            d: getPoiPrice(poiData)
+          }, getPoiPrice(poiData) ? {
+            e: common_vendor.t(getPoiPrice(poiData))
           } : {}, {
-            i: dayIndex
+            f: getPoiAddress(poiData)
+          }, getPoiAddress(poiData) ? {
+            g: common_vendor.t(getPoiAddress(poiData))
+          } : {}, {
+            h: getPoiTips(poiData)
+          }, getPoiTips(poiData) ? {
+            i: common_vendor.t(getPoiTips(poiData))
+          } : {}, {
+            j: getPoiSuggestion(poiData)
+          }, getPoiSuggestion(poiData) ? {
+            k: common_vendor.t(getPoiSuggestion(poiData))
+          } : {}, {
+            l: common_vendor.o(($event) => checkPoi(poiData)),
+            m: common_vendor.o(($event) => navigatePoi(poiData)),
+            n: poiIndex,
+            o: common_vendor.n(getPoiTypeClass((_a2 = poiData.poi) == null ? void 0 : _a2.poiType)),
+            p: common_vendor.o(($event) => viewPoiDetail(poiData))
           });
         })
       } : {}) : {}, {
-        d: routeDetail.value,
-        q: common_vendor.t(isFavorite.value ? "\u2764\uFE0F" : "\u{1F90D}"),
-        r: isFavorite.value ? 1 : "",
-        s: common_vendor.o(toggleFavorite),
-        t: common_vendor.o(useRoute)
+        g: routeDetail.value,
+        t: common_vendor.o(editRoute),
+        v: common_vendor.o(saveRoute),
+        w: common_vendor.o(regenerateRoute)
       });
     };
   }
