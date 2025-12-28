@@ -49,6 +49,12 @@ public class TravelNote {
     /** 封面图（非持久化字段，用于返回第一张图片） */
     private String coverImage;
 
+    /** 作者昵称（非持久化字段，用于返回作者信息） */
+    private String authorName;
+
+    /** 作者头像（非持久化字段，用于返回作者信息） */
+    private String authorAvatar;
+
     /** 创建时间 */
     private LocalDateTime createTime;
 
@@ -168,6 +174,22 @@ public class TravelNote {
 
     public void setCoverImage(String coverImage) {
         this.coverImage = coverImage;
+    }
+
+    public String getAuthorName() {
+        return authorName;
+    }
+
+    public void setAuthorName(String authorName) {
+        this.authorName = authorName;
+    }
+
+    public String getAuthorAvatar() {
+        return authorAvatar;
+    }
+
+    public void setAuthorAvatar(String authorAvatar) {
+        this.authorAvatar = authorAvatar;
     }
 
     public LocalDateTime getCreateTime() {

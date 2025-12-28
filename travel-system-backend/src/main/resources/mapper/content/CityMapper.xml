@@ -71,10 +71,26 @@
                create_time, update_time, del_flag
         FROM city
         WHERE del_flag = 0
-        AND city_name = #{cityName}
+        AND (
+            city_name = #{cityName}
+            OR city_name LIKE CONCAT(#{cityName}, '%')
+            OR #{cityName} LIKE CONCAT(city_name, '%')
+            OR REPLACE(REPLACE(REPLACE(REPLACE(city_name, '市', ''), '区', ''), '县', ''), '自治州', '') = REPLACE(REPLACE(REPLACE(REPLACE(#{cityName}, '市', ''), '区', ''), '县', ''), '自治州', '')
+        )
         <if test="province != null and province != ''">
-            AND province = #{province}
+            AND (
+                province = #{province}
+                OR province LIKE CONCAT(#{province}, '%')
+                OR #{province} LIKE CONCAT(province, '%')
+                OR REPLACE(REPLACE(REPLACE(REPLACE(province, '省', ''), '市', ''), '自治区', ''), '特别行政区', '') = REPLACE(REPLACE(REPLACE(REPLACE(#{province}, '省', ''), '市', ''), '自治区', ''), '特别行政区', '')
+            )
         </if>
+        ORDER BY
+            CASE
+                WHEN city_name = #{cityName} THEN 1
+                WHEN city_name LIKE CONCAT(#{cityName}, '%') THEN 2
+                ELSE 3
+            END
         LIMIT 1
     </select>
 

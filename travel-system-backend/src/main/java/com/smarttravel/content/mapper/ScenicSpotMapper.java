@@ -19,5 +19,7 @@ public interface ScenicSpotMapper {
     int insert(ScenicSpot spot);
     int update(ScenicSpot spot);
     int incrementHotScore(@Param("id") Long id, @Param("increment") Integer increment);
+    int deleteByIdPhysically(Long id);
+    ScenicSpot selectByIdWithoutDelFlag(Long id);
 }
 

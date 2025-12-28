@@ -67,11 +67,11 @@
           >
             <image
               class="comment-avatar"
-              :src="comment.userAvatar || authorAvatar"
+              :src="comment.avatar || comment.userAvatar || authorAvatar"
               mode="aspectFill"
             />
             <view class="comment-content-wrapper">
-              <text class="comment-author">{{ comment.userName || '匿名用户' }}</text>
+              <text class="comment-author">{{ comment.nickname || '匿名用户' }}</text>
               <text class="comment-content">{{ comment.content }}</text>
               <text class="comment-time">{{ formatTime(comment.createTime) }}</text>
             </view>
@@ -89,7 +89,7 @@
       <view
         class="action-btn"
         :class="{ active: isLiked }"
-        @click="toggleLike"
+        @tap="toggleLike"
       >
         <text
           class="iconfont action-icon icon-icon"
@@ -100,7 +100,7 @@
       <view
         class="action-btn"
         :class="{ active: isFavorite }"
-        @click="toggleFavorite"
+        @tap="toggleFavorite"
       >
         <text
           class="iconfont action-icon icon-shoucang"
@@ -108,7 +108,7 @@
         ></text>
         <text class="action-text">收藏</text>
       </view>
-      <view class="action-btn" @click="openCommentEditor">
+      <view class="action-btn" @tap="openCommentEditor">
         <text class="iconfont action-icon icon-pinglun"></text>
         <text class="action-text">{{ commentCount }}</text>
       </view>
@@ -218,7 +218,21 @@ const previewImage = (index: number | string) => {
 
 // 显示登录提示
 const showLoginPromptDialog = () => {
-  showLoginPrompt.value = true
+  console.log('showLoginPromptDialog called')
+  // 直接使用 uni.showModal，更可靠
+  uni.showModal({
+    title: '需要登录',
+    content: '请先登录',
+    confirmText: '去登录',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        // 用户选择去登录
+        uni.switchTab({ url: '/pages/profile/profile' })
+      }
+      // 用户选择取消，什么都不做，留在当前页面
+    }
+  })
 }
 
 // 登录确认
@@ -232,13 +246,16 @@ const handleLoginCancel = () => {
 }
 
 const toggleLike = async () => {
+  console.log('toggleLike called', noteId.value)
   if (!noteId.value) return
 
   try {
     if (!user.value) {
+      console.log('User not logged in, showing login prompt')
       showLoginPromptDialog()
       return
     }
+    console.log('Toggling like for note:', noteId.value, 'current state:', isLiked.value)
     const res = await travelNoteInteractionApi.toggleLike(user.value.id, noteId.value)
     const data = res.data as ApiResponse<{ isLiked: boolean; likeCount?: number }>
     if (res.statusCode === 200 && data.code === 200) {
@@ -273,13 +290,16 @@ const toggleLike = async () => {
 }
 
 const toggleFavorite = async () => {
+  console.log('toggleFavorite called', noteId.value)
   if (!noteId.value) return
 
   try {
     if (!user.value) {
+      console.log('User not logged in, showing login prompt')
       showLoginPromptDialog()
       return
     }
+    console.log('Toggling favorite for note:', noteId.value, 'current state:', isFavorite.value)
     const res = await travelNoteInteractionApi.toggleFavorite(user.value.id, noteId.value)
     const data = res.data as ApiResponse<{ isFavorite: boolean; favoriteCount?: number }>
     if (res.statusCode === 200 && data.code === 200) {
@@ -308,10 +328,13 @@ const toggleFavorite = async () => {
 }
 
 const openCommentEditor = () => {
+  console.log('openCommentEditor called')
   if (!user.value) {
+    console.log('User not logged in, showing login prompt')
     showLoginPromptDialog()
     return
   }
+  console.log('Opening comment editor')
 
   // 先重置焦点状态
   textareaFocus.value = false
@@ -412,6 +435,8 @@ const loadDetail = async () => {
     const data = res.data as ApiResponse
     if (res.statusCode === 200 && data.code === 200) {
       noteDetail.value = data.data
+      console.log('游记详情数据:', data.data)
+      console.log('作者信息:', data.data?.author)
       // 同步收藏状态（从后端返回的数据中获取）
       if (data.data?.isFavorite !== undefined) {
         isFavorite.value = data.data.isFavorite
@@ -446,9 +471,17 @@ const loadComments = async () => {
     })
     const data = res.data as ApiResponse<any[]>
     if (res.statusCode === 200 && data.code === 200) {
-      comments.value = data.data || []
-      // 不再覆盖后端返回的 commentCount，保持后端数据的真实性
-      // 后端返回的 commentCount 是准确的评论总数
+      // 确保字段名正确映射
+      comments.value = (data.data || []).map((comment: any) => ({
+        ...comment,
+        // 兼容不同的字段名
+        nickname: comment.nickname || comment.userName || comment.nick_name,
+        avatar: comment.avatar || comment.userAvatar || comment.user_avatar,
+      }))
+      console.log('评论列表加载成功:', comments.value.length, '条评论')
+      if (comments.value.length > 0) {
+        console.log('第一条评论数据:', comments.value[0])
+      }
     }
   } catch (error) {
     console.error('加载评论失败:', error)

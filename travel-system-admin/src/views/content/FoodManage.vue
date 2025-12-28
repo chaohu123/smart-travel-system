@@ -601,37 +601,136 @@ watch(locationMode, (newVal) => {
   }
 });
 
+// 辅助函数：标准化省份名称（去除后缀）
+const normalizeProvinceName = (province: string): string => {
+  if (!province) return '';
+  // 去除常见的省份后缀
+  return province.replace(/省|市|自治区|特别行政区|维吾尔自治区|壮族自治区|回族自治区/g, '').trim();
+};
+
+// 辅助函数：标准化城市名称（去除后缀，但保留直辖市）
+const normalizeCityName = (city: string, province: string): string => {
+  if (!city) return '';
+  // 直辖市：北京、上海、天津、重庆，保持原样
+  const directCities = ['北京', '上海', '天津', '重庆'];
+  if (directCities.includes(province) && directCities.includes(city)) {
+    return city;
+  }
+  // 其他城市：去除常见的城市后缀
+  return city.replace(/市|区|县|自治州|地区|自治县/g, '').trim();
+};
+
 // 地图选点确认回调
 const handleMapPickerConfirm = (location: any) => {
+  console.log('地图选点返回的数据:', location);
+
   // 自动填充表单字段
   form.latitude = location.latitude;
   form.longitude = location.longitude;
   form.address = location.address;
 
-  // 根据地址信息自动填充省份和城市
+  let provinceMatched = false;
+  let cityMatched = false;
+
+  // 改进的省份匹配逻辑
   if (location.province) {
-    // 查找匹配的省份
-    const provinceMatch = provinceOptions.find(p =>
-      location.province.includes(p.label) || p.label.includes(location.province)
-    );
+    const provinceText = normalizeProvinceName(location.province);
+
+    // 先尝试精确匹配（包含后缀）
+    let provinceMatch = provinceOptions.find(p => p.label === location.province);
+
+    // 如果精确匹配失败，尝试去除后缀后匹配
+    if (!provinceMatch) {
+      provinceMatch = provinceOptions.find(p => {
+        const pLabel = normalizeProvinceName(p.label);
+        return pLabel === provinceText ||
+               p.label === provinceText ||
+               location.province.includes(p.label) ||
+               p.label.includes(location.province);
+      });
+    }
+
     if (provinceMatch) {
       form.province = provinceMatch.value;
+      provinceMatched = true;
+      console.log('匹配到省份:', provinceMatch.value);
       // 触发城市选项更新
       handleProvinceChange(provinceMatch.value);
+    } else {
+      console.warn('未找到匹配的省份:', location.province);
+      ElMessage.warning(`未找到匹配的省份: ${location.province}，请手动选择`);
     }
   }
 
+  // 改进的城市匹配逻辑（需要等待城市选项更新）
   if (location.city && form.province) {
-    // 查找匹配的城市
-    const cityMatch = cityOptions.value.find(c =>
-      location.city.includes(c) || c.includes(location.city)
-    );
-    if (cityMatch) {
-      form.city = cityMatch;
-    }
+    // 使用 nextTick 确保城市选项已更新
+    nextTick(() => {
+      const cityText = normalizeCityName(location.city, form.province);
+
+      // 先尝试精确匹配
+      let cityMatch = cityOptions.value.find(c => c === location.city);
+
+      // 如果精确匹配失败，尝试去除后缀后匹配
+      if (!cityMatch) {
+        cityMatch = cityOptions.value.find(c => {
+          const cText = normalizeCityName(c, form.province);
+          return cText === cityText ||
+                 c === cityText ||
+                 location.city === c ||
+                 location.city.includes(c) ||
+                 c.includes(location.city) ||
+                 normalizeCityName(location.city, form.province) === c ||
+                 normalizeCityName(c, form.province) === normalizeCityName(location.city, form.province);
+        });
+      }
+
+      // 特殊处理：直辖市
+      const directCities = ['北京', '上海', '天津', '重庆'];
+      if (!cityMatch && directCities.includes(form.province)) {
+        // 直辖市：如果城市名称包含省份名称，使用省份名称作为城市
+        const normalizedProvince = normalizeProvinceName(form.province);
+        const normalizedCity = normalizeCityName(location.city, form.province);
+        if (normalizedCity === normalizedProvince || location.city.includes(form.province) || form.province.includes(normalizeCityName(location.city, form.province))) {
+          cityMatch = form.province;
+        }
+      }
+
+      if (cityMatch) {
+        form.city = cityMatch;
+        cityMatched = true;
+        console.log('匹配到城市:', cityMatch, '原始城市名称:', location.city);
+        ElMessage.success('位置信息已自动填充，省份和城市已自动选择');
+      } else {
+        console.warn('未找到匹配的城市:', location.city, '省份:', form.province);
+        console.log('可用的城市选项:', cityOptions.value);
+        // 如果仍然没有匹配，尝试使用原始城市名称（去除常见后缀后）
+        const fallbackCity = normalizeCityName(location.city, form.province);
+        if (fallbackCity && fallbackCity !== location.city) {
+          form.city = fallbackCity;
+          ElMessage.warning({
+            message: `已自动填充城市名称: ${fallbackCity}，如果提交失败，请手动选择正确的城市。`,
+            duration: 5000,
+            showClose: true
+          });
+        } else {
+          ElMessage.warning({
+            message: `未找到匹配的城市: ${location.city}，请手动选择城市。\n提示：请确保该城市已在城市管理中创建。`,
+            duration: 5000,
+            showClose: true
+          });
+        }
+      }
+    });
+  } else if (location.city && !form.province) {
+    // 如果只有城市没有省份，提示用户先选择省份
+    ElMessage.warning('请先选择省份，然后再选择城市');
+  } else if (provinceMatched && !location.city) {
+    ElMessage.success('位置信息已自动填充，请手动选择城市');
+  } else if (!provinceMatched && !cityMatched) {
+    ElMessage.warning('请手动选择省份和城市');
   }
 
-  ElMessage.success('位置信息已自动填充');
   // 保持地图选点模式，不切换回手动模式
 };
 
@@ -768,6 +867,16 @@ const handleSubmit = async () => {
       return;
     }
 
+    // 验证省份和城市是否已选择
+    if (!form.province || !form.city) {
+      ElMessage.error('请选择省份和城市');
+      // 如果是在最后一步，跳回第一步让用户选择
+      if (currentStep.value === 2) {
+        currentStep.value = 0;
+      }
+      return;
+    }
+
     // 合并所有图片URL
     const allImages = [...urlImageList.value, ...uploadedImageList.value];
     const imageUrlString = allImages.join(',');
@@ -785,6 +894,9 @@ const handleSubmit = async () => {
     // 设置图片URL（多个URL用逗号分隔）
     submitData.imageUrl = imageUrlString;
 
+    // 确保提交的城市和省份名称格式正确（与数据库中的格式一致）
+    console.log('提交数据 - 省份:', submitData.province, '城市:', submitData.city);
+
     if (form.id) {
       const resp = await updateFood(submitData);
       if (resp.data.code === 200) {
@@ -792,7 +904,18 @@ const handleSubmit = async () => {
         dialogVisible.value = false;
         loadData();
       } else {
-        ElMessage.error(resp.data.msg || '更新失败');
+        // 如果是城市未找到的错误，提供更友好的提示
+        if (resp.data.msg && resp.data.msg.includes('未找到对应的城市')) {
+          ElMessage.error({
+            message: `更新失败：${resp.data.msg}\n\n解决方案：\n1. 请先在城市管理中创建该城市\n2. 或者手动选择已存在的城市`,
+            duration: 6000,
+            showClose: true
+          });
+          // 跳回第一步让用户重新选择
+          currentStep.value = 0;
+        } else {
+          ElMessage.error(resp.data.msg || '更新失败');
+        }
       }
     } else {
       const resp = await createFood(submitData);
@@ -807,7 +930,18 @@ const handleSubmit = async () => {
         pagination.pageNum = 1;
         loadData();
       } else {
-        ElMessage.error(resp.data.msg || '创建失败');
+        // 如果是城市未找到的错误，提供更友好的提示
+        if (resp.data.msg && resp.data.msg.includes('未找到对应的城市')) {
+          ElMessage.error({
+            message: `创建失败：${resp.data.msg}\n\n解决方案：\n1. 请先在城市管理中创建该城市\n2. 或者手动选择已存在的城市`,
+            duration: 6000,
+            showClose: true
+          });
+          // 跳回第一步让用户重新选择
+          currentStep.value = 0;
+        } else {
+          ElMessage.error(resp.data.msg || '创建失败');
+        }
       }
     }
   } catch (e) {
@@ -824,12 +958,15 @@ const handleDelete = (row: Food) => {
         const resp = await deleteFood(row.id!);
         if (resp.data.code === 200) {
           ElMessage.success('删除成功');
-          loadData();
+          // 删除成功后，重置到第一页并刷新数据
+          pagination.pageNum = 1;
+          await loadData();
         } else {
           ElMessage.error(resp.data.msg || '删除失败');
         }
       } catch (e) {
-        ElMessage.error('请求失败');
+        console.error('删除失败:', e);
+        ElMessage.error('请求失败，请重试');
       }
     })
     .catch(() => {});

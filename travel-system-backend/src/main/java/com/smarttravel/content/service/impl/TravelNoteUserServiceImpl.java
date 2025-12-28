@@ -121,11 +121,19 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
         List<TravelNote> pageList = start < allNotes.size() ?
             allNotes.subList(start, end) : new ArrayList<>();
 
-        // 为每个游记加载第一张图片
+        // 为每个游记加载第一张图片和作者信息
         for (TravelNote note : pageList) {
             List<TravelNoteImage> images = travelNoteImageMapper.selectByNoteId(note.getId());
             if (images != null && !images.isEmpty()) {
                 note.setCoverImage(images.get(0).getUrl());
+            }
+            // 加载作者信息
+            if (note.getUserId() != null) {
+                User authorUser = userMapper.selectById(note.getUserId());
+                if (authorUser != null) {
+                    note.setAuthorName(authorUser.getNickname());
+                    note.setAuthorAvatar(authorUser.getAvatar());
+                }
             }
         }
 
@@ -201,8 +209,21 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
             commentResult.add(cMap);
         }
 
+        // 加载作者信息
+        Map<String, Object> authorInfo = new HashMap<>();
+        if (note.getUserId() != null) {
+            User author = userMapper.selectById(note.getUserId());
+            if (author != null) {
+                authorInfo.put("id", author.getId());
+                authorInfo.put("nickname", author.getNickname());
+                authorInfo.put("avatar", author.getAvatar());
+                authorInfo.put("city", author.getCity());
+            }
+        }
+
         Map<String, Object> result = new HashMap<>();
         result.put("note", note);
+        result.put("author", authorInfo);
         result.put("images", images);
         result.put("tags", tagIds);
         result.put("scenics", scenicList);

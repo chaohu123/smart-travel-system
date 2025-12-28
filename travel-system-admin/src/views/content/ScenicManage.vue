@@ -887,12 +887,15 @@ const handleDelete = (row: ScenicSpot) => {
         const resp = await deleteScenicSpot(row.id!);
         if (resp.data.code === 200) {
           ElMessage.success('删除成功');
-          loadData();
+          // 删除成功后，重置到第一页并刷新数据
+          pagination.pageNum = 1;
+          await loadData();
         } else {
           ElMessage.error(resp.data.msg || '删除失败');
         }
       } catch (e) {
-        ElMessage.error('请求失败');
+        console.error('删除失败:', e);
+        ElMessage.error('请求失败，请重试');
       }
     })
     .catch(() => {});

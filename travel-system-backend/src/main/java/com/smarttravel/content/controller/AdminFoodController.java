@@ -4,6 +4,7 @@ import com.smarttravel.content.domain.City;
 import com.smarttravel.content.domain.Food;
 import com.smarttravel.content.mapper.CityMapper;
 import com.smarttravel.content.mapper.FoodMapper;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -150,14 +151,40 @@ public class AdminFoodController {
         if (foodData.get("cityId") != null) {
             food.setCityId(((Number) foodData.get("cityId")).longValue());
         } else if (cityName != null && !cityName.isEmpty() && province != null && !province.isEmpty()) {
-            City city = cityMapper.selectByCityNameAndProvince(cityName, province);
+            City city = null;
+
+            // 第一次尝试：使用原始城市名称和省份
+            city = cityMapper.selectByCityNameAndProvince(cityName, province);
+
+            // 第二次尝试：如果第一次失败，尝试标准化后的名称
+            if (city == null) {
+                String normalizedCityName = cityName.replaceAll("市|区|县|自治州", "");
+                String normalizedProvince = province.replaceAll("省|市|自治区|特别行政区", "");
+                if (!normalizedCityName.equals(cityName) || !normalizedProvince.equals(province)) {
+                    city = cityMapper.selectByCityNameAndProvince(normalizedCityName, normalizedProvince);
+                }
+            }
+
+            // 第三次尝试：只使用城市名称，不限制省份（用于处理直辖市等特殊情况）
+            if (city == null) {
+                city = cityMapper.selectByCityNameAndProvince(cityName, null);
+            }
+
+            // 第四次尝试：使用标准化后的城市名称，不限制省份
+            if (city == null) {
+                String normalizedCityName = cityName.replaceAll("市|区|县|自治州", "");
+                if (!normalizedCityName.equals(cityName)) {
+                    city = cityMapper.selectByCityNameAndProvince(normalizedCityName, null);
+                }
+            }
+
             if (city != null && city.getId() != null) {
                 food.setCityId(city.getId());
             } else {
-                // 如果找不到对应的城市，返回错误
+                // 如果找不到对应的城市，返回更详细的错误信息
                 Map<String, Object> result = new HashMap<>();
                 result.put("code", 400);
-                result.put("msg", "未找到对应的城市，请先在城市管理中创建该城市");
+                result.put("msg", String.format("未找到对应的城市（城市：%s，省份：%s），请先在城市管理中创建该城市", cityName, province));
                 return result;
             }
         }
@@ -206,14 +233,40 @@ public class AdminFoodController {
         if (foodData.get("cityId") != null) {
             food.setCityId(((Number) foodData.get("cityId")).longValue());
         } else if (cityName != null && !cityName.isEmpty() && province != null && !province.isEmpty()) {
-            City city = cityMapper.selectByCityNameAndProvince(cityName, province);
+            City city = null;
+
+            // 第一次尝试：使用原始城市名称和省份
+            city = cityMapper.selectByCityNameAndProvince(cityName, province);
+
+            // 第二次尝试：如果第一次失败，尝试标准化后的名称
+            if (city == null) {
+                String normalizedCityName = cityName.replaceAll("市|区|县|自治州", "");
+                String normalizedProvince = province.replaceAll("省|市|自治区|特别行政区", "");
+                if (!normalizedCityName.equals(cityName) || !normalizedProvince.equals(province)) {
+                    city = cityMapper.selectByCityNameAndProvince(normalizedCityName, normalizedProvince);
+                }
+            }
+
+            // 第三次尝试：只使用城市名称，不限制省份（用于处理直辖市等特殊情况）
+            if (city == null) {
+                city = cityMapper.selectByCityNameAndProvince(cityName, null);
+            }
+
+            // 第四次尝试：使用标准化后的城市名称，不限制省份
+            if (city == null) {
+                String normalizedCityName = cityName.replaceAll("市|区|县|自治州", "");
+                if (!normalizedCityName.equals(cityName)) {
+                    city = cityMapper.selectByCityNameAndProvince(normalizedCityName, null);
+                }
+            }
+
             if (city != null && city.getId() != null) {
                 food.setCityId(city.getId());
             } else {
-                // 如果找不到对应的城市，返回错误
+                // 如果找不到对应的城市，返回更详细的错误信息
                 Map<String, Object> result = new HashMap<>();
                 result.put("code", 400);
-                result.put("msg", "未找到对应的城市，请先在城市管理中创建该城市");
+                result.put("msg", String.format("未找到对应的城市（城市：%s，省份：%s），请先在城市管理中创建该城市", cityName, province));
                 return result;
             }
         }
@@ -226,14 +279,35 @@ public class AdminFoodController {
     }
 
     @DeleteMapping("/{id}")
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> delete(@PathVariable Long id) {
-        Food food = new Food();
-        food.setId(id);
-        food.setDelFlag(1);
-        foodMapper.update(food);
         Map<String, Object> result = new HashMap<>();
-        result.put("code", 200);
-        result.put("msg", "success");
+
+        try {
+            // 先检查记录是否存在（包括已删除的记录）
+            Food existingFood = foodMapper.selectByIdWithoutDelFlag(id);
+            if (existingFood == null) {
+                result.put("code", 404);
+                result.put("msg", "美食不存在");
+                return result;
+            }
+
+            // 执行物理删除（真正从数据库中删除记录）
+            int rows = foodMapper.deleteByIdPhysically(id);
+
+            if (rows > 0) {
+                result.put("code", 200);
+                result.put("msg", "删除成功");
+            } else {
+                result.put("code", 500);
+                result.put("msg", "删除失败，记录可能不存在");
+            }
+        } catch (Exception e) {
+            result.put("code", 500);
+            result.put("msg", "删除操作异常: " + e.getMessage());
+            throw e; // 重新抛出异常以触发事务回滚
+        }
+
         return result;
     }
 }

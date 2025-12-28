@@ -566,3 +566,37 @@
   border-radius: 12rpx;
   font-size: 22rpx;
 }
+
+/* 回到顶部按钮 */
+.back-to-top.data-v-087d42bb {
+  position: fixed;
+  right: 32rpx;
+  bottom: 120rpx;
+  width: 88rpx;
+  height: 88rpx;
+  background: linear-gradient(135deg, #3ba272, #6fd3a5);
+  border-radius: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(59, 162, 114, 0.4);
+  z-index: 999;
+  opacity: 0;
+  transform: translateY(20rpx);
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+.back-to-top.show.data-v-087d42bb {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.back-to-top.data-v-087d42bb:active {
+  transform: scale(0.95);
+}
+.back-to-top-icon.data-v-087d42bb {
+  font-size: 40rpx;
+  color: #ffffff;
+  font-weight: 600;
+  line-height: 1;
+}

@@ -75,6 +75,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       var _a;
       return ((_a = provinceList.value[selectedProvinceIndex.value]) == null ? void 0 : _a.name) || "\u5168\u90E8\u7701\u4EFD";
     });
+    const scrollTop = common_vendor.ref(0);
+    const showBackToTop = common_vendor.ref(false);
+    const onScroll = (e) => {
+      const scrollTopValue = e.detail.scrollTop;
+      showBackToTop.value = scrollTopValue > 300;
+    };
+    const scrollToTop = () => {
+      scrollTop.value = 0;
+      setTimeout(() => {
+        scrollTop.value = 0.01;
+      }, 100);
+    };
     const filteredScenicList = common_vendor.computed(() => {
       return scenicList.value;
     });
@@ -116,7 +128,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       common_vendor.index.navigateTo({ url: `/pages/travel-note/detail?id=${note.id}` });
     };
     const showLoginPromptDialog = () => {
-      showLoginPrompt.value = true;
+      console.log("showLoginPromptDialog called");
+      common_vendor.index.showModal({
+        title: "\u9700\u8981\u767B\u5F55",
+        content: "\u8BF7\u5148\u767B\u5F55",
+        confirmText: "\u53BB\u767B\u5F55",
+        cancelText: "\u53D6\u6D88",
+        success: (res) => {
+          if (res.confirm) {
+            common_vendor.index.switchTab({ url: "/pages/profile/profile" });
+          }
+        }
+      });
     };
     const handleLoginConfirm = () => {
       showLoginPrompt.value = false;
@@ -124,21 +147,49 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const handleLoginCancel = () => {
       showLoginPrompt.value = false;
     };
-    const toggleLike = (note) => {
+    const toggleLike = async (note) => {
+      console.log("toggleLike called", note.id);
       if (!user.value) {
+        console.log("User not logged in, showing login prompt");
         showLoginPromptDialog();
         return;
       }
-      if (!note.isLiked) {
-        note.isLiked = true;
-        note.likeCount = (note.likeCount || 0) + 1;
-        shouldAnimateMap.value[note.id] = true;
-        setTimeout(() => {
-          shouldAnimateMap.value[note.id] = false;
-        }, 300);
-      } else {
-        note.isLiked = false;
-        note.likeCount = Math.max(0, (note.likeCount || 0) - 1);
+      try {
+        console.log("Toggling like for note:", note.id, "current state:", note.isLiked);
+        const wasLiked = note.isLiked;
+        note.isLiked = !wasLiked;
+        if (!wasLiked) {
+          note.likeCount = (note.likeCount || 0) + 1;
+          shouldAnimateMap.value[note.id] = true;
+          setTimeout(() => {
+            shouldAnimateMap.value[note.id] = false;
+          }, 300);
+        } else {
+          note.likeCount = Math.max(0, (note.likeCount || 0) - 1);
+        }
+        const res = await api_content.travelNoteInteractionApi.toggleLike(user.value.id, note.id);
+        const data = res.data;
+        if (res.statusCode === 200 && data.code === 200) {
+          note.isLiked = data.data.isLiked;
+          if (data.data.likeCount !== void 0) {
+            note.likeCount = data.data.likeCount;
+          }
+        } else {
+          note.isLiked = wasLiked;
+          note.likeCount = wasLiked ? (note.likeCount || 0) + 1 : Math.max(0, (note.likeCount || 0) - 1);
+          common_vendor.index.showToast({
+            title: data.msg || "\u64CD\u4F5C\u5931\u8D25",
+            icon: "none"
+          });
+        }
+      } catch (error) {
+        console.error("\u70B9\u8D5E\u5931\u8D25:", error);
+        note.isLiked = !note.isLiked;
+        note.likeCount = note.isLiked ? (note.likeCount || 0) + 1 : Math.max(0, (note.likeCount || 0) - 1);
+        common_vendor.index.showToast({
+          title: (error == null ? void 0 : error.message) || "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC",
+          icon: "none"
+        });
       }
     };
     const handleComment = (note) => {
@@ -160,7 +211,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       common_vendor.index.navigateTo({ url: `/pages/food/detail?id=${item.id}` });
     };
     const fetchHomeData = async () => {
-      var _a;
+      var _a, _b;
       if (loadingRecommend.value)
         return;
       loadingRecommend.value = true;
@@ -169,9 +220,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const provinceValue = selectedProvince.value && selectedProvince.value !== "\u5168\u90E8\u7701\u4EFD" ? (_a = provinceList.value[selectedProvinceIndex.value]) == null ? void 0 : _a.value : void 0;
         const scenicParams = { limit: 3 };
         const foodParams = { limit: 6 };
-        if (provinceValue) {
+        if (provinceValue && provinceValue !== "") {
           scenicParams.province = provinceValue;
           foodParams.province = provinceValue;
+          console.log("[\u9996\u9875] \u9009\u62E9\u7701\u4EFD:", provinceValue, "\u7F8E\u98DF\u53C2\u6570:", foodParams);
+        } else {
+          console.log("[\u9996\u9875] \u672A\u9009\u62E9\u7701\u4EFD\u6216\u9009\u62E9\u5168\u90E8\u7701\u4EFD\uFF0C\u4E0D\u4F20\u9012province\u53C2\u6570");
         }
         const [routeRes, scenicRes, foodRes] = await Promise.all([
           api_content.recommendApi.routes(void 0, 10),
@@ -202,8 +256,25 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         }
         if (foodRes.statusCode === 200 && foodRes.data.code === 200) {
           foodList.value = foodRes.data.data || [];
+          console.log("[\u9996\u9875] \u7F8E\u98DF\u6570\u636E\u52A0\u8F7D\u6210\u529F\uFF0C\u6570\u91CF:", foodList.value.length, "\u7701\u4EFD:", provinceValue || "\u5168\u90E8");
+          if (foodList.value.length > 0) {
+            console.log("[\u9996\u9875] \u7F8E\u98DF\u5217\u8868:", foodList.value.map((f) => ({ name: f.name, address: f.address })));
+          } else if (provinceValue) {
+            console.warn("[\u9996\u9875] \u9009\u62E9\u4E86\u7701\u4EFD\u4F46\u672A\u8FD4\u56DE\u7F8E\u98DF\u6570\u636E\uFF0C\u53EF\u80FD\u8BE5\u7701\u4EFD\u6682\u65E0\u7F8E\u98DF\u6570\u636E");
+            if (foodList.value.length === 0) {
+              common_vendor.index.showToast({
+                title: `\u8BE5\u7701\u4EFD\u6682\u65E0\u7F8E\u98DF\u6570\u636E`,
+                icon: "none",
+                duration: 2e3
+              });
+            }
+          }
+        } else {
+          console.error("[\u9996\u9875] \u7F8E\u98DF\u6570\u636E\u52A0\u8F7D\u5931\u8D25:", foodRes.data);
+          toastFail(((_b = foodRes.data) == null ? void 0 : _b.msg) || "\u63A8\u8350\u7F8E\u98DF\u52A0\u8F7D\u5931\u8D25");
         }
       } catch (error) {
+        console.error("[\u9996\u9875] \u63A8\u8350\u6570\u636E\u52A0\u8F7D\u5F02\u5E38:", error);
         toastFail("\u9996\u9875\u63A8\u8350\u52A0\u8F7D\u5931\u8D25");
       } finally {
         loadingRecommend.value = false;
@@ -399,7 +470,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             i: item.id,
             j: common_vendor.o(($event) => onViewFood(item))
           });
-        })
+        }),
+        B: scrollTop.value,
+        C: common_vendor.o(onScroll),
+        D: showBackToTop.value ? 1 : "",
+        E: common_vendor.o(scrollToTop)
       });
     };
   }

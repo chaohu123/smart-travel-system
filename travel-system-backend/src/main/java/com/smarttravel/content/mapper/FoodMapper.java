@@ -17,5 +17,8 @@ public interface FoodMapper {
     List<Food> selectRecommend(@Param("limit") Integer limit);
     int insert(Food food);
     int update(Food food);
+    int deleteById(Long id);
+    int deleteByIdPhysically(Long id);
+    Food selectByIdWithoutDelFlag(Long id);
 }
 

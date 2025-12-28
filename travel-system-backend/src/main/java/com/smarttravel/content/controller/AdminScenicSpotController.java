@@ -4,6 +4,7 @@ import com.smarttravel.content.domain.City;
 import com.smarttravel.content.domain.ScenicSpot;
 import com.smarttravel.content.mapper.CityMapper;
 import com.smarttravel.content.mapper.ScenicSpotMapper;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -125,14 +126,35 @@ public class AdminScenicSpotController {
     }
 
     @DeleteMapping("/{id}")
+    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> delete(@PathVariable Long id) {
-        ScenicSpot spot = new ScenicSpot();
-        spot.setId(id);
-        spot.setDelFlag(1);
-        scenicSpotMapper.update(spot);
         Map<String, Object> result = new HashMap<>();
-        result.put("code", 200);
-        result.put("msg", "success");
+
+        try {
+            // 先检查记录是否存在（包括已删除的记录）
+            ScenicSpot existingSpot = scenicSpotMapper.selectByIdWithoutDelFlag(id);
+            if (existingSpot == null) {
+                result.put("code", 404);
+                result.put("msg", "景点不存在");
+                return result;
+            }
+
+            // 执行物理删除（真正从数据库中删除记录）
+            int rows = scenicSpotMapper.deleteByIdPhysically(id);
+
+            if (rows > 0) {
+                result.put("code", 200);
+                result.put("msg", "删除成功");
+            } else {
+                result.put("code", 500);
+                result.put("msg", "删除失败，记录可能不存在");
+            }
+        } catch (Exception e) {
+            result.put("code", 500);
+            result.put("msg", "删除操作异常: " + e.getMessage());
+            throw e; // 重新抛出异常以触发事务回滚
+        }
+
         return result;
     }
 }

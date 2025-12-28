@@ -59,7 +59,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       });
     };
     const showLoginPromptDialog = () => {
-      showLoginPrompt.value = true;
+      console.log("showLoginPromptDialog called");
+      common_vendor.index.showModal({
+        title: "\u9700\u8981\u767B\u5F55",
+        content: "\u8BF7\u5148\u767B\u5F55",
+        confirmText: "\u53BB\u767B\u5F55",
+        cancelText: "\u53D6\u6D88",
+        success: (res) => {
+          if (res.confirm) {
+            common_vendor.index.switchTab({ url: "/pages/profile/profile" });
+          }
+        }
+      });
     };
     const handleLoginConfirm = () => {
       showLoginPrompt.value = false;
@@ -69,13 +80,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const toggleLike = async () => {
       var _a;
+      console.log("toggleLike called", noteId.value);
       if (!noteId.value)
         return;
       try {
         if (!user.value) {
+          console.log("User not logged in, showing login prompt");
           showLoginPromptDialog();
           return;
         }
+        console.log("Toggling like for note:", noteId.value, "current state:", isLiked.value);
         const res = await api_content.travelNoteInteractionApi.toggleLike(user.value.id, noteId.value);
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
@@ -107,13 +121,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const toggleFavorite = async () => {
       var _a;
+      console.log("toggleFavorite called", noteId.value);
       if (!noteId.value)
         return;
       try {
         if (!user.value) {
+          console.log("User not logged in, showing login prompt");
           showLoginPromptDialog();
           return;
         }
+        console.log("Toggling favorite for note:", noteId.value, "current state:", isFavorite.value);
         const res = await api_content.travelNoteInteractionApi.toggleFavorite(user.value.id, noteId.value);
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
@@ -140,10 +157,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const openCommentEditor = () => {
+      console.log("openCommentEditor called");
       if (!user.value) {
+        console.log("User not logged in, showing login prompt");
         showLoginPromptDialog();
         return;
       }
+      console.log("Opening comment editor");
       textareaFocus.value = false;
       commentContent.value = "";
       commentEditorVisible.value = true;
@@ -224,7 +244,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     };
     const loadDetail = async () => {
-      var _a, _b, _c;
+      var _a, _b, _c, _d;
       if (!noteId.value)
         return;
       try {
@@ -232,10 +252,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
           noteDetail.value = data.data;
-          if (((_b = data.data) == null ? void 0 : _b.isFavorite) !== void 0) {
+          console.log("\u6E38\u8BB0\u8BE6\u60C5\u6570\u636E:", data.data);
+          console.log("\u4F5C\u8005\u4FE1\u606F:", (_b = data.data) == null ? void 0 : _b.author);
+          if (((_c = data.data) == null ? void 0 : _c.isFavorite) !== void 0) {
             isFavorite.value = data.data.isFavorite;
           }
-          if (((_c = data.data) == null ? void 0 : _c.isLiked) !== void 0) {
+          if (((_d = data.data) == null ? void 0 : _d.isLiked) !== void 0) {
             isLiked.value = data.data.isLiked;
           }
         } else {
@@ -263,7 +285,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
-          comments.value = data.data || [];
+          comments.value = (data.data || []).map((comment) => ({
+            ...comment,
+            nickname: comment.nickname || comment.userName || comment.nick_name,
+            avatar: comment.avatar || comment.userAvatar || comment.user_avatar
+          }));
+          console.log("\u8BC4\u8BBA\u5217\u8868\u52A0\u8F7D\u6210\u529F:", comments.value.length, "\u6761\u8BC4\u8BBA");
+          if (comments.value.length > 0) {
+            console.log("\u7B2C\u4E00\u6761\u8BC4\u8BBA\u6570\u636E:", comments.value[0]);
+          }
         }
       } catch (error) {
         console.error("\u52A0\u8F7D\u8BC4\u8BBA\u5931\u8D25:", error);
@@ -316,8 +346,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         p: common_vendor.t(common_vendor.unref(commentCount)),
         q: common_vendor.f(comments.value, (comment, k0, i0) => {
           return {
-            a: comment.userAvatar || common_vendor.unref(authorAvatar),
-            b: common_vendor.t(comment.userName || "\u533F\u540D\u7528\u6237"),
+            a: comment.avatar || comment.userAvatar || common_vendor.unref(authorAvatar),
+            b: common_vendor.t(comment.nickname || "\u533F\u540D\u7528\u6237"),
             c: common_vendor.t(comment.content),
             d: common_vendor.t(formatTime(comment.createTime)),
             e: comment.id
