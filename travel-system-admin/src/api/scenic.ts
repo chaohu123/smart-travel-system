@@ -22,6 +22,7 @@ export interface ScenicSpot {
   createTime?: string;
   updateTime?: string;
   delFlag?: number;
+  freeNotice?: string;
 }
 
 export interface ScenicSpotListResponse {

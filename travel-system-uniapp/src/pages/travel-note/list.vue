@@ -199,7 +199,7 @@ const loadCities = async () => {
       ]
     }
   } catch (error) {
-    console.error('加载城市列表失败', error)
+    // 忽略城市列表加载错误
   }
 }
 

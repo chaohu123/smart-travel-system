@@ -146,22 +146,26 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }, detail.value.ticketInfo ? {
         v: common_vendor.t(detail.value.ticketInfo)
       } : {}, {
-        w: detail.value.intro
-      }, detail.value.intro ? {
-        x: common_vendor.t(detail.value.intro)
+        w: (!detail.value.price || Number(detail.value.price) === 0) && detail.value.freeNotice
+      }, (!detail.value.price || Number(detail.value.price) === 0) && detail.value.freeNotice ? {
+        x: common_vendor.t(detail.value.freeNotice)
       } : {}, {
-        y: detail.value.tags && detail.value.tags.length > 0
+        y: detail.value.intro
+      }, detail.value.intro ? {
+        z: common_vendor.t(detail.value.intro)
+      } : {}, {
+        A: detail.value.tags && detail.value.tags.length > 0
       }, detail.value.tags && detail.value.tags.length > 0 ? {
-        z: common_vendor.f(detail.value.tags, (tag, k0, i0) => {
+        B: common_vendor.f(detail.value.tags, (tag, k0, i0) => {
           return {
             a: common_vendor.t(tag),
             b: tag
           };
         })
       } : {}, {
-        A: nearbyFoods.value.length > 0
+        C: nearbyFoods.value.length > 0
       }, nearbyFoods.value.length > 0 ? {
-        B: common_vendor.f(nearbyFoods.value, (food, k0, i0) => {
+        D: common_vendor.f(nearbyFoods.value, (food, k0, i0) => {
           return common_vendor.e({
             a: food.imageUrl
           }, food.imageUrl ? {
@@ -178,10 +182,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         })
       } : {}) : {}, {
         d: detail.value,
-        C: isFavorite.value ? 1 : "",
-        D: common_vendor.o(toggleFavorite),
-        E: common_vendor.o(goCheckin),
-        F: common_vendor.o(addToRoute)
+        E: isFavorite.value ? 1 : "",
+        F: common_vendor.o(toggleFavorite),
+        G: common_vendor.o(goCheckin),
+        H: common_vendor.o(addToRoute)
       });
     };
   }

@@ -520,6 +520,11 @@
   font-size: 24rpx;
   color: #666666;
 }
+.scenic-price-wrapper.data-v-087d42bb {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
 .scenic-price.data-v-087d42bb {
   font-size: 26rpx;
   font-weight: 600;
@@ -535,6 +540,16 @@
 .scenic-heritage.data-v-087d42bb {
   color: #ff9800;
   font-size: 24rpx;
+}
+.scenic-free-notice.data-v-087d42bb {
+  color: #3ba272;
+  font-size: 22rpx;
+  font-weight: 500;
+  padding: 4rpx 12rpx;
+  background-color: #e8f6f0;
+  border-radius: 12rpx;
+  display: inline-block;
+  white-space: nowrap;
 }
 .scenic-location.data-v-087d42bb {
   flex: 1;

@@ -151,6 +151,14 @@
                 <el-radio value="free">免费</el-radio>
                 <el-radio value="paid">收费</el-radio>
               </el-radio-group>
+              <template v-if="priceType === 'free'">
+                <el-input
+                  v-model="form.freeNotice"
+                  placeholder="是否需要预约"
+                  style="width: 300px;"
+                  clearable
+                />
+              </template>
               <template v-if="priceType === 'paid'">
                 <el-input v-model="form.price" placeholder="价格（元）" style="width: 200px;" />
                 <el-input v-model="form.ticketInfo" placeholder="说明" style="width: 200px;" />
@@ -443,7 +451,8 @@ const form = reactive<ScenicSpot>({
   suggestedVisitTime: '',
   score: undefined,
   hotScore: 0,
-  isRecommend: 0
+  isRecommend: 0,
+  freeNotice: ''
 });
 
 const loadData = async () => {
@@ -525,7 +534,8 @@ const handleAdd = () => {
     suggestedVisitTime: '',
     score: 4.0,
     hotScore: 0,
-    isRecommend: 0
+    isRecommend: 0,
+    freeNotice: ''
   });
   dialogVisible.value = true;
   // 重置表单验证
@@ -633,9 +643,11 @@ const handlePriceTypeChange = (value: string) => {
   if (value === 'free') {
     form.price = 0;
     form.ticketInfo = '';
+    // 免费时不清空 freeNotice，保留用户输入
   } else {
-    // 切换到收费时，清空价格让用户重新输入
+    // 切换到收费时，清空价格和免费说明让用户重新输入
     form.price = undefined;
+    form.freeNotice = '';
   }
 };
 

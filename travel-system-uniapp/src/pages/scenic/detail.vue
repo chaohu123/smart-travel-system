@@ -83,6 +83,14 @@
             </view>
             <text class="info-content">{{ detail.ticketInfo }}</text>
           </view>
+
+          <view class="info-item" v-if="(!detail.price || Number(detail.price) === 0) && detail.freeNotice">
+            <view class="info-label">
+              <text class="info-icon">ℹ️</text>
+              <text class="info-title">温馨提示</text>
+            </view>
+            <text class="info-content free-notice-content">{{ detail.freeNotice }}</text>
+          </view>
         </view>
 
         <!-- 简介卡片 -->
@@ -476,6 +484,16 @@ onMounted(() => {
   line-height: 1.6;
   display: block;
   padding-left: 40rpx;
+}
+
+.free-notice-content {
+  color: #3ba272;
+  font-weight: 500;
+  background-color: #e8f6f0;
+  padding: 12rpx 20rpx;
+  border-radius: 12rpx;
+  display: inline-block;
+  margin-left: 40rpx;
 }
 
 /* 简介卡片 */

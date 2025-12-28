@@ -122,10 +122,7 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
             allNotes.subList(start, end) : new ArrayList<>();
 
         // 为每个游记加载第一张图片和作者信息
-<<<<<<< HEAD
-=======
         List<Map<String, Object>> noteList = new ArrayList<>();
->>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
         for (TravelNote note : pageList) {
             Map<String, Object> noteMap = new HashMap<>();
             noteMap.put("id", note.getId());
@@ -146,7 +143,6 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
             if (images != null && !images.isEmpty()) {
                 noteMap.put("coverImage", images.get(0).getUrl());
             }
-<<<<<<< HEAD
             // 加载作者信息
             if (note.getUserId() != null) {
                 User authorUser = userMapper.selectById(note.getUserId());
@@ -155,8 +151,6 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
                     note.setAuthorAvatar(authorUser.getAvatar());
                 }
             }
-=======
-
             // 加载作者信息
             if (note.getUserId() != null) {
                 User author = userMapper.selectById(note.getUserId());
@@ -167,7 +161,6 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
             }
 
             noteList.add(noteMap);
->>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
         }
 
         Map<String, Object> result = new HashMap<>();

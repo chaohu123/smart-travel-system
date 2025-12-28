@@ -5,7 +5,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const visible = common_vendor.ref(false);
     const steps = [
-      { title: "\u667A\u80FD\u89C4\u5212", desc: "\u5728\u9996\u9875\u8FDB\u5165\u201C\u667A\u80FD\u89C4\u5212\u201D\u5FEB\u901F\u751F\u6210\u884C\u7A0B" },
+      { title: "\u667A\u80FD\u89C4\u5212", desc: '\u5728\u9996\u9875\u8FDB\u5165"\u667A\u80FD\u89C4\u5212"\u5FEB\u901F\u751F\u6210\u884C\u7A0B' },
       { title: "\u6E38\u8BB0\u53D1\u5E03", desc: "\u5728\u6E38\u8BB0\u9875\u53D1\u5E03\u56FE\u6587\uFF0C\u5206\u4EAB\u4F53\u9A8C" },
       { title: "\u6253\u5361", desc: "\u5728\u666F\u70B9/\u7F8E\u98DF\u9875\u4E0A\u4F20\u7167\u7247\u5B8C\u6210\u6253\u5361" }
     ];

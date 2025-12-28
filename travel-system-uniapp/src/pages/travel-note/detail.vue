@@ -67,11 +67,7 @@
           >
             <image
               class="comment-avatar"
-<<<<<<< HEAD
               :src="comment.avatar || comment.userAvatar || authorAvatar"
-=======
-              :src="comment.avatar || authorAvatar"
->>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
               mode="aspectFill"
             />
             <view class="comment-content-wrapper">
@@ -240,7 +236,6 @@ const previewImage = (index: number | string) => {
 
 // 显示登录提示
 const showLoginPromptDialog = () => {
-  console.log('showLoginPromptDialog called')
   // 直接使用 uni.showModal，更可靠
   uni.showModal({
     title: '需要登录',
@@ -270,16 +265,13 @@ const handleLoginCancel = () => {
 }
 
 const toggleLike = async () => {
-  console.log('toggleLike called', noteId.value)
   if (!noteId.value) return
 
   try {
     if (!user.value) {
-      console.log('User not logged in, showing login prompt')
       showLoginPromptDialog()
       return
     }
-    console.log('Toggling like for note:', noteId.value, 'current state:', isLiked.value)
     const res = await travelNoteInteractionApi.toggleLike(user.value.id, noteId.value)
     const data = res.data as ApiResponse<{ isLiked: boolean; likeCount?: number }>
     if (res.statusCode === 200 && data.code === 200) {
@@ -305,7 +297,6 @@ const toggleLike = async () => {
       })
     }
   } catch (error: any) {
-    console.error('点赞失败:', error)
     uni.showToast({
       title: error?.message || '操作失败，请检查网络',
       icon: 'none',
@@ -314,16 +305,13 @@ const toggleLike = async () => {
 }
 
 const toggleFavorite = async () => {
-  console.log('toggleFavorite called', noteId.value)
   if (!noteId.value) return
 
   try {
     if (!user.value) {
-      console.log('User not logged in, showing login prompt')
       showLoginPromptDialog()
       return
     }
-    console.log('Toggling favorite for note:', noteId.value, 'current state:', isFavorite.value)
     const res = await travelNoteInteractionApi.toggleFavorite(user.value.id, noteId.value)
     const data = res.data as ApiResponse<{ isFavorite: boolean; favoriteCount?: number }>
     if (res.statusCode === 200 && data.code === 200) {
@@ -343,7 +331,6 @@ const toggleFavorite = async () => {
       })
     }
   } catch (error: any) {
-    console.error('收藏失败:', error)
     uni.showToast({
       title: error?.message || '操作失败，请检查网络',
       icon: 'none',
@@ -352,13 +339,10 @@ const toggleFavorite = async () => {
 }
 
 const openCommentEditor = () => {
-  console.log('openCommentEditor called')
   if (!user.value) {
-    console.log('User not logged in, showing login prompt')
     showLoginPromptDialog()
     return
   }
-  console.log('Opening comment editor')
 
   // 先重置焦点状态
   textareaFocus.value = false
@@ -433,10 +417,9 @@ const submitComment = async () => {
         }
       }
     } else {
-      uni.showToast({ title: data.msg || '评论失败', icon: 'none' })
+      uni.showToast({ title: data.msg || '评论失败', icon: 'none'       })
     }
   } catch (error: any) {
-    console.error('评论失败:', error)
     uni.showToast({
       title: error?.message || '网络错误，请检查网络连接',
       icon: 'none'
@@ -460,8 +443,6 @@ const loadDetail = async () => {
     const data = res.data as ApiResponse
     if (res.statusCode === 200 && data.code === 200) {
       noteDetail.value = data.data
-      console.log('游记详情数据:', data.data)
-      console.log('作者信息:', data.data?.author)
       // 同步收藏状态（从后端返回的数据中获取）
       if (data.data?.isFavorite !== undefined) {
         isFavorite.value = data.data.isFavorite
@@ -503,13 +484,8 @@ const loadComments = async () => {
         nickname: comment.nickname || comment.userName || comment.nick_name,
         avatar: comment.avatar || comment.userAvatar || comment.user_avatar,
       }))
-      console.log('评论列表加载成功:', comments.value.length, '条评论')
-      if (comments.value.length > 0) {
-        console.log('第一条评论数据:', comments.value[0])
-      }
     }
   } catch (error) {
-    console.error('加载评论失败:', error)
     // 忽略评论加载错误，但不影响页面显示
   }
 }

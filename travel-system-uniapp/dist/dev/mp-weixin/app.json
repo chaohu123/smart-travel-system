@@ -3,6 +3,8 @@
     "pages/home/home",
     "pages/route/plan",
     "pages/route/detail",
+    "pages/route/hot-routes",
+    "pages/recommend/interest",
     "pages/checkin/checkin",
     "pages/travel-note/list",
     "pages/travel-note/detail",

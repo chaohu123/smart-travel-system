@@ -91,9 +91,14 @@
               <text class="scenic-name">{{ item.name }}</text>
               <view class="scenic-meta-row">
                 <text class="scenic-location">位置：{{item.address || item.city || '未知地点' }}</text>
-                <text class="scenic-price" :class="{ 'price-free': !item.price || item.price === 0 }">
-                  {{ item.price && item.price > 0 ? `¥${item.price}` : '免费' }}
-                </text>
+                <view class="scenic-price-wrapper">
+                  <text class="scenic-price" :class="{ 'price-free': !item.price || item.price === 0 }">
+                    {{ item.price && item.price > 0 ? `¥${item.price}` : '免费' }}
+                  </text>
+                  <text class="scenic-free-notice" v-if="(!item.price || item.price === 0) && item.freeNotice">
+                    {{ item.freeNotice }}
+                  </text>
+                </view>
               </view>
               <view class="scenic-meta-row" v-if="item.isWorldHeritage">
                 <text class="scenic-heritage">世界文化遗产</text>
@@ -277,12 +282,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app'
-<<<<<<< HEAD
 import { recommendApi, scenicSpotApi, type ApiResponse, travelNoteApi, travelNoteInteractionApi } from '@/api/content'
-=======
-import { recommendApi, scenicSpotApi, type ApiResponse } from '@/api/content'
-import { travelNoteApi, travelNoteInteractionApi } from '@/api/content'
->>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
 import { request } from '@/utils/http'
 import { useUserStore } from '@/store/user'
 import EmptyState from '@/components/EmptyState.vue'
@@ -348,6 +348,7 @@ interface ScenicItem {
   openTime?: string // 开放时间
   isMatchUserRoute?: boolean // 是否符合用户路线
   tags?: string[] // 标签列表
+  freeNotice?: string // 免费景点特殊说明（如：是否需要预约）
 }
 
 interface FoodItem {
@@ -474,9 +475,9 @@ const onFeatureClick = (item: (typeof featureEntries.value)[number]) => {
   if (item.type === 'planner') {
     uni.switchTab({ url: '/pages/route/plan' })
   } else if (item.type === 'hot-routes') {
-    uni.showToast({ title: '功能开发中', icon: 'none' })
+    uni.navigateTo({ url: '/pages/route/hot-routes' })
   } else if (item.type === 'interest') {
-    uni.showToast({ title: '功能开发中', icon: 'none' })
+    uni.navigateTo({ url: '/pages/recommend/interest' })
   }
 }
 
@@ -491,7 +492,6 @@ const onViewNote = (note: NoteItem) => {
 
 // 显示登录提示
 const showLoginPromptDialog = () => {
-  console.log('showLoginPromptDialog called')
   // 直接使用 uni.showModal，更可靠
   uni.showModal({
     title: '需要登录',
@@ -522,16 +522,13 @@ const handleLoginCancel = () => {
 
 // 点赞切换
 const toggleLike = async (note: NoteItem) => {
-  console.log('toggleLike called', note.id)
   // 检查登录状态
   if (!user.value) {
-    console.log('User not logged in, showing login prompt')
     showLoginPromptDialog()
     return
   }
 
   try {
-    console.log('Toggling like for note:', note.id, 'current state:', note.isLiked)
     // 先更新UI状态（乐观更新）
     const wasLiked = note.isLiked
     note.isLiked = !wasLiked
@@ -566,7 +563,6 @@ const toggleLike = async (note: NoteItem) => {
       })
     }
   } catch (error: any) {
-    console.error('点赞失败:', error)
     // 回滚UI状态
     note.isLiked = !note.isLiked
     note.likeCount = note.isLiked ? (note.likeCount || 0) + 1 : Math.max(0, (note.likeCount || 0) - 1)
@@ -579,10 +575,8 @@ const toggleLike = async (note: NoteItem) => {
 
 // 评论处理
 const handleComment = (note: NoteItem) => {
-  console.log('handleComment called', note.id)
   // 检查登录状态
   if (!user.value) {
-    console.log('User not logged in, showing login prompt')
     showLoginPromptDialog()
     return
   }
@@ -595,7 +589,6 @@ const onViewScenic = async (item: ScenicItem) => {
     await scenicSpotApi.incrementHotScore(item.id)
   } catch (error) {
     // 静默失败，不影响页面跳转
-    console.error('增加热度失败:', error)
   }
   uni.navigateTo({ url: `/pages/scenic/detail?id=${item.id}` })
 }
@@ -619,16 +612,10 @@ const fetchHomeData = async () => {
     const scenicParams: any = { limit: 3 }
     const foodParams: any = { limit: 6 }
 
-<<<<<<< HEAD
-=======
     // 如果选择了省份（不是"全部省份"），添加省份参数
->>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
     if (provinceValue && provinceValue !== '') {
       scenicParams.province = provinceValue
       foodParams.province = provinceValue
-      console.log('[首页] 选择省份:', provinceValue, '美食参数:', foodParams)
-    } else {
-      console.log('[首页] 未选择省份或选择全部省份，不传递province参数')
     }
 
     const [routeRes, scenicRes, foodRes] = await Promise.all([
@@ -655,38 +642,14 @@ const fetchHomeData = async () => {
 
     if (scenicRes.statusCode === 200 && scenicRes.data.code === 200) {
       scenicList.value = scenicRes.data.data || []
-      // 调试：打印价格信息
-      console.log('景点数据:', scenicList.value)
-      scenicList.value.forEach(item => {
-        console.log(`${item.name} - price:`, item.price, 'type:', typeof item.price)
-      })
     }
 
     if (foodRes.statusCode === 200 && foodRes.data.code === 200) {
       foodList.value = foodRes.data.data || []
-      console.log('[首页] 美食数据加载成功，数量:', foodList.value.length, '省份:', provinceValue || '全部')
-      if (foodList.value.length > 0) {
-        console.log('[首页] 美食列表:', foodList.value.map(f => ({ name: f.name, address: f.address })))
-      } else if (provinceValue) {
-        console.warn('[首页] 选择了省份但未返回美食数据，可能该省份暂无美食数据')
-<<<<<<< HEAD
-        // 如果选择了省份但没有数据，给用户提示
-        if (foodList.value.length === 0) {
-          uni.showToast({
-            title: `该省份暂无美食数据`,
-            icon: 'none',
-            duration: 2000
-          })
-        }
-=======
->>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
-      }
     } else {
-      console.error('[首页] 美食数据加载失败:', foodRes.data)
       toastFail(foodRes.data?.msg || '推荐美食加载失败')
     }
   } catch (error) {
-    console.error('[首页] 推荐数据加载异常:', error)
     toastFail('首页推荐加载失败')
   } finally {
     loadingRecommend.value = false
@@ -1341,6 +1304,12 @@ onReachBottom(() => {
   color: #666666;
 }
 
+.scenic-price-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
 .scenic-price {
   font-size: 26rpx;
   font-weight: 600;
@@ -1359,6 +1328,17 @@ onReachBottom(() => {
 .scenic-heritage {
   color: #ff9800;
   font-size: 24rpx;
+}
+
+.scenic-free-notice {
+  color: #3ba272;
+  font-size: 22rpx;
+  font-weight: 500;
+  padding: 4rpx 12rpx;
+  background-color: #e8f6f0;
+  border-radius: 12rpx;
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .scenic-location {

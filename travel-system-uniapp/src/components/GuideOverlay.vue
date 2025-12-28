@@ -20,7 +20,7 @@ import { getCache, setCache } from '@/utils/storage'
 
 const visible = ref(false)
 const steps = [
-  { title: '智能规划', desc: '在首页进入“智能规划”快速生成行程' },
+  { title: '智能规划', desc: '在首页进入"智能规划"快速生成行程' },
   { title: '游记发布', desc: '在游记页发布图文，分享体验' },
   { title: '打卡', desc: '在景点/美食页上传照片完成打卡' },
 ]
@@ -98,30 +98,3 @@ onMounted(() => {
   font-weight: 600;
 }
 </style>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<<<<<<< HEAD
-
-=======
->>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f

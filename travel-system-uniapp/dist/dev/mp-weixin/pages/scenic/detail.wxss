@@ -154,6 +154,15 @@
   display: block;
   padding-left: 40rpx;
 }
+.free-notice-content.data-v-44e281b9 {
+  color: #3ba272;
+  font-weight: 500;
+  background-color: #e8f6f0;
+  padding: 12rpx 20rpx;
+  border-radius: 12rpx;
+  display: inline-block;
+  margin-left: 40rpx;
+}
 
 /* 简介卡片 */
 .intro-card.data-v-44e281b9 {

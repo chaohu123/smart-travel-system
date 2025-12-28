@@ -71,7 +71,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       });
     };
     const showLoginPromptDialog = () => {
-      console.log("showLoginPromptDialog called");
       common_vendor.index.showModal({
         title: "\u9700\u8981\u767B\u5F55",
         content: "\u8BF7\u5148\u767B\u5F55",
@@ -92,16 +91,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const toggleLike = async () => {
       var _a;
-      console.log("toggleLike called", noteId.value);
       if (!noteId.value)
         return;
       try {
         if (!user.value) {
-          console.log("User not logged in, showing login prompt");
           showLoginPromptDialog();
           return;
         }
-        console.log("Toggling like for note:", noteId.value, "current state:", isLiked.value);
         const res = await api_content.travelNoteInteractionApi.toggleLike(user.value.id, noteId.value);
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
@@ -124,7 +120,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         }
       } catch (error) {
-        console.error("\u70B9\u8D5E\u5931\u8D25:", error);
         common_vendor.index.showToast({
           title: (error == null ? void 0 : error.message) || "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC",
           icon: "none"
@@ -133,16 +128,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const toggleFavorite = async () => {
       var _a;
-      console.log("toggleFavorite called", noteId.value);
       if (!noteId.value)
         return;
       try {
         if (!user.value) {
-          console.log("User not logged in, showing login prompt");
           showLoginPromptDialog();
           return;
         }
-        console.log("Toggling favorite for note:", noteId.value, "current state:", isFavorite.value);
         const res = await api_content.travelNoteInteractionApi.toggleFavorite(user.value.id, noteId.value);
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
@@ -161,7 +153,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         }
       } catch (error) {
-        console.error("\u6536\u85CF\u5931\u8D25:", error);
         common_vendor.index.showToast({
           title: (error == null ? void 0 : error.message) || "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC",
           icon: "none"
@@ -169,13 +160,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const openCommentEditor = () => {
-      console.log("openCommentEditor called");
       if (!user.value) {
-        console.log("User not logged in, showing login prompt");
         showLoginPromptDialog();
         return;
       }
-      console.log("Opening comment editor");
       textareaFocus.value = false;
       commentContent.value = "";
       commentEditorVisible.value = true;
@@ -239,7 +227,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           common_vendor.index.showToast({ title: data.msg || "\u8BC4\u8BBA\u5931\u8D25", icon: "none" });
         }
       } catch (error) {
-        console.error("\u8BC4\u8BBA\u5931\u8D25:", error);
         common_vendor.index.showToast({
           title: (error == null ? void 0 : error.message) || "\u7F51\u7EDC\u9519\u8BEF\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5",
           icon: "none"
@@ -255,7 +242,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     };
     const loadDetail = async () => {
-      var _a, _b, _c, _d;
+      var _a, _b, _c;
       if (!noteId.value)
         return;
       try {
@@ -263,12 +250,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
           noteDetail.value = data.data;
-          console.log("\u6E38\u8BB0\u8BE6\u60C5\u6570\u636E:", data.data);
-          console.log("\u4F5C\u8005\u4FE1\u606F:", (_b = data.data) == null ? void 0 : _b.author);
-          if (((_c = data.data) == null ? void 0 : _c.isFavorite) !== void 0) {
+          if (((_b = data.data) == null ? void 0 : _b.isFavorite) !== void 0) {
             isFavorite.value = data.data.isFavorite;
           }
-          if (((_d = data.data) == null ? void 0 : _d.isLiked) !== void 0) {
+          if (((_c = data.data) == null ? void 0 : _c.isLiked) !== void 0) {
             isLiked.value = data.data.isLiked;
           }
         } else {
@@ -301,13 +286,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             nickname: comment.nickname || comment.userName || comment.nick_name,
             avatar: comment.avatar || comment.userAvatar || comment.user_avatar
           }));
-          console.log("\u8BC4\u8BBA\u5217\u8868\u52A0\u8F7D\u6210\u529F:", comments.value.length, "\u6761\u8BC4\u8BBA");
-          if (comments.value.length > 0) {
-            console.log("\u7B2C\u4E00\u6761\u8BC4\u8BBA\u6570\u636E:", comments.value[0]);
-          }
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u8BC4\u8BBA\u5931\u8D25:", error);
       }
     };
     common_vendor.onMounted(() => {
@@ -357,11 +337,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         p: common_vendor.t(common_vendor.unref(commentCount)),
         q: common_vendor.f(comments.value, (comment, k0, i0) => {
           return {
-<<<<<<< HEAD
             a: comment.avatar || comment.userAvatar || common_vendor.unref(authorAvatar),
-=======
-            a: comment.avatar || common_vendor.unref(authorAvatar),
->>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
             b: common_vendor.t(comment.nickname || "\u533F\u540D\u7528\u6237"),
             c: common_vendor.t(comment.content),
             d: common_vendor.t(formatTime(comment.createTime)),

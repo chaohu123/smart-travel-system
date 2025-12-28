@@ -5,6 +5,8 @@ if (!Math) {
   "./pages/home/home.js";
   "./pages/route/plan.js";
   "./pages/route/detail.js";
+  "./pages/route/hot-routes.js";
+  "./pages/recommend/interest.js";
   "./pages/checkin/checkin.js";
   "./pages/travel-note/list.js";
   "./pages/travel-note/detail.js";

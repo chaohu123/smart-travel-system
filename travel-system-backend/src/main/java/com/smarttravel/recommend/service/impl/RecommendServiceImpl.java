@@ -231,6 +231,7 @@ public class RecommendServiceImpl implements RecommendService {
             item.put("imageUrl", spot.getImageUrl());
             item.put("isWorldHeritage", spot.getIsWorldHeritage() != null && spot.getIsWorldHeritage() == 1);
             item.put("suggestedVisitTime", spot.getSuggestedVisitTime());
+            item.put("freeNotice", spot.getFreeNotice());
 
             // 获取标签列表
             List<String> tagNames = tagNamesMap.getOrDefault(spot.getId(), Collections.emptyList());

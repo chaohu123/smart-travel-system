@@ -116,9 +116,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       if (item.type === "planner") {
         common_vendor.index.switchTab({ url: "/pages/route/plan" });
       } else if (item.type === "hot-routes") {
-        common_vendor.index.showToast({ title: "\u529F\u80FD\u5F00\u53D1\u4E2D", icon: "none" });
+        common_vendor.index.navigateTo({ url: "/pages/route/hot-routes" });
       } else if (item.type === "interest") {
-        common_vendor.index.showToast({ title: "\u529F\u80FD\u5F00\u53D1\u4E2D", icon: "none" });
+        common_vendor.index.navigateTo({ url: "/pages/recommend/interest" });
       }
     };
     const onViewRoute = (route) => {
@@ -128,7 +128,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       common_vendor.index.navigateTo({ url: `/pages/travel-note/detail?id=${note.id}` });
     };
     const showLoginPromptDialog = () => {
-      console.log("showLoginPromptDialog called");
       common_vendor.index.showModal({
         title: "\u9700\u8981\u767B\u5F55",
         content: "\u8BF7\u5148\u767B\u5F55",
@@ -148,14 +147,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       showLoginPrompt.value = false;
     };
     const toggleLike = async (note) => {
-      console.log("toggleLike called", note.id);
       if (!user.value) {
-        console.log("User not logged in, showing login prompt");
         showLoginPromptDialog();
         return;
       }
       try {
-        console.log("Toggling like for note:", note.id, "current state:", note.isLiked);
         const wasLiked = note.isLiked;
         note.isLiked = !wasLiked;
         if (!wasLiked) {
@@ -183,7 +179,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         }
       } catch (error) {
-        console.error("\u70B9\u8D5E\u5931\u8D25:", error);
         note.isLiked = !note.isLiked;
         note.likeCount = note.isLiked ? (note.likeCount || 0) + 1 : Math.max(0, (note.likeCount || 0) - 1);
         common_vendor.index.showToast({
@@ -193,9 +188,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const handleComment = (note) => {
-      console.log("handleComment called", note.id);
       if (!user.value) {
-        console.log("User not logged in, showing login prompt");
         showLoginPromptDialog();
         return;
       }
@@ -205,7 +198,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       try {
         await api_content.scenicSpotApi.incrementHotScore(item.id);
       } catch (error) {
-        console.error("\u589E\u52A0\u70ED\u5EA6\u5931\u8D25:", error);
       }
       common_vendor.index.navigateTo({ url: `/pages/scenic/detail?id=${item.id}` });
     };
@@ -225,9 +217,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         if (provinceValue && provinceValue !== "") {
           scenicParams.province = provinceValue;
           foodParams.province = provinceValue;
-          console.log("[\u9996\u9875] \u9009\u62E9\u7701\u4EFD:", provinceValue, "\u7F8E\u98DF\u53C2\u6570:", foodParams);
-        } else {
-          console.log("[\u9996\u9875] \u672A\u9009\u62E9\u7701\u4EFD\u6216\u9009\u62E9\u5168\u90E8\u7701\u4EFD\uFF0C\u4E0D\u4F20\u9012province\u53C2\u6570");
         }
         const [routeRes, scenicRes, foodRes] = await Promise.all([
           api_content.recommendApi.routes(void 0, 10),
@@ -251,35 +240,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         }
         if (scenicRes.statusCode === 200 && scenicRes.data.code === 200) {
           scenicList.value = scenicRes.data.data || [];
-          console.log("\u666F\u70B9\u6570\u636E:", scenicList.value);
-          scenicList.value.forEach((item) => {
-            console.log(`${item.name} - price:`, item.price, "type:", typeof item.price);
-          });
         }
         if (foodRes.statusCode === 200 && foodRes.data.code === 200) {
           foodList.value = foodRes.data.data || [];
-          console.log("[\u9996\u9875] \u7F8E\u98DF\u6570\u636E\u52A0\u8F7D\u6210\u529F\uFF0C\u6570\u91CF:", foodList.value.length, "\u7701\u4EFD:", provinceValue || "\u5168\u90E8");
-          if (foodList.value.length > 0) {
-            console.log("[\u9996\u9875] \u7F8E\u98DF\u5217\u8868:", foodList.value.map((f) => ({ name: f.name, address: f.address })));
-          } else if (provinceValue) {
-            console.warn("[\u9996\u9875] \u9009\u62E9\u4E86\u7701\u4EFD\u4F46\u672A\u8FD4\u56DE\u7F8E\u98DF\u6570\u636E\uFF0C\u53EF\u80FD\u8BE5\u7701\u4EFD\u6682\u65E0\u7F8E\u98DF\u6570\u636E");
-<<<<<<< HEAD
-            if (foodList.value.length === 0) {
-              common_vendor.index.showToast({
-                title: `\u8BE5\u7701\u4EFD\u6682\u65E0\u7F8E\u98DF\u6570\u636E`,
-                icon: "none",
-                duration: 2e3
-              });
-            }
-=======
->>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
-          }
         } else {
-          console.error("[\u9996\u9875] \u7F8E\u98DF\u6570\u636E\u52A0\u8F7D\u5931\u8D25:", foodRes.data);
           toastFail(((_b = foodRes.data) == null ? void 0 : _b.msg) || "\u63A8\u8350\u7F8E\u98DF\u52A0\u8F7D\u5931\u8D25");
         }
       } catch (error) {
-        console.error("[\u9996\u9875] \u63A8\u8350\u6570\u636E\u52A0\u8F7D\u5F02\u5E38:", error);
         toastFail("\u9996\u9875\u63A8\u8350\u52A0\u8F7D\u5931\u8D25");
       } finally {
         loadingRecommend.value = false;
@@ -377,33 +344,37 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             c: common_vendor.t(item.address || item.city || "\u672A\u77E5\u5730\u70B9"),
             d: common_vendor.t(item.price && item.price > 0 ? `\xA5${item.price}` : "\u514D\u8D39"),
             e: !item.price || item.price === 0 ? 1 : "",
-            f: item.isWorldHeritage
-          }, item.isWorldHeritage ? {} : {}, {
-            g: item.openTime || item.suggestedVisitTime
-          }, item.openTime || item.suggestedVisitTime ? common_vendor.e({
-            h: item.openTime
-          }, item.openTime ? {
-            i: common_vendor.t(item.openTime)
+            f: (!item.price || item.price === 0) && item.freeNotice
+          }, (!item.price || item.price === 0) && item.freeNotice ? {
+            g: common_vendor.t(item.freeNotice)
           } : {}, {
-            j: item.openTime && item.suggestedVisitTime
+            h: item.isWorldHeritage
+          }, item.isWorldHeritage ? {} : {}, {
+            i: item.openTime || item.suggestedVisitTime
+          }, item.openTime || item.suggestedVisitTime ? common_vendor.e({
+            j: item.openTime
+          }, item.openTime ? {
+            k: common_vendor.t(item.openTime)
+          } : {}, {
+            l: item.openTime && item.suggestedVisitTime
           }, item.openTime && item.suggestedVisitTime ? {} : {}, {
-            k: item.suggestedVisitTime
+            m: item.suggestedVisitTime
           }, item.suggestedVisitTime ? {
-            l: common_vendor.t(item.suggestedVisitTime)
+            n: common_vendor.t(item.suggestedVisitTime)
           } : {}) : {}, {
-            m: item.isMatchUserRoute
+            o: item.isMatchUserRoute
           }, item.isMatchUserRoute ? {} : {}, {
-            n: item.tags && item.tags.length > 0
+            p: item.tags && item.tags.length > 0
           }, item.tags && item.tags.length > 0 ? {
-            o: common_vendor.f(item.tags, (tag, k1, i1) => {
+            q: common_vendor.f(item.tags, (tag, k1, i1) => {
               return {
                 a: common_vendor.t(tag),
                 b: tag
               };
             })
           } : {}, {
-            p: item.id,
-            q: common_vendor.o(($event) => onViewScenic(item))
+            r: item.id,
+            s: common_vendor.o(($event) => onViewScenic(item))
           });
         }),
         q: loadingRecommend.value

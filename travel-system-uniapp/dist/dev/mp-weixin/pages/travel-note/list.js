@@ -93,7 +93,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           ];
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u57CE\u5E02\u5217\u8868\u5931\u8D25", error);
       }
     };
     common_vendor.onMounted(() => {

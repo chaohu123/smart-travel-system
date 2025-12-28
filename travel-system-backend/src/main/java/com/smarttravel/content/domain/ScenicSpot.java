@@ -25,6 +25,7 @@ public class ScenicSpot {
     private BigDecimal score;
     private Integer hotScore;
     private Integer isRecommend;
+    private String freeNotice;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private Integer delFlag;
@@ -172,6 +173,14 @@ public class ScenicSpot {
 
     public void setIsRecommend(Integer isRecommend) {
         this.isRecommend = isRecommend;
+    }
+
+    public String getFreeNotice() {
+        return freeNotice;
+    }
+
+    public void setFreeNotice(String freeNotice) {
+        this.freeNotice = freeNotice;
     }
 
     public LocalDateTime getCreateTime() {
