@@ -102,10 +102,9 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 const query = reactive<Partial<Comment>>({
-  contentType: '',
-  contentId: undefined,
-  status: undefined
-});
+  contentType: ''
+  // contentId 和 status 不设置，默认为 undefined，在构建请求参数时会过滤掉
+} as Partial<Comment>);
 
 const list = ref<Comment[]>([]);
 const dialogVisible = ref(false);
@@ -120,7 +119,18 @@ const form = reactive<Comment>({
 
 const loadData = async () => {
   try {
-    const resp = await fetchCommentList(query);
+    // 过滤掉 undefined 值
+    const params: any = {};
+    if (query.contentType !== undefined && query.contentType !== '') {
+      params.contentType = query.contentType;
+    }
+    if (query.contentId !== undefined && query.contentId !== null) {
+      params.contentId = query.contentId;
+    }
+    if (query.status !== undefined && query.status !== null) {
+      params.status = query.status;
+    }
+    const resp = await fetchCommentList(params);
     if (resp.data.code === 200) {
       list.value = resp.data.rows;
     } else {
@@ -137,8 +147,9 @@ const handleSearch = () => {
 
 const handleReset = () => {
   query.contentType = '';
-  query.contentId = undefined;
-  query.status = undefined;
+  // 使用 null 而不是 undefined，这样在构建 params 时更容易处理
+  query.contentId = null as any;
+  query.status = null as any;
   loadData();
 };
 

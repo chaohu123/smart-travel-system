@@ -144,9 +144,9 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 const query = reactive<Partial<TravelRoute>>({
-  routeName: '',
-  cityId: undefined
-});
+  routeName: ''
+  // cityId 不设置，默认为 undefined，在构建请求参数时会过滤掉
+} as Partial<TravelRoute>);
 
 const pagination = reactive({
   pageNum: 1,
@@ -182,11 +182,18 @@ const dayDrawer = reactive({
 
 const loadData = async () => {
   try {
-    const params = {
-      ...query,
+    // 过滤掉 undefined 值
+    const params: any = {
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize
     };
+    // 只添加非 undefined 的查询参数
+    if (query.routeName !== undefined && query.routeName !== '') {
+      params.routeName = query.routeName;
+    }
+    if (query.cityId !== undefined && query.cityId !== null) {
+      params.cityId = query.cityId;
+    }
     const resp = await fetchRouteList(params);
     if (resp.data.code === 200) {
       list.value = resp.data.rows;
@@ -206,7 +213,8 @@ const handleSearch = () => {
 
 const handleReset = () => {
   query.routeName = '';
-  query.cityId = undefined;
+  // 使用 null 而不是 undefined，这样在构建 params 时更容易处理
+  query.cityId = null as any;
   pagination.pageNum = 1; // 重置到第一页
   loadData();
 };

@@ -39,3 +39,10 @@ public interface AiService {
 
 
 
+
+
+
+
+
+
+

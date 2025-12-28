@@ -32,6 +32,9 @@ export function fetchTravelNoteList(params: Partial<TravelNote>) {
 }
 
 export function fetchTravelNoteDetail(id: number) {
+  if (id === undefined || id === null || isNaN(Number(id))) {
+    return Promise.reject(new Error('游记ID不能为空'));
+  }
   return http.get('/admin/travel/note/' + id);
 }
 
@@ -44,6 +47,9 @@ export function updateTravelNote(data: TravelNote) {
 }
 
 export function deleteTravelNote(id: number) {
+  if (id === undefined || id === null || isNaN(Number(id))) {
+    return Promise.reject(new Error('游记ID不能为空'));
+  }
   return http.delete('/admin/travel/note/' + id);
 }
 

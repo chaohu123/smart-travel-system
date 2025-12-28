@@ -12,6 +12,7 @@
         <result column="food_type" property="foodType"/>
         <result column="avg_price" property="avgPrice"/>
         <result column="intro" property="intro"/>
+        <result column="image_url" property="imageUrl"/>
         <result column="score" property="score"/>
         <result column="hot_score" property="hotScore"/>
         <result column="is_recommend" property="isRecommend"/>
@@ -21,7 +22,7 @@
     </resultMap>
 
     <select id="selectList" parameterType="com.smarttravel.content.domain.Food" resultMap="FoodResult">
-        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro,
+        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro, image_url,
                score, hot_score, is_recommend, create_time, update_time, del_flag
         FROM food
         WHERE del_flag = 0
@@ -31,18 +32,56 @@
         <if test="isRecommend != null">
             AND is_recommend = #{isRecommend}
         </if>
+        <if test="name != null and name != ''">
+            AND name LIKE CONCAT('%', #{name}, '%')
+        </if>
         ORDER BY hot_score DESC, score DESC
     </select>
 
+    <select id="selectListWithPage" resultMap="FoodResult">
+        SELECT f.id, f.name, f.city_id, f.address, f.latitude, f.longitude, f.food_type, f.avg_price, f.intro, f.image_url,
+               f.score, f.hot_score, f.is_recommend, f.create_time, f.update_time, f.del_flag
+        FROM food f
+        LEFT JOIN city c ON f.city_id = c.id
+        WHERE f.del_flag = 0
+        <if test="query.cityId != null">
+            AND f.city_id = #{query.cityId}
+        </if>
+        <if test="query.isRecommend != null">
+            AND f.is_recommend = #{query.isRecommend}
+        </if>
+        <if test="query.name != null and query.name != ''">
+            AND f.name LIKE CONCAT('%', #{query.name}, '%')
+        </if>
+        ORDER BY f.hot_score DESC, f.score DESC
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countList" parameterType="com.smarttravel.content.domain.Food" resultType="int">
+        SELECT COUNT(*)
+        FROM food f
+        LEFT JOIN city c ON f.city_id = c.id
+        WHERE f.del_flag = 0
+        <if test="cityId != null">
+            AND f.city_id = #{cityId}
+        </if>
+        <if test="isRecommend != null">
+            AND f.is_recommend = #{isRecommend}
+        </if>
+        <if test="name != null and name != ''">
+            AND f.name LIKE CONCAT('%', #{name}, '%')
+        </if>
+    </select>
+
     <select id="selectById" parameterType="long" resultMap="FoodResult">
-        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro,
+        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro, image_url,
                score, hot_score, is_recommend, create_time, update_time, del_flag
         FROM food
         WHERE id = #{id} AND del_flag = 0
     </select>
 
     <select id="selectHotByCityId" resultMap="FoodResult">
-        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro,
+        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro, image_url,
                score, hot_score, is_recommend, create_time, update_time, del_flag
         FROM food
         WHERE del_flag = 0
@@ -53,8 +92,21 @@
         LIMIT #{limit}
     </select>
 
+    <select id="selectHotByProvince" resultMap="FoodResult">
+        SELECT f.id, f.name, f.city_id, f.address, f.latitude, f.longitude, f.food_type, f.avg_price, f.intro, f.image_url,
+               f.score, f.hot_score, f.is_recommend, f.create_time, f.update_time, f.del_flag
+        FROM food f
+        INNER JOIN city c ON f.city_id = c.id
+        WHERE f.del_flag = 0 AND c.del_flag = 0
+        <if test="province != null and province != ''">
+            AND c.province = #{province}
+        </if>
+        ORDER BY (f.hot_score * 2 + COALESCE(f.score, 0)) DESC
+        LIMIT #{limit}
+    </select>
+
     <select id="selectRecommend" resultMap="FoodResult">
-        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro,
+        SELECT id, name, city_id, address, latitude, longitude, food_type, avg_price, intro, image_url,
                score, hot_score, is_recommend, create_time, update_time, del_flag
         FROM food
         WHERE del_flag = 0 AND is_recommend = 1
@@ -63,9 +115,9 @@
     </select>
 
     <insert id="insert" parameterType="com.smarttravel.content.domain.Food" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO food (name, city_id, address, latitude, longitude, food_type, avg_price, intro,
+        INSERT INTO food (name, city_id, address, latitude, longitude, food_type, avg_price, intro, image_url,
                score, hot_score, is_recommend, create_time, update_time, del_flag)
-        VALUES (#{name}, #{cityId}, #{address}, #{latitude}, #{longitude}, #{foodType}, #{avgPrice}, #{intro},
+        VALUES (#{name}, #{cityId}, #{address}, #{latitude}, #{longitude}, #{foodType}, #{avgPrice}, #{intro}, #{imageUrl},
                #{score}, #{hotScore}, #{isRecommend}, NOW(), NOW(), 0)
     </insert>
 
@@ -80,6 +132,7 @@
             <if test="foodType != null">food_type = #{foodType},</if>
             <if test="avgPrice != null">avg_price = #{avgPrice},</if>
             <if test="intro != null">intro = #{intro},</if>
+            <if test="imageUrl != null">image_url = #{imageUrl},</if>
             <if test="score != null">score = #{score},</if>
             <if test="hotScore != null">hot_score = #{hotScore},</if>
             <if test="isRecommend != null">is_recommend = #{isRecommend},</if>
@@ -90,6 +143,9 @@
     </update>
 
 </mapper>
+
+
+
 
 
 

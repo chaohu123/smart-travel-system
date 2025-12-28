@@ -40,3 +40,10 @@ public interface UserInterestService {
 
 
 
+
+
+
+
+
+
+

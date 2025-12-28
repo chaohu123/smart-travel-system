@@ -11,6 +11,24 @@ const handleAuthFail = () => {
     common_vendor.index.switchTab({ url: "/pages/profile/profile" });
   }, 400);
 };
+const cleanParams = (params) => {
+  if (!params || typeof params !== "object") {
+    return params;
+  }
+  if (Array.isArray(params)) {
+    return params.map(cleanParams).filter((item) => item !== void 0 && item !== null);
+  }
+  const cleaned = {};
+  for (const key in params) {
+    if (Object.prototype.hasOwnProperty.call(params, key)) {
+      const value = params[key];
+      if (value !== void 0 && value !== null && value !== "undefined" && value !== "null") {
+        cleaned[key] = value;
+      }
+    }
+  }
+  return cleaned;
+};
 const request = (options) => {
   const {
     url,
@@ -18,6 +36,7 @@ const request = (options) => {
     showLoading = true,
     needRetry = false,
     header = {},
+    data,
     ...rest
   } = options;
   const token = getToken();
@@ -32,10 +51,12 @@ const request = (options) => {
   if (showLoading) {
     common_vendor.index.showLoading({ title: "\u52A0\u8F7D\u4E2D", mask: true });
   }
+  const cleanedData = data ? cleanParams(data) : void 0;
   const run = () => new Promise((resolve, reject) => {
     common_vendor.index.request({
       url: url.startsWith("http") ? url : `${BASE_URL}${url}`,
       header: headers,
+      data: cleanedData,
       ...rest,
       success: (res) => {
         if (res.statusCode === 401 || res.statusCode === 403) {

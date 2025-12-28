@@ -1,45 +1,45 @@
 package com.smarttravel.common.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.nio.file.Paths;
+import java.io.File;
 
 /**
- * 静态资源映射，支持本地上传文件访问
+ * Web MVC 配置
+ * - 跨域配置
+ * - 静态资源映射（上传文件访问）
  */
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    @Value("${upload.dir:uploads}")
-    private String uploadDir;
+    /**
+     * 跨域配置
+     */
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOriginPatterns("*")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(3600);
+    }
 
-    @Value("${upload.access-prefix:/uploads/}")
-    private String accessPrefix;
-
+    /**
+     * 静态资源映射
+     * 将 /uploads/** 映射到项目根目录下的 uploads 文件夹
+     */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String physicalPath = Paths.get(uploadDir).toAbsolutePath().toUri().toString();
-        registry.addResourceHandler(accessPrefix + "**")
-                .addResourceLocations(physicalPath);
+        // 获取项目根目录
+        String projectRoot = System.getProperty("user.dir");
+        String uploadsPath = projectRoot + File.separator + "uploads";
+
+        // 映射 /uploads/** 到文件系统的 uploads 目录
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:" + uploadsPath + File.separator);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

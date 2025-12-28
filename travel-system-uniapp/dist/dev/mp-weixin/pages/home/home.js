@@ -1,8 +1,8 @@
 "use strict";
 var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
+var utils_http = require("../../utils/http.js");
 var store_user = require("../../store/user.js");
-require("../../utils/http.js");
 require("../../utils/storage.js");
 if (!Math) {
   (GuideOverlay + LoginPrompt + common_vendor.unref(common_vendor.Search) + SkeletonCards + EmptyState)();
@@ -167,10 +167,26 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       const toastFail = (msg) => common_vendor.index.showToast({ title: msg, icon: "none" });
       try {
         const provinceValue = selectedProvince.value && selectedProvince.value !== "\u5168\u90E8\u7701\u4EFD" ? (_a = provinceList.value[selectedProvinceIndex.value]) == null ? void 0 : _a.value : void 0;
+        const scenicParams = { limit: 3 };
+        const foodParams = { limit: 6 };
+        if (provinceValue) {
+          scenicParams.province = provinceValue;
+          foodParams.province = provinceValue;
+        }
         const [routeRes, scenicRes, foodRes] = await Promise.all([
           api_content.recommendApi.routes(void 0, 10),
-          api_content.recommendApi.scenicSpots(void 0, void 0, 3, provinceValue),
-          api_content.recommendApi.foods(void 0, void 0, 6)
+          utils_http.request({
+            url: "/recommend/scenic-spots",
+            method: "GET",
+            data: scenicParams,
+            showLoading: false
+          }),
+          utils_http.request({
+            url: "/recommend/foods",
+            method: "GET",
+            data: foodParams,
+            showLoading: false
+          })
         ]);
         if (routeRes.statusCode === 200 && routeRes.data.code === 200) {
           routeList.value = routeRes.data.data || [];
@@ -322,7 +338,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       } : {
         s: common_vendor.f(routeList.value.slice(0, 4), (route, k0, i0) => {
           return {
-            a: route.coverImage || "https://via.placeholder.com/800x450?text=Route",
+            a: route.coverImage,
             b: common_vendor.t(route.days),
             c: common_vendor.t(route.routeName),
             d: common_vendor.t(route.summary || "\u70B9\u51FB\u67E5\u770B\u7EBF\u8DEF\u8BE6\u60C5"),
@@ -339,8 +355,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       } : common_vendor.e({
         w: common_vendor.f(noteList.value, (note, k0, i0) => {
           return {
-            a: note.coverImage || "https://via.placeholder.com/800x450?text=Travel+Note",
-            b: note.authorAvatar || "https://via.placeholder.com/80?text=Avatar",
+            a: note.coverImage,
+            b: note.authorAvatar,
             c: common_vendor.t(note.authorName || "\u533F\u540D\u7528\u6237"),
             d: common_vendor.t(note.title),
             e: common_vendor.n({
@@ -365,14 +381,24 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         })
       } : {}), {
         A: common_vendor.f(foodList.value, (item, k0, i0) => {
-          return {
-            a: common_vendor.t(item.name),
-            b: common_vendor.t(item.address || item.foodType || "\u70B9\u51FB\u67E5\u770B\u8BE6\u60C5"),
-            c: common_vendor.t(item.score || "--"),
-            d: common_vendor.t(item.hotScore || 0),
-            e: item.id,
-            f: common_vendor.o(($event) => onViewFood(item))
-          };
+          return common_vendor.e({
+            a: item.imageUrl
+          }, item.imageUrl ? {
+            b: item.imageUrl
+          } : {}, {
+            c: common_vendor.t(item.name),
+            d: item.avgPrice
+          }, item.avgPrice ? {
+            e: common_vendor.t(item.avgPrice)
+          } : {}, {
+            f: common_vendor.t(item.address || "\u5730\u5740\u672A\u77E5"),
+            g: item.score
+          }, item.score ? {
+            h: common_vendor.t(item.score)
+          } : {}, {
+            i: item.id,
+            j: common_vendor.o(($event) => onViewFood(item))
+          });
         })
       });
     };

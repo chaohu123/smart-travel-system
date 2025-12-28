@@ -27,6 +27,9 @@ export function fetchCityList(params?: Partial<City & { pageNum?: number; pageSi
 }
 
 export function fetchCityDetail(id: number) {
+  if (id === undefined || id === null || isNaN(Number(id))) {
+    return Promise.reject(new Error('城市ID不能为空'));
+  }
   return http.get('/admin/city/' + id);
 }
 
@@ -39,6 +42,9 @@ export function updateCity(data: City) {
 }
 
 export function deleteCity(id: number) {
+  if (id === undefined || id === null || isNaN(Number(id))) {
+    return Promise.reject(new Error('城市ID不能为空'));
+  }
   return http.delete('/admin/city/' + id);
 }
 

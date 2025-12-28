@@ -1,31 +1,111 @@
 /**
- * 内容相关API（游记、景点、美食、标签、上传）
+ * 内容相关API（游记、景点、美食、推荐等）
  */
 
 import { request, uploadFile } from '@/utils/http'
 
-// 辅助函数：过滤掉 undefined 和 null 值
-const filterParams = (params: Record<string, any>): Record<string, any> => {
-  const filtered: Record<string, any> = {}
-  for (const key in params) {
-    if (params[key] !== undefined && params[key] !== null) {
-      filtered[key] = params[key]
-    }
-  }
-  return filtered
-}
-
-// 统一的接口响应结构
-export interface ApiResponse<T> {
+// API 响应类型
+export interface ApiResponse<T = any> {
   code: number
-  msg?: string
+  msg: string
   data: T
 }
 
-// 游记相关
+// 推荐API
+export const recommendApi = {
+  // 推荐旅游线路
+  routes: (userId?: number, limit: number = 10) => {
+    return request({
+      url: '/recommend/routes',
+      method: 'GET',
+      data: { userId, limit },
+      showLoading: false,
+    })
+  },
+
+  // 推荐游记
+  travelNotes: (userId?: number, limit: number = 10) => {
+    return request({
+      url: '/recommend/travel-notes',
+      method: 'GET',
+      data: { userId, limit },
+      showLoading: false,
+    })
+  },
+
+  // 推荐景点
+  scenicSpots: (userId?: number, cityId?: number, limit: number = 3, province?: string) => {
+    return request({
+      url: '/recommend/scenic-spots',
+      method: 'GET',
+      data: { userId, cityId, limit, province },
+      showLoading: false,
+    })
+  },
+
+  // 推荐美食
+  foods: (userId?: number, cityId?: number, limit: number = 10, province?: string) => {
+    return request({
+      url: '/recommend/foods',
+      method: 'GET',
+      data: { userId, cityId, limit, province },
+      showLoading: false,
+    })
+  },
+}
+
+// 景点API
+export const scenicSpotApi = {
+  // 查询景点列表
+  list: (params?: {
+    pageNum?: number
+    pageSize?: number
+    cityId?: number
+    tagName?: string
+    sortBy?: string
+  }) => {
+    return request({
+      url: '/scenic/list',
+      method: 'GET',
+      data: params || {},
+      showLoading: false,
+    })
+  },
+
+  // 查询景点详情
+  getDetail: (id: number) => {
+    return request({
+      url: `/scenic/${id}`,
+      method: 'GET',
+      showLoading: true,
+    })
+  },
+
+  // 查询热门景点
+  getHot: (cityId?: number, limit: number = 10) => {
+    return request({
+      url: '/scenic/hot',
+      method: 'GET',
+      data: { cityId, limit },
+      showLoading: false,
+    })
+  },
+
+  // 增加景点热度
+  incrementHotScore: (id: number) => {
+    return request({
+      url: `/scenic/${id}/increment-hot`,
+      method: 'POST',
+      showLoading: false,
+      needAuth: false,
+    })
+  },
+}
+
+// 游记API
 export const travelNoteApi = {
   // 查询游记列表
-  list: (params: {
+  list: (params?: {
     pageNum?: number
     pageSize?: number
     cityId?: number
@@ -35,8 +115,8 @@ export const travelNoteApi = {
     return request({
       url: '/travel/note/list',
       method: 'GET',
-      data: filterParams(params),
-      needRetry: true,
+      data: params || {},
+      showLoading: false,
     })
   },
 
@@ -45,7 +125,8 @@ export const travelNoteApi = {
     return request({
       url: `/travel/note/${id}`,
       method: 'GET',
-      data: filterParams({ userId }),
+      data: { userId },
+      showLoading: true,
     })
   },
 
@@ -53,10 +134,10 @@ export const travelNoteApi = {
   publish: (data: {
     userId: number
     title: string
-    content: string
-    cityId: number
+    content?: string
+    cityId?: number
     cityName?: string
-    imageUrls: string[]
+    imageUrls?: string[]
     scenicIds?: number[]
     tagIds?: number[]
   }) => {
@@ -68,8 +149,17 @@ export const travelNoteApi = {
     })
   },
 
-  // 编辑游记
-  update: (id: number, data: any) => {
+  // 更新游记
+  update: (id: number, data: {
+    userId: number
+    title: string
+    content?: string
+    cityId?: number
+    cityName?: string
+    imageUrls?: string[]
+    scenicIds?: number[]
+    tagIds?: number[]
+  }) => {
     return request({
       url: `/travel/note/${id}`,
       method: 'PUT',
@@ -87,9 +177,29 @@ export const travelNoteApi = {
       needAuth: true,
     })
   },
+
+  // 我收藏的游记列表
+  listMyFavorites: (userId: number, pageNum: number = 1, pageSize: number = 10) => {
+    return request({
+      url: '/travel/note/my/favorites',
+      method: 'GET',
+      data: { userId, pageNum, pageSize },
+      needAuth: true,
+    })
+  },
+
+  // 我发布的游记列表
+  listMyNotes: (userId: number, pageNum: number = 1, pageSize: number = 10) => {
+    return request({
+      url: '/travel/note/my/list',
+      method: 'GET',
+      data: { userId, pageNum, pageSize },
+      needAuth: true,
+    })
+  },
 }
 
-// 游记互动相关
+// 游记互动API
 export const travelNoteInteractionApi = {
   // 点赞/取消点赞
   toggleLike: (userId: number, noteId: number) => {
@@ -98,7 +208,6 @@ export const travelNoteInteractionApi = {
       method: 'POST',
       data: { userId, noteId },
       needAuth: true,
-      showLoading: false,
     })
   },
 
@@ -109,7 +218,6 @@ export const travelNoteInteractionApi = {
       method: 'POST',
       data: { userId, noteId },
       needAuth: true,
-      showLoading: false,
     })
   },
 
@@ -126,7 +234,6 @@ export const travelNoteInteractionApi = {
       method: 'POST',
       data,
       needAuth: true,
-      showLoading: true,
     })
   },
 
@@ -140,58 +247,16 @@ export const travelNoteInteractionApi = {
     return request({
       url: '/travel/note/interaction/comment/list',
       method: 'GET',
-      data: filterParams(params),
+      data: params,
+      showLoading: false,
     })
   },
 }
 
-// 景点相关
-export const scenicSpotApi = {
-  // 查询景点列表
-  list: (params: {
-    pageNum?: number
-    pageSize?: number
-    cityId?: number
-    tagName?: string
-    sortBy?: string
-  }) => {
-    return request({
-      url: '/scenic/list',
-      method: 'GET',
-      data: filterParams(params),
-    })
-  },
-
-  // 查询景点详情
-  getDetail: (id: number) => {
-    return request({
-      url: `/scenic/${id}`,
-      method: 'GET',
-    })
-  },
-
-  // 查询热门景点
-  getHot: (cityId?: number, limit?: number) => {
-    return request({
-      url: '/scenic/hot',
-      method: 'GET',
-      data: filterParams({ cityId, limit }),
-    })
-  },
-
-  // 增加景点热度
-  incrementHotScore: (id: number) => {
-    return request({
-      url: `/scenic/${id}/increment-hot`,
-      method: 'POST',
-    })
-  },
-}
-
-// 美食相关
+// 美食API
 export const foodApi = {
   // 查询美食列表
-  list: (params: {
+  list: (params?: {
     pageNum?: number
     pageSize?: number
     cityId?: number
@@ -201,7 +266,8 @@ export const foodApi = {
     return request({
       url: '/food/list',
       method: 'GET',
-      data: filterParams(params),
+      data: params || {},
+      showLoading: false,
     })
   },
 
@@ -210,84 +276,49 @@ export const foodApi = {
     return request({
       url: `/food/${id}`,
       method: 'GET',
+      showLoading: true,
     })
   },
 
   // 查询热门美食
-  getHot: (cityId?: number, limit?: number) => {
+  getHot: (cityId?: number, limit: number = 10) => {
     return request({
       url: '/food/hot',
       method: 'GET',
-      data: filterParams({ cityId, limit }),
+      data: { cityId, limit },
+      showLoading: false,
     })
   },
 }
 
-// 城市相关
+// 城市API
 export const cityApi = {
   // 查询城市列表
   list: () => {
     return request({
       url: '/city/list',
       method: 'GET',
+      showLoading: false,
     })
   },
 }
 
-// 首页推荐相关
-export const recommendApi = {
-  // 推荐线路
-  routes: (userId?: number, limit?: number, cityId?: number) => {
-    return request<ApiResponse<any[]>>({
-      url: '/recommend/routes',
-      method: 'GET',
-      data: filterParams({ userId, limit, cityId }),
-      needRetry: true,
-    })
-  },
-  // 推荐游记
-  travelNotes: (userId?: number, limit?: number) => {
-    return request<ApiResponse<any[]>>({
-      url: '/recommend/travel-notes',
-      method: 'GET',
-      data: filterParams({ userId, limit }),
-      needRetry: true,
-    })
-  },
-  // 推荐景点
-  scenicSpots: (userId?: number, cityId?: number, limit?: number, province?: string) => {
-    return request<ApiResponse<any[]>>({
-      url: '/recommend/scenic-spots',
-      method: 'GET',
-      data: filterParams({ userId, cityId, limit, province }),
-      needRetry: true,
-    })
-  },
-  // 推荐美食
-  foods: (userId?: number, cityId?: number, limit?: number) => {
-    return request<ApiResponse<any[]>>({
-      url: '/recommend/foods',
-      method: 'GET',
-      data: filterParams({ userId, cityId, limit }),
-      needRetry: true,
-    })
-  },
-}
-
-// 标签相关
+// 标签API
 export const tagApi = {
+  // 查询标签列表
   list: () => {
-    return request<ApiResponse<any[]>>({
+    return request({
       url: '/tag/list',
       method: 'GET',
+      showLoading: false,
     })
   },
 }
 
-// 上传相关
+// 上传API
 export const uploadApi = {
+  // 上传图片
   upload: (filePath: string) => {
-    return uploadFile('/upload', filePath)
+    return uploadFile('/upload/image', filePath)
   },
 }
-

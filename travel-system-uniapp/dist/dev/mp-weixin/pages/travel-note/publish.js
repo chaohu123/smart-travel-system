@@ -78,11 +78,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       common_vendor.index.chooseImage({
         count: remain,
         success: async (res) => {
+          var _a;
           for (const path of res.tempFilePaths) {
             const uploadRes = await api_content.uploadApi.upload(path);
             const data = JSON.parse(uploadRes.data);
             if (uploadRes.statusCode === 200 && data.code === 200) {
-              imageUrls.value.push(data.data);
+              const imageUrl = typeof data.data === "string" ? data.data : (_a = data.data) == null ? void 0 : _a.url;
+              if (imageUrl) {
+                imageUrls.value.push(imageUrl);
+              } else {
+                common_vendor.index.showToast({ title: "\u4E0A\u4F20\u5931\u8D25\uFF1A\u672A\u83B7\u53D6\u5230\u56FE\u7247URL", icon: "none" });
+                break;
+              }
             } else {
               common_vendor.index.showToast({ title: data.msg || "\u4E0A\u4F20\u5931\u8D25", icon: "none" });
               break;

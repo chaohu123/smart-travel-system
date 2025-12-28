@@ -31,6 +31,9 @@ export function fetchRouteList(params?: Partial<TravelRoute & { pageNum?: number
 }
 
 export function fetchRouteDetail(id: number) {
+  if (id === undefined || id === null || isNaN(Number(id))) {
+    return Promise.reject(new Error('线路ID不能为空'));
+  }
   return http.get('/admin/route/' + id);
 }
 
@@ -43,10 +46,16 @@ export function updateRoute(data: TravelRoute) {
 }
 
 export function deleteRoute(id: number) {
+  if (id === undefined || id === null || isNaN(Number(id))) {
+    return Promise.reject(new Error('线路ID不能为空'));
+  }
   return http.delete('/admin/route/' + id);
 }
 
 export function fetchRouteDays(routeId: number) {
+  if (routeId === undefined || routeId === null || isNaN(Number(routeId))) {
+    return Promise.reject(new Error('线路ID不能为空'));
+  }
   return http.get('/admin/route/day/list', { params: { routeId } });
 }
 
@@ -55,6 +64,9 @@ export function saveRouteDay(data: any) {
 }
 
 export function deleteRouteDay(id: number) {
+  if (id === undefined || id === null || isNaN(Number(id))) {
+    return Promise.reject(new Error('日程ID不能为空'));
+  }
   return http.delete('/admin/route/day/' + id);
 }
 

@@ -28,12 +28,14 @@ logging:
   level:
     com.smarttravel: debug
 
+# 文件上传配置
+upload:
+  dir: uploads  # 上传目录（相对路径，相对于项目根目录）
+  access-prefix: /uploads/  # 访问前缀
+
 # AI服务配置
 ai:
   enabled: false  # 是否启用AI服务
   provider: openai  # AI服务提供商：openai/baidu/ali
   api-key:  # AI服务API密钥（需要配置）
   api-url:  # AI服务API地址（可选，部分服务需要）
-
-
-

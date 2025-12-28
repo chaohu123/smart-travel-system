@@ -135,3 +135,10 @@ public class CheckinRecord {
 
 
 
+
+
+
+
+
+
+

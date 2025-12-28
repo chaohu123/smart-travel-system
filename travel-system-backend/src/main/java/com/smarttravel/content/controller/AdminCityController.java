@@ -22,12 +22,24 @@ public class AdminCityController {
 
     @GetMapping("/list")
     public Map<String, Object> list(City query,
-                                     @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
-                                     @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
+                                     @RequestParam(value = "pageNum", required = false) Integer pageNum,
+                                     @RequestParam(value = "pageSize", required = false) Integer pageSize) {
         if (query == null) {
             query = new City();
         }
         query.setDelFlag(0);
+
+        Map<String, Object> result = new HashMap<>();
+
+        // 如果没有传分页参数，或者pageSize很大（>=1000），返回所有数据
+        if (pageNum == null || pageSize == null || pageSize >= 1000) {
+            List<City> list = cityMapper.selectList(query);
+            result.put("code", 200);
+            result.put("msg", "success");
+            result.put("rows", list);
+            result.put("total", list.size());
+            return result;
+        }
 
         // 计算offset
         Integer offset = (pageNum - 1) * pageSize;
@@ -38,7 +50,6 @@ public class AdminCityController {
         // 分页查询
         List<City> list = cityMapper.selectListWithPage(query, offset, pageSize);
 
-        Map<String, Object> result = new HashMap<>();
         result.put("code", 200);
         result.put("msg", "success");
         result.put("rows", list);

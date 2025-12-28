@@ -31,6 +31,11 @@ public interface RecommendService {
      * 推荐美食接口（本地热门、与用户偏好匹配）
      */
     List<Map<String, Object>> recommendFoods(Long userId, Long cityId, Integer limit);
+
+    /**
+     * 推荐美食接口（支持按省份筛选）
+     */
+    List<Map<String, Object>> recommendFoods(Long userId, Long cityId, String province, Integer limit);
 }
 
 

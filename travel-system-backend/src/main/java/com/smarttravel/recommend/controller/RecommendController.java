@@ -89,16 +89,17 @@ public class RecommendController {
 
     /**
      * 推荐美食接口
-     * GET /api/v1/recommend/foods?userId=1&cityId=1&limit=10
+     * GET /api/v1/recommend/foods?userId=1&cityId=1&province=北京&limit=10
      */
     @GetMapping("/foods")
     public Map<String, Object> recommendFoods(@RequestParam(required = false) Long userId,
                                                @RequestParam(required = false) Long cityId,
+                                               @RequestParam(required = false) String province,
                                                @RequestParam(defaultValue = "10") Integer limit) {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            List<Map<String, Object>> data = recommendService.recommendFoods(userId, cityId, limit);
+            List<Map<String, Object>> data = recommendService.recommendFoods(userId, cityId, province, limit);
             response.put("code", 200);
             response.put("msg", "success");
             response.put("data", data);

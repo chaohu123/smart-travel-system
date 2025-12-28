@@ -257,16 +257,28 @@ public class RecommendServiceImpl implements RecommendService {
 
     @Override
     public List<Map<String, Object>> recommendFoods(Long userId, Long cityId, Integer limit) {
-        // 先从缓存获取
-        String cacheKey = HOT_FOOD_KEY_PREFIX + cityId;
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> cached = redisService.get(cacheKey);
-        if (cached != null && cached.size() >= limit) {
-            return cached.stream().limit(limit).collect(Collectors.toList());
-        }
+        return recommendFoods(userId, cityId, null, limit);
+    }
 
-        // 查询城市下的热门美食
-        List<Food> foods = foodMapper.selectHotByCityId(cityId, limit * 2);
+    @Override
+    public List<Map<String, Object>> recommendFoods(Long userId, Long cityId, String province, Integer limit) {
+        // 如果指定了省份，使用省份查询；否则使用城市查询
+        List<Food> foods;
+        if (province != null && !province.isEmpty()) {
+            // 按省份查询热门美食，固定返回前limit名
+            foods = foodMapper.selectHotByProvince(province, limit * 2);
+        } else {
+            // 先从缓存获取（仅当使用cityId时）
+            String cacheKey = HOT_FOOD_KEY_PREFIX + cityId;
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> cached = redisService.get(cacheKey);
+            if (cached != null && cached.size() >= limit) {
+                return cached.stream().limit(limit).collect(Collectors.toList());
+            }
+
+            // 查询城市下的热门美食
+            foods = foodMapper.selectHotByCityId(cityId, limit * 2);
+        }
 
         // 如果有用户ID，可以根据用户偏好进一步筛选
         Map<Long, Integer> tagWeights = userId != null ? userInterestService.getUserTagWeights(userId) : Collections.emptyMap();
@@ -287,13 +299,17 @@ public class RecommendServiceImpl implements RecommendService {
             item.put("address", food.getAddress());
             item.put("foodType", food.getFoodType());
             item.put("avgPrice", food.getAvgPrice());
+            item.put("imageUrl", food.getImageUrl());
             item.put("score", food.getScore());
             item.put("hotScore", food.getHotScore());
             result.add(item);
         }
 
-        // 缓存结果
-        redisService.set(cacheKey, result, Duration.ofSeconds(CACHE_EXPIRE_SECONDS));
+        // 缓存结果（仅当使用cityId时）
+        if (province == null || province.isEmpty()) {
+            String cacheKey = HOT_FOOD_KEY_PREFIX + cityId;
+            redisService.set(cacheKey, result, Duration.ofSeconds(CACHE_EXPIRE_SECONDS));
+        }
 
         return result;
     }

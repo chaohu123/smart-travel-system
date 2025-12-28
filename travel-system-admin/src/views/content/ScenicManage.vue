@@ -64,151 +64,256 @@
     </el-card>
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="900px">
-      <el-form :model="form" label-width="120px">
-        <el-form-item label="景点名称">
-          <el-input v-model="form.name" />
-        </el-form-item>
+      <!-- 步骤条 -->
+      <el-steps :active="currentStep" finish-status="success" style="margin-bottom: 30px;">
+        <el-step title="基本信息" />
+        <el-step title="价格和开放时间" />
+        <el-step title="其他信息和图片" />
+      </el-steps>
 
-        <!-- 省份、城市、地址在同一行 -->
-        <el-form-item label="位置信息">
-          <el-row :gutter="16">
-            <el-col :span="8">
-              <div style="display: flex; align-items: center;">
-                <span style="min-width: 50px; color: #606266; margin-right: 8px;">省份：</span>
-                <el-select v-model="form.province" placeholder="请选择省份" @change="handleProvinceChange" clearable style="flex: 1;">
-                  <el-option
-                    v-for="province in provinceOptions"
-                    :key="province.value"
-                    :label="province.label"
-                    :value="province.value"
-                  />
-                </el-select>
+      <el-form :model="form" label-width="120px" ref="formRef">
+        <!-- 第一步：基本信息 -->
+        <div v-show="currentStep === 0">
+          <el-form-item label="景点名称" prop="name" :rules="[{ required: true, message: '请输入景点名称', trigger: 'blur' }]">
+            <el-input v-model="form.name" placeholder="请输入景点名称" />
+          </el-form-item>
+
+          <el-form-item label="位置">
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+              <div style="display: flex; flex-direction: column; min-width: 120px;">
+                <el-radio-group v-model="locationMode">
+                  <el-radio value="map">地图选点（推荐）</el-radio>
+                </el-radio-group>
               </div>
-            </el-col>
-            <el-col :span="8">
-              <div style="display: flex; align-items: center;">
-                <span style="min-width: 50px; color: #606266; margin-right: 8px;">城市：</span>
-                <el-select v-model="form.city" placeholder="请选择城市" clearable :disabled="!form.province" style="flex: 1;">
-                  <el-option
-                    v-for="city in cityOptions"
-                    :key="city"
-                    :label="city"
-                    :value="city"
-                  />
-                </el-select>
+              <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
+                <el-radio-group v-model="locationMode">
+                  <el-radio value="manual">手动填写</el-radio>
+                </el-radio-group>
+                <el-form-item
+                  v-show="locationMode === 'manual'"
+                  prop="province"
+                  :rules="[{ required: true, message: '请选择省份', trigger: 'change' }]"
+                  style="margin-bottom: 0; flex: 1; min-width: 150px;"
+                >
+                  <el-select v-model="form.province" placeholder="请选择省份" @change="handleProvinceChange" clearable style="width: 100%;">
+                    <el-option
+                      v-for="province in provinceOptions"
+                      :key="province.value"
+                      :label="province.label"
+                      :value="province.value"
+                    />
+                  </el-select>
+                </el-form-item>
+                <el-form-item
+                  v-show="locationMode === 'manual'"
+                  prop="city"
+                  :rules="[{ required: true, message: '请选择城市', trigger: 'change' }]"
+                  style="margin-bottom: 0; flex: 1; min-width: 150px;"
+                >
+                  <el-select v-model="form.city" placeholder="请选择城市" clearable :disabled="!form.province" style="width: 100%;">
+                    <el-option
+                      v-for="city in cityOptions"
+                      :key="city"
+                      :label="city"
+                      :value="city"
+                    />
+                  </el-select>
+                </el-form-item>
               </div>
-            </el-col>
-            <el-col :span="8">
-              <div style="display: flex; align-items: center;">
-                <span style="min-width: 50px; color: #606266; margin-right: 8px;">地址：</span>
-                <el-input v-model="form.address" placeholder="详细地址" />
+            </div>
+          </el-form-item>
+            <el-form-item label="经纬度" v-if="form.latitude && form.longitude" style="margin-top: 12px;">
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <div style="display: flex; align-items: center;">
+                    <span style="min-width: 50px; color: #606266; margin-right: 8px;">纬度：</span>
+                    <el-input-number v-model="form.latitude" :precision="6" placeholder="纬度" style="flex: 1;" />
+                  </div>
+                </el-col>
+                <el-col :span="12">
+                  <div style="display: flex; align-items: center;">
+                    <span style="min-width: 50px; color: #606266; margin-right: 8px;">经度：</span>
+                    <el-input-number v-model="form.longitude" :precision="6" placeholder="经度" style="flex: 1;" />
+                  </div>
+                </el-col>
+              </el-row>
+            </el-form-item>
+          <el-form-item label="详细地址" prop="address" :rules="[{ required: true, message: '请输入详细地址', trigger: 'blur' }]">
+            <el-input v-model="form.address" placeholder="请输入详细地址" />
+          </el-form-item>
+        </div>
+
+        <!-- 第二步：价格和开放时间 -->
+        <div v-show="currentStep === 1">
+          <el-form-item label="价格">
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+              <el-radio-group v-model="priceType" @change="handlePriceTypeChange">
+                <el-radio value="free">免费</el-radio>
+                <el-radio value="paid">收费</el-radio>
+              </el-radio-group>
+              <template v-if="priceType === 'paid'">
+                <el-input v-model="form.price" placeholder="价格（元）" style="width: 200px;" />
+                <el-input v-model="form.ticketInfo" placeholder="说明" style="width: 200px;" />
+              </template>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="建议时长" prop="suggestedVisitTime" :rules="[{ required: true, message: '请输入建议时长', trigger: 'blur' }]">
+            <el-select v-model="form.suggestedVisitTime" placeholder="请选择建议时长" style="width: 100%;">
+              <el-option label="1-2小时" value="1-2小时" />
+              <el-option label="2-3小时" value="2-3小时" />
+              <el-option label="3-4小时" value="3-4小时" />
+              <el-option label="4-6小时" value="4-6小时" />
+              <el-option label="半天" value="半天" />
+              <el-option label="全天" value="全天" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="开放时间" prop="openTime" :rules="[{ required: true, message: '请输入开放时间', trigger: 'blur' }]">
+            <el-input v-model="form.openTime" placeholder="如：08:30-17:00" />
+            <el-collapse style="margin-top: 12px;">
+              <el-collapse-item title="点击展开详细设置" name="1">
+                <el-input v-model="form.openTime" type="textarea" :rows="3" placeholder="可输入详细开放时间说明，如：周一至周五 08:30-17:00，周末 09:00-18:00" />
+              </el-collapse-item>
+            </el-collapse>
+          </el-form-item>
+        </div>
+
+        <!-- 第三步：其他信息和图片 -->
+        <div v-show="currentStep === 2">
+          <el-form-item label="世界文化遗产？">
+            <el-radio-group v-model="form.isWorldHeritage">
+              <el-radio :label="1">是</el-radio>
+              <el-radio :label="0">否</el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <el-form-item label="是否推荐">
+            <el-radio-group v-model="form.isRecommend">
+              <el-radio :label="1">是</el-radio>
+              <el-radio :label="0">否</el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <el-form-item label="初始评分">
+            <el-slider v-model="scoreRate" :min="0" :max="5" :step="0.1" show-input @change="handleScoreChange" style="width: 100%;" />
+          </el-form-item>
+
+          <el-form-item label="简介" prop="intro" :rules="[{ required: true, message: '请输入简介', trigger: 'blur' }]">
+            <el-input v-model="form.intro" type="textarea" :rows="6" placeholder="请输入景点简介" />
+          </el-form-item>
+
+          <!-- 景点图片 - URL链接 -->
+          <el-form-item label="添加URL上传图片">
+            <div style="margin-bottom: 16px;">
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <el-input
+                  v-model="urlImageInput"
+                  placeholder="请输入图片URL，多个URL用逗号分隔"
+                  @input="handleUrlInputChange"
+                  clearable
+                  style="flex: 1;"
+                />
+                <el-button
+                  type="primary"
+                  :disabled="previewUrlList.length === 0"
+                  @click="handleAddUrlImages"
+                >
+                  添加
+                </el-button>
               </div>
-            </el-col>
-          </el-row>
-        </el-form-item>
-
-        <!-- 经度纬度 -->
-        <el-form-item label="经纬度">
-          <el-row :gutter="16">
-            <el-col :span="12">
-              <div style="display: flex; align-items: center;">
-                <span style="min-width: 50px; color: #606266; margin-right: 8px;">纬度：</span>
-                <el-input-number v-model="form.latitude" :precision="6" placeholder="纬度" style="flex: 1;" />
+              <div class="upload-tip" style="margin-top: 8px;">输入URL后点击"添加"按钮将图片添加到列表</div>
+            </div>
+            <!-- 预览区域 -->
+            <div v-if="previewUrlList.length > 0" style="margin-bottom: 16px;">
+              <div style="color: #606266; font-size: 14px; margin-bottom: 8px;">预览图片（点击"添加"按钮添加到列表）：</div>
+              <div class="image-list">
+                <div v-for="(url, index) in previewUrlList" :key="'preview-' + index" class="image-item">
+                  <img :src="getImageUrl(url)" class="image-preview-small" @error="handleImageError" />
+                </div>
               </div>
-            </el-col>
-            <el-col :span="12">
-              <div style="display: flex; align-items: center;">
-                <span style="min-width: 50px; color: #606266; margin-right: 8px;">经度：</span>
-                <el-input-number v-model="form.longitude" :precision="6" placeholder="经度" style="flex: 1;" />
+            </div>
+            <!-- 已添加的图片列表 -->
+            <div v-if="urlImageList.length > 0" class="image-list">
+              <div v-for="(url, index) in urlImageList" :key="'url-' + index" class="image-item">
+                <img :src="getImageUrl(url)" class="image-preview-small" @error="handleImageError" />
+                <el-button
+                  type="danger"
+                  size="small"
+                  circle
+                  class="image-delete-btn"
+                  @click="removeUrlImage(index)"
+                >
+                  <el-icon><Close /></el-icon>
+                </el-button>
               </div>
-            </el-col>
-          </el-row>
-        </el-form-item>
+            </div>
+          </el-form-item>
 
-        <!-- 价格、建议游览时间、开放时间水平排列 -->
-        <el-form-item label="基本信息">
-          <el-row :gutter="16">
-            <el-col :span="8">
-              <div style="display: flex; align-items: center;">
-                <span style="min-width: 50px; color: #606266; margin-right: 8px;">价格：</span>
-                <el-input v-model="form.price" placeholder="请输入门票价格若无则填0" />
+          <!-- 景点图片 - 本地上传 -->
+          <el-form-item label="本地上传图片">
+            <div class="upload-container">
+              <div class="upload-wrapper">
+                <el-upload
+                  :action="uploadAction"
+                  :show-file-list="false"
+                  :on-success="handleImageSuccess"
+                  :before-upload="beforeImageUpload"
+                  :multiple="true"
+                  class="multi-image-uploader"
+                >
+                  <div class="upload-button">
+                    <el-icon class="image-uploader-icon"><Plus /></el-icon>
+                    <div style="margin-top: 8px; color: #8c939d; font-size: 12px;">点击上传</div>
+                  </div>
+                </el-upload>
+                <div class="upload-tip">支持jpg/png格式，大小不超过2MB，可上传多张图片</div>
               </div>
-            </el-col>
-            <el-col :span="8">
-              <div style="display: flex; align-items: center;">
-                <span style="min-width: 90px; color: #606266; margin-right: 8px;">游览时长：</span>
-                <el-input v-model="form.suggestedVisitTime" placeholder="如：2-3小时" />
+              <div v-if="uploadedImageList.length > 0" class="image-list">
+                <div v-for="(url, index) in uploadedImageList" :key="'upload-' + index" class="image-item">
+                  <img :src="getImageUrl(url)" class="image-preview-small" @error="handleImageError" />
+                  <el-button
+                    type="danger"
+                    size="small"
+                    circle
+                    class="image-delete-btn"
+                    @click="removeUploadedImage(index)"
+                  >
+                    <el-icon><Close /></el-icon>
+                  </el-button>
+                </div>
               </div>
-            </el-col>
-            <el-col :span="8">
-              <div style="display: flex; align-items: center;">
-                <span style="min-width: 80px; color: #606266; margin-right: 8px;">开放时间：</span>
-                <el-input v-model="form.openTime" placeholder="如：08:30-17:00" />
-              </div>
-            </el-col>
-          </el-row>
-        </el-form-item>
-
-        <el-form-item label="世界文化遗产">
-          <el-radio-group v-model="form.isWorldHeritage">
-            <el-radio :label="1">是</el-radio>
-            <el-radio :label="0">否</el-radio>
-          </el-radio-group>
-        </el-form-item>
-
-        <el-form-item label="简介">
-          <el-input v-model="form.intro" type="textarea" :rows="3" />
-        </el-form-item>
-
-        <el-form-item label="门票信息">
-          <el-input v-model="form.ticketInfo" />
-        </el-form-item>
-
-        <el-form-item label="评分">
-          <el-input-number v-model="form.score" :precision="1" :min="0" :max="5" />
-        </el-form-item>
-
-        <el-form-item label="推荐">
-          <el-radio-group v-model="form.isRecommend">
-            <el-radio :label="1">是</el-radio>
-            <el-radio :label="0">否</el-radio>
-          </el-radio-group>
-        </el-form-item>
-
-        <!-- 景点图片移到最后 -->
-        <el-form-item label="景点图片">
-          <el-radio-group v-model="imageUploadType" style="margin-bottom: 12px">
-            <el-radio label="url">URL链接</el-radio>
-            <el-radio label="upload">本地上传</el-radio>
-          </el-radio-group>
-          <div v-if="imageUploadType === 'url'">
-            <el-input v-model="form.imageUrl" placeholder="请输入图片URL" />
-          </div>
-          <div v-else>
-            <el-upload
-              class="image-uploader"
-              :action="uploadAction"
-              :show-file-list="false"
-              :on-success="handleImageSuccess"
-              :before-upload="beforeImageUpload"
-            >
-              <img v-if="form.imageUrl" :src="form.imageUrl" class="image-preview" />
-              <el-icon v-else class="image-uploader-icon"><Plus /></el-icon>
-            </el-upload>
-            <div class="upload-tip">支持jpg/png格式，大小不超过2MB</div>
-          </div>
-        </el-form-item>
+            </div>
+          </el-form-item>
+        </div>
       </el-form>
+
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
+        <div style="display: flex; justify-content: space-between;">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <div>
+            <el-button v-if="currentStep > 0" @click="prevStep">上一步</el-button>
+            <el-button v-if="currentStep < 2" type="primary" @click="nextStep">下一步</el-button>
+            <el-button v-if="currentStep === 2" type="primary" @click="handleSubmit">完成</el-button>
+          </div>
+        </div>
       </template>
     </el-dialog>
+
+    <!-- 地图选点组件 -->
+    <MapPicker
+      v-model="mapPickerVisible"
+      :api-key="mapApiKey"
+      :security-key="mapSecurityKey"
+      :initial-location="initialMapLocation"
+      :initial-search-keyword="form.name"
+      @confirm="handleMapPickerConfirm"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, computed } from 'vue';
+import { onMounted, reactive, ref, computed, nextTick, watch } from 'vue';
 import {
   deleteScenicSpot,
   fetchScenicSpotList,
@@ -217,8 +322,10 @@ import {
   type ScenicSpot
 } from '@/api/scenic';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { Plus } from '@element-plus/icons-vue';
+import { Plus, Close } from '@element-plus/icons-vue';
 import http from '@/api/http';
+import MapPicker from '@/components/MapPicker.vue';
+import { getMapApiKey, getMapSecurityKey } from '@/config/map';
 
 const query = reactive<Partial<ScenicSpot>>({
   name: '',
@@ -302,8 +409,23 @@ const selectedProvince = computed(() => provinceList[selectedProvinceIndex.value
 const list = ref<ScenicSpot[]>([]);
 const dialogVisible = ref(false);
 const dialogTitle = ref('新增景点');
-const imageUploadType = ref<'url' | 'upload'>('url');
-const uploadAction = ref('http://localhost:8080/admin/upload/image');
+const uploadAction = ref('http://localhost:8080/api/v1/admin/upload/image');
+const urlImageInput = ref('');
+const urlImageList = ref<string[]>([]);
+const uploadedImageList = ref<string[]>([]);
+const previewUrlList = ref<string[]>([]);
+const currentStep = ref(0);
+const formRef = ref();
+const locationMode = ref('manual');
+const priceType = ref('free');
+const scoreRate = ref(4.0);
+const mapPickerVisible = ref(false);
+const mapApiKey = ref(getMapApiKey()); // 从配置文件获取地图API Key
+const mapSecurityKey = ref(getMapSecurityKey()); // 从配置文件获取地图安全密钥
+const initialMapLocation = computed(() => ({
+  latitude: form.latitude,
+  longitude: form.longitude
+}));
 
 const form = reactive<ScenicSpot>({
   name: '',
@@ -378,7 +500,14 @@ const onProvinceChange = (e: any) => {
 
 const handleAdd = () => {
   dialogTitle.value = '新增景点';
-  imageUploadType.value = 'url';
+  currentStep.value = 0;
+  urlImageInput.value = '';
+  urlImageList.value = [];
+  uploadedImageList.value = [];
+  previewUrlList.value = [];
+  locationMode.value = 'manual';
+  priceType.value = 'free';
+  scoreRate.value = 4.0;
   Object.assign(form, {
     id: undefined,
     name: '',
@@ -394,27 +523,282 @@ const handleAdd = () => {
     imageUrl: '',
     isWorldHeritage: 0,
     suggestedVisitTime: '',
-    score: undefined,
+    score: 4.0,
     hotScore: 0,
     isRecommend: 0
   });
   dialogVisible.value = true;
+  // 重置表单验证
+  nextTick(() => {
+    if (formRef.value) {
+      formRef.value.clearValidate();
+    }
+  });
 };
 
 const handleEdit = (row: ScenicSpot) => {
   dialogTitle.value = '编辑景点';
-  imageUploadType.value = row.imageUrl && row.imageUrl.startsWith('http') ? 'url' : 'upload';
+  currentStep.value = 0;
+  locationMode.value = 'manual';
+  priceType.value = row.price && row.price > 0 ? 'paid' : 'free';
+  scoreRate.value = row.score ? Number(row.score) : 4.0;
+  // 解析图片URL（可能是逗号分隔的多个URL，支持中英文逗号）
+  if (row.imageUrl) {
+    let imageUrlStr = row.imageUrl;
+
+    // 先尝试解码整个字符串
+    try {
+      imageUrlStr = decodeURIComponent(imageUrlStr);
+    } catch (e) {
+      // 解码失败，使用原字符串
+    }
+
+    const imageUrls = imageUrlStr
+      .split(/[,，]/) // 支持英文逗号和中文逗号
+      .map(url => {
+        url = url.trim();
+
+        // 去除URL中可能存在的编码逗号字符
+        url = url.replace(/%EF%BC%8C/gi, ''); // 去除中文逗号的编码
+        url = url.replace(/%2C/gi, ''); // 去除英文逗号的编码
+
+        // 去除首尾可能残留的编码字符
+        url = url.replace(/^[%EF%BC%8C%2C，,]+/, '');
+        url = url.replace(/[%EF%BC%8C%2C，,]+$/, '');
+
+        // 再次尝试解码
+        try {
+          const decoded = decodeURIComponent(url);
+          if (decoded.startsWith('http://') || decoded.startsWith('https://') || decoded.startsWith('/')) {
+            url = decoded;
+          }
+        } catch (e) {
+          // 解码失败，使用原URL
+        }
+
+        return url.trim();
+      })
+      .filter(url => url);
+
+    urlImageList.value = imageUrls.filter(url => url.startsWith('http'));
+    uploadedImageList.value = imageUrls.filter(url => !url.startsWith('http'));
+    urlImageInput.value = urlImageList.value.join(', ');
+  } else {
+    urlImageList.value = [];
+    uploadedImageList.value = [];
+    urlImageInput.value = '';
+  }
   Object.assign(form, row);
   dialogVisible.value = true;
+  // 重置表单验证
+  nextTick(() => {
+    if (formRef.value) {
+      formRef.value.clearValidate();
+    }
+  });
 };
 
-const handleImageSuccess = (response: any) => {
+// 步骤切换
+const nextStep = async () => {
+  if (!formRef.value) return;
+
+  // 验证当前步骤的表单字段
+  const fieldsToValidate: string[] = [];
+  if (currentStep.value === 0) {
+    fieldsToValidate.push('name', 'province', 'city', 'address');
+  } else if (currentStep.value === 1) {
+    fieldsToValidate.push('suggestedVisitTime', 'openTime');
+  }
+
+  if (fieldsToValidate.length > 0) {
+    try {
+      await formRef.value.validateField(fieldsToValidate);
+      currentStep.value++;
+    } catch (error) {
+      ElMessage.warning('请完成必填项后再继续');
+    }
+  } else {
+    currentStep.value++;
+  }
+};
+
+const prevStep = () => {
+  if (currentStep.value > 0) {
+    currentStep.value--;
+  }
+};
+
+// 价格类型改变
+const handlePriceTypeChange = (value: string) => {
+  if (value === 'free') {
+    form.price = 0;
+    form.ticketInfo = '';
+  } else {
+    // 切换到收费时，清空价格让用户重新输入
+    form.price = undefined;
+  }
+};
+
+// 评分改变
+const handleScoreChange = (value: number) => {
+  form.score = value;
+};
+
+// 打开地图选点
+const openMapPicker = () => {
+  if (!mapApiKey.value) {
+    ElMessage.warning('地图API Key未配置，请检查配置文件');
+    return;
+  }
+  mapPickerVisible.value = true;
+};
+
+// 监听位置模式变化，当选择地图选点时自动打开地图
+watch(locationMode, (newVal) => {
+  if (newVal === 'map') {
+    openMapPicker();
+  }
+});
+
+// 地图选点确认回调
+const handleMapPickerConfirm = (location: any) => {
+  // 自动填充表单字段
+  form.latitude = location.latitude;
+  form.longitude = location.longitude;
+  form.address = location.address;
+
+  // 根据地址信息自动填充省份和城市
+  if (location.province) {
+    // 查找匹配的省份
+    const provinceMatch = provinceOptions.find(p =>
+      location.province.includes(p.label) || p.label.includes(location.province)
+    );
+    if (provinceMatch) {
+      form.province = provinceMatch.value;
+      // 触发城市选项更新
+      handleProvinceChange(provinceMatch.value);
+    }
+  }
+
+  if (location.city && form.province) {
+    // 查找匹配的城市
+    const cityMatch = cityOptions.value.find(c =>
+      location.city.includes(c) || c.includes(location.city)
+    );
+    if (cityMatch) {
+      form.city = cityMatch;
+    }
+  }
+
+  ElMessage.success('位置信息已自动填充');
+  // 保持地图选点模式，不切换回手动模式
+};
+
+const handleImageSuccess = (response: any, file: any) => {
   if (response && response.code === 200) {
-    form.imageUrl = response.data.url || response.data;
+    const imageUrl = response.data.url || response.data;
+    uploadedImageList.value.push(imageUrl);
     ElMessage.success('图片上传成功');
   } else {
     ElMessage.error(response?.msg || '图片上传失败');
   }
+};
+
+// 解析URL字符串为URL数组
+const parseUrlString = (inputText: string): string[] => {
+  if (!inputText.trim()) {
+    return [];
+  }
+
+  // 先尝试解码整个字符串（处理URL编码的逗号）
+  try {
+    inputText = decodeURIComponent(inputText);
+  } catch (e) {
+    // 如果解码失败，使用原字符串
+  }
+
+  // 同时支持英文逗号和中文逗号分隔
+  const urls = inputText
+    .split(/[,，]/) // 支持英文逗号和中文逗号
+    .map(url => {
+      // 去除首尾空白
+      url = url.trim();
+
+      // 去除URL中可能存在的编码逗号字符（%EF%BC%8C是中文逗号，%2C是英文逗号）
+      url = url.replace(/%EF%BC%8C/gi, ''); // 去除中文逗号的编码
+      url = url.replace(/%2C/gi, ''); // 去除英文逗号的编码
+
+      // 去除首尾可能残留的编码字符
+      url = url.replace(/^[%EF%BC%8C%2C，,]+/, '');
+      url = url.replace(/[%EF%BC%8C%2C，,]+$/, '');
+
+      // 再次尝试解码（处理其他可能的编码字符）
+      try {
+        const decoded = decodeURIComponent(url);
+        // 如果解码后仍然是有效的URL格式，使用解码后的
+        if (decoded.startsWith('http://') || decoded.startsWith('https://') || decoded.startsWith('/')) {
+          url = decoded;
+        }
+      } catch (e) {
+        // 如果解码失败，使用原URL
+      }
+
+      return url.trim();
+    })
+    .filter(url => {
+      // 过滤掉空字符串和无效URL
+      return url && (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/'));
+    });
+
+  return urls;
+};
+
+// 处理URL输入框变化事件（实时解析）
+const handleUrlInputChange = () => {
+  previewUrlList.value = parseUrlString(urlImageInput.value);
+};
+
+// 添加预览的URL图片到列表
+const handleAddUrlImages = () => {
+  if (previewUrlList.value.length > 0) {
+    const count = previewUrlList.value.length;
+    // 将预览的URL添加到已添加列表
+    urlImageList.value.push(...previewUrlList.value);
+    // 清空输入框和预览列表
+    urlImageInput.value = '';
+    previewUrlList.value = [];
+    ElMessage.success(`成功添加 ${count} 张图片`);
+  }
+};
+
+// 移除URL图片
+const removeUrlImage = (index: number) => {
+  urlImageList.value.splice(index, 1);
+  urlImageInput.value = urlImageList.value.join(', ');
+};
+
+// 移除上传的图片
+const removeUploadedImage = (index: number) => {
+  uploadedImageList.value.splice(index, 1);
+};
+
+// 获取完整的图片URL
+const getImageUrl = (url: string) => {
+  if (!url) return '';
+  // 如果已经是完整URL，直接返回
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  // 如果是相对路径，添加基础URL
+  if (url.startsWith('/')) {
+    return `http://localhost:8080${url}`;
+  }
+  return url;
+};
+
+// 处理图片加载错误
+const handleImageError = (event: any) => {
+  console.error('图片加载失败:', event.target.src);
 };
 
 const beforeImageUpload = (file: File) => {
@@ -434,15 +818,36 @@ const beforeImageUpload = (file: File) => {
 
 const handleSubmit = async () => {
   try {
+    // 验证最后一步的表单字段
+    if (!formRef.value) return;
+    try {
+      await formRef.value.validateField(['intro']);
+    } catch (error) {
+      ElMessage.warning('请完成必填项后再提交');
+      return;
+    }
+
+    // 合并所有图片URL
+    const allImages = [...urlImageList.value, ...uploadedImageList.value];
+    const imageUrlString = allImages.join(',');
+
     // 处理价格字段：将字符串转换为数字
     const submitData: any = { ...form };
-    const priceValue = submitData.price;
-    if (priceValue !== undefined && priceValue !== null && priceValue !== '') {
-      const priceNum = parseFloat(String(priceValue));
-      submitData.price = isNaN(priceNum) ? 0 : priceNum;
-    } else {
+    // 如果价格类型是免费，确保价格为0
+    if (priceType.value === 'free') {
       submitData.price = 0;
+    } else {
+      const priceValue = submitData.price;
+      if (priceValue !== undefined && priceValue !== null && priceValue !== '') {
+        const priceNum = parseFloat(String(priceValue));
+        submitData.price = isNaN(priceNum) ? 0 : priceNum;
+      } else {
+        submitData.price = 0;
+      }
     }
+
+    // 设置图片URL（多个URL用逗号分隔）
+    submitData.imageUrl = imageUrlString;
 
     if (form.id) {
       const resp = await updateScenicSpot(submitData);
@@ -537,6 +942,76 @@ onMounted(() => {
   color: #909399;
   font-size: 12px;
   margin-top: 8px;
+}
+
+.image-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.image-item {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.image-preview-small {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 10;
+}
+
+.upload-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.upload-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.multi-image-uploader :deep(.el-upload) {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+  background-color: #fafafa;
+}
+
+.multi-image-uploader :deep(.el-upload:hover) {
+  border-color: #409eff;
+}
+
+.upload-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 </style>
 

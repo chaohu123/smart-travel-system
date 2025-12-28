@@ -17,8 +17,25 @@ export default defineConfig({
     alias: {
       '@': '/src'
     }
+  },
+  // 解决Vite CJS警告
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext'
+    }
+  },
+  build: {
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    }
   }
 });
+
+
+
+
+
 
 
 

@@ -196,9 +196,16 @@ const chooseImages = () => {
     success: async (res) => {
       for (const path of res.tempFilePaths) {
         const uploadRes = await uploadApi.upload(path)
-        const data = JSON.parse(uploadRes.data) as ApiResponse<string>
+        const data = JSON.parse(uploadRes.data) as ApiResponse<{ url: string }>
         if (uploadRes.statusCode === 200 && data.code === 200) {
-          imageUrls.value.push(data.data)
+          // 后端返回格式：{ code: 200, msg: "success", data: { url: "..." } }
+          const imageUrl = typeof data.data === 'string' ? data.data : data.data?.url
+          if (imageUrl) {
+            imageUrls.value.push(imageUrl)
+          } else {
+            uni.showToast({ title: '上传失败：未获取到图片URL', icon: 'none' })
+            break
+          }
         } else {
           uni.showToast({ title: data.msg || '上传失败', icon: 'none' })
           break

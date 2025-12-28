@@ -19,6 +19,29 @@ const handleAuthFail = () => {
   }, 400)
 }
 
+// 清理参数中的 undefined 和 null 值
+const cleanParams = (params: any): any => {
+  if (!params || typeof params !== 'object') {
+    return params
+  }
+
+  if (Array.isArray(params)) {
+    return params.map(cleanParams).filter(item => item !== undefined && item !== null)
+  }
+
+  const cleaned: Record<string, any> = {}
+  for (const key in params) {
+    if (Object.prototype.hasOwnProperty.call(params, key)) {
+      const value = params[key]
+      // 跳过 undefined、null 和字符串 "undefined"、"null"
+      if (value !== undefined && value !== null && value !== 'undefined' && value !== 'null') {
+        cleaned[key] = value
+      }
+    }
+  }
+  return cleaned
+}
+
 export const request = <T = any>(options: RequestOptions) => {
   const {
     url,
@@ -26,6 +49,7 @@ export const request = <T = any>(options: RequestOptions) => {
     showLoading = true,
     needRetry = false,
     header = {},
+    data,
     ...rest
   } = options
 
@@ -44,11 +68,15 @@ export const request = <T = any>(options: RequestOptions) => {
     uni.showLoading({ title: '加载中', mask: true })
   }
 
+  // 清理 data 中的 undefined 和 null 值
+  const cleanedData = data ? cleanParams(data) : undefined
+
   const run = () =>
     new Promise<UniApp.RequestSuccessCallbackResult & { data: any }>((resolve, reject) => {
       uni.request({
         url: url.startsWith('http') ? url : `${BASE_URL}${url}`,
         header: headers,
+        data: cleanedData,
         ...rest,
         success: (res) => {
           if (res.statusCode === 401 || res.statusCode === 403) {
@@ -85,6 +113,13 @@ export const uploadFile = (url: string, filePath: string) => {
     header: token ? { Authorization: `Bearer ${token}` } : {},
   })
 }
+
+
+
+
+
+
+
 
 
 

@@ -28,6 +28,9 @@ export function fetchCommentList(params?: Partial<Comment>) {
 }
 
 export function fetchCommentDetail(id: number) {
+  if (id === undefined || id === null || isNaN(Number(id))) {
+    return Promise.reject(new Error('评论ID不能为空'));
+  }
   return http.get('/admin/comment/' + id);
 }
 
@@ -40,6 +43,9 @@ export function updateComment(data: Comment) {
 }
 
 export function deleteComment(id: number) {
+  if (id === undefined || id === null || isNaN(Number(id))) {
+    return Promise.reject(new Error('评论ID不能为空'));
+  }
   return http.delete('/admin/comment/' + id);
 }
 

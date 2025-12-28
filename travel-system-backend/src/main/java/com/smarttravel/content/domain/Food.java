@@ -16,6 +16,7 @@ public class Food {
     private String foodType;
     private BigDecimal avgPrice;
     private String intro;
+    private String imageUrl;
     private BigDecimal score;
     private Integer hotScore;
     private Integer isRecommend;
@@ -96,6 +97,14 @@ public class Food {
         this.intro = intro;
     }
 
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
     public BigDecimal getScore() {
         return score;
     }
@@ -144,6 +153,7 @@ public class Food {
         this.delFlag = delFlag;
     }
 }
+
 
 
 

@@ -130,7 +130,7 @@
             <view class="route-cover-wrapper route-cover-wrapper--grid">
               <image
                 class="route-cover"
-                :src="route.coverImage || 'https://via.placeholder.com/800x450?text=Route'"
+                :src="route.coverImage"
                 mode="aspectFill"
               />
               <view class="route-badge">
@@ -165,7 +165,7 @@
               <view class="note-cover-wrapper">
                 <image
                   class="note-cover"
-                  :src="note.coverImage || 'https://via.placeholder.com/800x450?text=Travel+Note'"
+                  :src="note.coverImage "
                   mode="aspectFill"
                 />
               </view>
@@ -178,7 +178,7 @@
                     <view class="note-avatar-wrapper">
                       <image
                         class="note-author-avatar"
-                        :src="note.authorAvatar || 'https://via.placeholder.com/80?text=Avatar'"
+                        :src="note.authorAvatar"
                         mode="aspectFill"
                       />
                       <text class="note-author-name">{{ note.authorName || '匿名用户' }}</text>
@@ -218,25 +218,42 @@
           <text class="section-title">人气美食</text>
           <text class="section-subtitle">必吃榜单</text>
         </view>
-        <view class="poi-list">
-          <view
-            v-for="item in foodList"
-            :key="item.id"
-            class="poi-card"
-            @click="onViewFood(item)"
-          >
-            <view class="poi-info">
-              <text class="poi-name">{{ item.name }}</text>
-              <text class="poi-sub">
-                {{ item.address || item.foodType || '点击查看详情' }}
-              </text>
-            </view>
-            <view class="poi-meta">
-              <text class="poi-score">{{ item.score || '--' }}分</text>
-              <text class="poi-hot">热度 {{ item.hotScore || 0 }}</text>
+        <scroll-view scroll-x class="food-scroll" show-scrollbar="false">
+          <view class="food-list">
+            <view
+              v-for="item in foodList"
+              :key="item.id"
+              class="food-card"
+              @click="onViewFood(item)"
+            >
+              <!-- 美食图片 -->
+              <view class="food-image-wrapper">
+                <image
+                  v-if="item.imageUrl"
+                  class="food-image"
+                  :src="item.imageUrl"
+                  mode="aspectFill"
+                />
+                <view v-else class="food-image-placeholder">
+                  <text class="food-icon">🍜</text>
+                </view>
+              </view>
+              <!-- 美食信息 -->
+              <view class="food-content">
+                <view class="food-name-row">
+                  <text class="food-name">{{ item.name }}</text>
+                  <text class="food-price" v-if="item.avgPrice">
+                    ¥{{ item.avgPrice }}/人
+                  </text>
+                </view>
+                <view class="food-meta-row">
+                  <text class="food-address">{{ item.address || '地址未知' }}</text>
+                  <text class="food-score" v-if="item.score">{{ item.score }}分</text>
+                </view>
+              </view>
             </view>
           </view>
-        </view>
+        </scroll-view>
       </view>
     </scroll-view>
   </view>
@@ -247,6 +264,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app'
 import { recommendApi, scenicSpotApi, type ApiResponse } from '@/api/content'
 import { travelNoteApi } from '@/api/content'
+import { request } from '@/utils/http'
 import { useUserStore } from '@/store/user'
 import EmptyState from '@/components/EmptyState.vue'
 import SkeletonCards from '@/components/SkeletonCards.vue'
@@ -321,6 +339,7 @@ interface FoodItem {
   avgPrice?: number
   score?: number
   hotScore?: number
+  imageUrl?: string // 美食图片
 }
 
 const routeList = ref<RouteItem[]>([])
@@ -510,10 +529,29 @@ const fetchHomeData = async () => {
       ? provinceList.value[selectedProvinceIndex.value]?.value
       : undefined
 
+    // 构建请求参数，不传递 undefined 值
+    const scenicParams: any = { limit: 3 }
+    const foodParams: any = { limit: 6 }
+
+    if (provinceValue) {
+      scenicParams.province = provinceValue
+      foodParams.province = provinceValue
+    }
+
     const [routeRes, scenicRes, foodRes] = await Promise.all([
       recommendApi.routes(undefined, 10) as Promise<ListResponse<RouteItem>>,
-      recommendApi.scenicSpots(undefined, undefined, 3, provinceValue) as Promise<ListResponse<ScenicItem>>,
-      recommendApi.foods(undefined, undefined, 6) as Promise<ListResponse<FoodItem>>,
+      request({
+        url: '/recommend/scenic-spots',
+        method: 'GET',
+        data: scenicParams,
+        showLoading: false,
+      }) as Promise<ListResponse<ScenicItem>>,
+      request({
+        url: '/recommend/foods',
+        method: 'GET',
+        data: foodParams,
+        showLoading: false,
+      }) as Promise<ListResponse<FoodItem>>,
     ])
 
     if (routeRes.statusCode === 200 && routeRes.data.code === 200) {
@@ -1006,53 +1044,122 @@ onReachBottom(() => {
   font-weight: 600;
 }
 
-.poi-list {
+/* 人气美食水平滚动样式 */
+.food-scroll {
   margin-top: 8rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
+  white-space: nowrap;
+  width: 100%;
 }
 
-.poi-card {
+.food-list {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20rpx 24rpx;
+  flex-direction: row;
+  gap: 16rpx;
+  padding: 0 0 8rpx 0;
+}
+
+.food-card {
+  flex-shrink: 0;
+  width: 220rpx;
   background-color: #ffffff;
   border-radius: 20rpx;
-  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
 }
 
-.poi-info {
+/* 美食图片 */
+.food-image-wrapper {
+  width: 100%;
+  height: 0;
+  padding-bottom: 75%; /* 4:3 比例 */
+  position: relative;
+  overflow: hidden;
+  background-color: #f0f0f0;
+}
+
+.food-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.food-image-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f0f0f0;
+}
+
+.food-icon {
+  font-size: 60rpx;
+}
+
+/* 美食内容 */
+.food-content {
+  padding: 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.food-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8rpx;
+}
+
+.food-name {
   flex: 1;
-  min-width: 0;
-}
-
-.poi-name {
-  font-size: 30rpx;
+  font-size: 26rpx;
   font-weight: 600;
   color: #333333;
   display: -webkit-box;
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-width: 0;
 }
 
-.poi-price {
-  display: flex;
-  align-items: center;
+.food-price {
   flex-shrink: 0;
-  margin-left: 16rpx;
-}
-
-.price-text {
-  font-size: 28rpx;
+  font-size: 24rpx;
   font-weight: 600;
   color: #3ba272;
 }
 
-.price-text.price-free {
-  color: #ff6b6b;
+.food-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8rpx;
+}
+
+.food-address {
+  flex: 1;
+  font-size: 22rpx;
+  color: #666666;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.food-score {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #ff9800;
+  font-weight: 600;
 }
 
 /* 热门景点样式 */
