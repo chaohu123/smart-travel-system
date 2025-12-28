@@ -3,9 +3,13 @@ var common_vendor = require("../common/vendor.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   props: {
     visible: { type: Boolean, required: true },
-    message: { type: String, required: false, default: "\u767B\u5F55\u540E\u5373\u53EF\u8FDB\u884C\u70B9\u8D5E\u3001\u6536\u85CF\u3001\u8BC4\u8BBA\u7B49\u64CD\u4F5C" }
+    message: { type: String, required: false, default: "\u8BF7\u5148\u767B\u5F55" }
   },
   setup(__props, { emit }) {
+    const props = __props;
+    common_vendor.watch(() => props.visible, (newVal) => {
+      console.log("LoginPrompt visible changed:", newVal);
+    }, { immediate: true });
     const handleConfirm = () => {
       emit("confirm");
       common_vendor.index.switchTab({ url: "/pages/profile/profile" });

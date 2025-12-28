@@ -16,6 +16,8 @@ import com.smarttravel.route.domain.TravelRoute;
 import com.smarttravel.route.mapper.TravelRouteMapper;
 import com.smarttravel.travel.domain.TravelNote;
 import com.smarttravel.travel.mapper.TravelNoteMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -28,6 +30,8 @@ import java.util.stream.Collectors;
  */
 @Service
 public class RecommendServiceImpl implements RecommendService {
+
+    private static final Logger log = LoggerFactory.getLogger(RecommendServiceImpl.class);
 
     @Resource
     private TravelRouteMapper travelRouteMapper;
@@ -266,7 +270,9 @@ public class RecommendServiceImpl implements RecommendService {
         List<Food> foods;
         if (province != null && !province.isEmpty()) {
             // 按省份查询热门美食，固定返回前limit名
+            log.debug("按省份查询美食: province={}, limit={}", province, limit * 2);
             foods = foodMapper.selectHotByProvince(province, limit * 2);
+            log.debug("省份美食查询结果数量: {}", foods != null ? foods.size() : 0);
         } else {
             // 先从缓存获取（仅当使用cityId时）
             String cacheKey = HOT_FOOD_KEY_PREFIX + cityId;

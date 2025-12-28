@@ -207,14 +207,28 @@
               <div style="color: #606266; font-size: 14px; margin-bottom: 8px;">预览图片（点击"添加"按钮添加到列表）：</div>
               <div class="image-list">
                 <div v-for="(url, index) in previewUrlList" :key="'preview-' + index" class="image-item">
-                  <img :src="getImageUrl(url)" class="image-preview-small" @error="handleImageError" />
+                  <img
+                    :src="getImageUrl(url)"
+                    class="image-preview-small"
+                    @error="handleImageError"
+                    crossorigin="anonymous"
+                    referrerpolicy="no-referrer"
+                    loading="lazy"
+                  />
                 </div>
               </div>
             </div>
             <!-- 已添加的图片列表 -->
             <div v-if="urlImageList.length > 0" class="image-list">
               <div v-for="(url, index) in urlImageList" :key="'url-' + index" class="image-item">
-                <img :src="getImageUrl(url)" class="image-preview-small" @error="handleImageError" />
+                <img
+                  :src="getImageUrl(url)"
+                  class="image-preview-small"
+                  @error="handleImageError"
+                  crossorigin="anonymous"
+                  referrerpolicy="no-referrer"
+                  loading="lazy"
+                />
                 <el-button
                   type="danger"
                   size="small"
@@ -249,7 +263,14 @@
               </div>
               <div v-if="uploadedImageList.length > 0" class="image-list">
                 <div v-for="(url, index) in uploadedImageList" :key="'upload-' + index" class="image-item">
-                  <img :src="getImageUrl(url)" class="image-preview-small" @error="handleImageError" />
+                  <img
+                    :src="getImageUrl(url)"
+                    class="image-preview-small"
+                    @error="handleImageError"
+                    crossorigin="anonymous"
+                    referrerpolicy="no-referrer"
+                    loading="lazy"
+                  />
                   <el-button
                     type="danger"
                     size="small"
@@ -827,6 +848,18 @@ const getImageUrl = (url: string) => {
   if (!url) return '';
   // 如果已经是完整URL，直接返回
   if (url.startsWith('http://') || url.startsWith('https://')) {
+    // 对于外部图片URL，尝试添加一些参数来避免跨域问题
+    // 注意：某些CDN可能不支持，这只是尝试
+    try {
+      const urlObj = new URL(url);
+      // 如果是百度图片CDN，可能需要特殊处理
+      if (urlObj.hostname.includes('bcebos.com') || urlObj.hostname.includes('baidu.com')) {
+        // 保持原URL，但添加crossorigin属性（在img标签上）
+        return url;
+      }
+    } catch (e) {
+      // URL解析失败，直接返回原URL
+    }
     return url;
   }
   // 如果是相对路径，添加基础URL
@@ -839,6 +872,13 @@ const getImageUrl = (url: string) => {
 // 处理图片加载错误
 const handleImageError = (event: any) => {
   console.error('图片加载失败:', event.target.src);
+  // 设置占位图，避免显示破损图片图标
+  const target = event.target as HTMLImageElement;
+  // 使用一个透明的1x1像素占位图，或者使用data URI
+  target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LXNpemU9IjEyIiBmaWxsPSIjOTk5IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSI+5Zu+54mH5aSx6LSlPC90ZXh0Pjwvc3ZnPg==';
+  // 添加错误标记，方便后续处理
+  target.setAttribute('data-error', 'true');
+  target.style.backgroundColor = '#f5f5f5';
 };
 
 const beforeImageUpload = (file: File) => {

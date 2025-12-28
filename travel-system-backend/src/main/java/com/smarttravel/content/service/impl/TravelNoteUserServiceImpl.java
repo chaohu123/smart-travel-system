@@ -122,11 +122,31 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
             allNotes.subList(start, end) : new ArrayList<>();
 
         // 为每个游记加载第一张图片和作者信息
+<<<<<<< HEAD
+=======
+        List<Map<String, Object>> noteList = new ArrayList<>();
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
         for (TravelNote note : pageList) {
+            Map<String, Object> noteMap = new HashMap<>();
+            noteMap.put("id", note.getId());
+            noteMap.put("title", note.getTitle());
+            noteMap.put("content", note.getContent());
+            noteMap.put("cityId", note.getCityId());
+            noteMap.put("cityName", note.getCityName());
+            noteMap.put("viewCount", note.getViewCount());
+            noteMap.put("likeCount", note.getLikeCount());
+            noteMap.put("favoriteCount", note.getFavoriteCount());
+            noteMap.put("commentCount", note.getCommentCount());
+            noteMap.put("isFeatured", note.getIsFeatured());
+            noteMap.put("createTime", note.getCreateTime());
+            noteMap.put("userId", note.getUserId());
+
+            // 加载第一张图片
             List<TravelNoteImage> images = travelNoteImageMapper.selectByNoteId(note.getId());
             if (images != null && !images.isEmpty()) {
-                note.setCoverImage(images.get(0).getUrl());
+                noteMap.put("coverImage", images.get(0).getUrl());
             }
+<<<<<<< HEAD
             // 加载作者信息
             if (note.getUserId() != null) {
                 User authorUser = userMapper.selectById(note.getUserId());
@@ -135,10 +155,24 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
                     note.setAuthorAvatar(authorUser.getAvatar());
                 }
             }
+=======
+
+            // 加载作者信息
+            if (note.getUserId() != null) {
+                User author = userMapper.selectById(note.getUserId());
+                if (author != null) {
+                    noteMap.put("authorName", author.getNickname());
+                    noteMap.put("authorAvatar", author.getAvatar());
+                }
+            }
+
+            noteList.add(noteMap);
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
         }
 
         Map<String, Object> result = new HashMap<>();
-        result.put("list", pageList);
+        result.put("list", noteList);
+        result.put("rows", noteList); // 兼容不同的字段名
         result.put("total", allNotes.size());
         result.put("pageNum", pageNum);
         result.put("pageSize", pageSize);

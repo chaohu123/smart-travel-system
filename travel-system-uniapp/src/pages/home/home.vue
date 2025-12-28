@@ -165,7 +165,7 @@
               v-for="note in noteList"
               :key="note.id"
               class="note-card"
-              @click="onViewNote(note)"
+              @tap="onViewNote(note)"
             >
               <!-- 封面图片 -->
               <view class="note-cover-wrapper">
@@ -275,9 +275,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app'
+<<<<<<< HEAD
 import { recommendApi, scenicSpotApi, type ApiResponse, travelNoteApi, travelNoteInteractionApi } from '@/api/content'
+=======
+import { recommendApi, scenicSpotApi, type ApiResponse } from '@/api/content'
+import { travelNoteApi, travelNoteInteractionApi } from '@/api/content'
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
 import { request } from '@/utils/http'
 import { useUserStore } from '@/store/user'
 import EmptyState from '@/components/EmptyState.vue'
@@ -506,11 +511,13 @@ const showLoginPromptDialog = () => {
 // 登录确认
 const handleLoginConfirm = () => {
   showLoginPrompt.value = false
+  // 跳转到登录页面（LoginPrompt组件内部会处理跳转）
 }
 
 // 登录取消
 const handleLoginCancel = () => {
   showLoginPrompt.value = false
+  // 用户选择取消，留在当前页面
 }
 
 // 点赞切换
@@ -572,8 +579,10 @@ const toggleLike = async (note: NoteItem) => {
 
 // 评论处理
 const handleComment = (note: NoteItem) => {
+  console.log('handleComment called', note.id)
   // 检查登录状态
   if (!user.value) {
+    console.log('User not logged in, showing login prompt')
     showLoginPromptDialog()
     return
   }
@@ -610,6 +619,10 @@ const fetchHomeData = async () => {
     const scenicParams: any = { limit: 3 }
     const foodParams: any = { limit: 6 }
 
+<<<<<<< HEAD
+=======
+    // 如果选择了省份（不是"全部省份"），添加省份参数
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
     if (provinceValue && provinceValue !== '') {
       scenicParams.province = provinceValue
       foodParams.province = provinceValue
@@ -656,6 +669,7 @@ const fetchHomeData = async () => {
         console.log('[首页] 美食列表:', foodList.value.map(f => ({ name: f.name, address: f.address })))
       } else if (provinceValue) {
         console.warn('[首页] 选择了省份但未返回美食数据，可能该省份暂无美食数据')
+<<<<<<< HEAD
         // 如果选择了省份但没有数据，给用户提示
         if (foodList.value.length === 0) {
           uni.showToast({
@@ -664,6 +678,8 @@ const fetchHomeData = async () => {
             duration: 2000
           })
         }
+=======
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
       }
     } else {
       console.error('[首页] 美食数据加载失败:', foodRes.data)
@@ -1090,10 +1106,21 @@ onReachBottom(() => {
   gap: 4rpx;
   cursor: pointer;
   transition: all 0.2s;
+  padding: 12rpx 8rpx;
+  margin: -12rpx -8rpx;
+  position: relative;
+  z-index: 10;
+  /* 确保可以点击 */
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 80rpx;
+  min-height: 60rpx;
+  justify-content: center;
 }
 
 .note-stat-item:active {
   opacity: 0.7;
+  transform: scale(0.95);
 }
 
 .note-icon-box {

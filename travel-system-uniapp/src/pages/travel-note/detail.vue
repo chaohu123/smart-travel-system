@@ -67,7 +67,11 @@
           >
             <image
               class="comment-avatar"
+<<<<<<< HEAD
               :src="comment.avatar || comment.userAvatar || authorAvatar"
+=======
+              :src="comment.avatar || authorAvatar"
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
               mode="aspectFill"
             />
             <view class="comment-content-wrapper">
@@ -200,11 +204,29 @@ const coverImage = computed(() => {
 })
 
 const authorAvatar = computed(() => {
-  return noteDetail.value?.author?.avatar || 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200'
+  // 优先使用author对象中的avatar
+  if (noteDetail.value?.author?.avatar) {
+    return noteDetail.value.author.avatar
+  }
+  // 如果没有author信息，尝试从note中获取（兼容旧数据）
+  if (noteDetail.value?.note?.authorAvatar) {
+    return noteDetail.value.note.authorAvatar
+  }
+  // 默认头像
+  return 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200'
 })
 
 const authorName = computed(() => {
-  return noteDetail.value?.author?.nickname || `用户${noteDetail.value?.note?.userId || ''}`
+  // 优先使用author对象中的nickname
+  if (noteDetail.value?.author?.nickname) {
+    return noteDetail.value.author.nickname
+  }
+  // 如果没有author信息，尝试从note中获取（兼容旧数据）
+  if (noteDetail.value?.note?.authorName) {
+    return noteDetail.value.note.authorName
+  }
+  // 最后使用userId作为后备
+  return `用户${noteDetail.value?.note?.userId || ''}`
 })
 
 const previewImage = (index: number | string) => {
@@ -238,11 +260,13 @@ const showLoginPromptDialog = () => {
 // 登录确认
 const handleLoginConfirm = () => {
   showLoginPrompt.value = false
+  // 跳转到登录页面（LoginPrompt组件内部会处理跳转）
 }
 
 // 登录取消
 const handleLoginCancel = () => {
   showLoginPrompt.value = false
+  // 用户选择取消，留在当前页面
 }
 
 const toggleLike = async () => {
@@ -378,14 +402,15 @@ const submitComment = async () => {
     return
   }
 
+  // 检查登录状态
+  if (!user.value) {
+    closeCommentEditor()
+    showLoginPromptDialog()
+    return
+  }
+
   submitting.value = true
   try {
-    if (!user.value) {
-      uni.showToast({ title: '请先登录', icon: 'none' })
-      uni.switchTab({ url: '/pages/profile/profile' })
-      submitting.value = false
-      return
-    }
     const res = await travelNoteInteractionApi.publishComment({
       userId: user.value.id,
       contentType: 'note',
@@ -798,6 +823,17 @@ onMounted(() => {
   justify-content: center;
   gap: 8rpx;
   padding: 0 32rpx;
+  position: relative;
+  z-index: 10;
+  /* 确保可以点击 */
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s;
+}
+
+.action-btn:active {
+  transform: scale(0.95);
+  opacity: 0.8;
 }
 
 .action-btn.active {

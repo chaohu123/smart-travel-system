@@ -193,7 +193,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const handleComment = (note) => {
+      console.log("handleComment called", note.id);
       if (!user.value) {
+        console.log("User not logged in, showing login prompt");
         showLoginPromptDialog();
         return;
       }
@@ -261,6 +263,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             console.log("[\u9996\u9875] \u7F8E\u98DF\u5217\u8868:", foodList.value.map((f) => ({ name: f.name, address: f.address })));
           } else if (provinceValue) {
             console.warn("[\u9996\u9875] \u9009\u62E9\u4E86\u7701\u4EFD\u4F46\u672A\u8FD4\u56DE\u7F8E\u98DF\u6570\u636E\uFF0C\u53EF\u80FD\u8BE5\u7701\u4EFD\u6682\u65E0\u7F8E\u98DF\u6570\u636E");
+<<<<<<< HEAD
             if (foodList.value.length === 0) {
               common_vendor.index.showToast({
                 title: `\u8BE5\u7701\u4EFD\u6682\u65E0\u7F8E\u98DF\u6570\u636E`,
@@ -268,6 +271,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
                 duration: 2e3
               });
             }
+=======
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
           }
         } else {
           console.error("[\u9996\u9875] \u7F8E\u98DF\u6570\u636E\u52A0\u8F7D\u5931\u8D25:", foodRes.data);

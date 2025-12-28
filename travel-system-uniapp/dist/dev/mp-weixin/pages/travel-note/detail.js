@@ -41,12 +41,24 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return null;
     });
     const authorAvatar = common_vendor.computed(() => {
-      var _a, _b;
-      return ((_b = (_a = noteDetail.value) == null ? void 0 : _a.author) == null ? void 0 : _b.avatar) || "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
+      var _a, _b, _c, _d;
+      if ((_b = (_a = noteDetail.value) == null ? void 0 : _a.author) == null ? void 0 : _b.avatar) {
+        return noteDetail.value.author.avatar;
+      }
+      if ((_d = (_c = noteDetail.value) == null ? void 0 : _c.note) == null ? void 0 : _d.authorAvatar) {
+        return noteDetail.value.note.authorAvatar;
+      }
+      return "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
     });
     const authorName = common_vendor.computed(() => {
-      var _a, _b, _c, _d;
-      return ((_b = (_a = noteDetail.value) == null ? void 0 : _a.author) == null ? void 0 : _b.nickname) || `\u7528\u6237${((_d = (_c = noteDetail.value) == null ? void 0 : _c.note) == null ? void 0 : _d.userId) || ""}`;
+      var _a, _b, _c, _d, _e, _f;
+      if ((_b = (_a = noteDetail.value) == null ? void 0 : _a.author) == null ? void 0 : _b.nickname) {
+        return noteDetail.value.author.nickname;
+      }
+      if ((_d = (_c = noteDetail.value) == null ? void 0 : _c.note) == null ? void 0 : _d.authorName) {
+        return noteDetail.value.note.authorName;
+      }
+      return `\u7528\u6237${((_f = (_e = noteDetail.value) == null ? void 0 : _e.note) == null ? void 0 : _f.userId) || ""}`;
     });
     const previewImage = (index) => {
       var _a;
@@ -197,14 +209,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         common_vendor.index.showToast({ title: "\u8BF7\u8F93\u5165\u8BC4\u8BBA\u5185\u5BB9", icon: "none" });
         return;
       }
+      if (!user.value) {
+        closeCommentEditor();
+        showLoginPromptDialog();
+        return;
+      }
       submitting.value = true;
       try {
-        if (!user.value) {
-          common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
-          common_vendor.index.switchTab({ url: "/pages/profile/profile" });
-          submitting.value = false;
-          return;
-        }
         const res = await api_content.travelNoteInteractionApi.publishComment({
           userId: user.value.id,
           contentType: "note",
@@ -346,7 +357,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         p: common_vendor.t(common_vendor.unref(commentCount)),
         q: common_vendor.f(comments.value, (comment, k0, i0) => {
           return {
+<<<<<<< HEAD
             a: comment.avatar || comment.userAvatar || common_vendor.unref(authorAvatar),
+=======
+            a: comment.avatar || common_vendor.unref(authorAvatar),
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
             b: common_vendor.t(comment.nickname || "\u533F\u540D\u7528\u6237"),
             c: common_vendor.t(comment.content),
             d: common_vendor.t(formatTime(comment.createTime)),

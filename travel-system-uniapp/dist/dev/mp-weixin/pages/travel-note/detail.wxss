@@ -259,6 +259,16 @@
   justify-content: center;
   gap: 8rpx;
   padding: 0 32rpx;
+  position: relative;
+  z-index: 10;
+  /* 确保可以点击 */
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s;
+}
+.action-btn.data-v-18791242:active {
+  transform: scale(0.95);
+  opacity: 0.8;
 }
 .action-btn.active.data-v-18791242 {
   color: #3ba272;

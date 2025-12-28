@@ -307,9 +307,20 @@
   gap: 4rpx;
   cursor: pointer;
   transition: all 0.2s;
+  padding: 12rpx 8rpx;
+  margin: -12rpx -8rpx;
+  position: relative;
+  z-index: 10;
+  /* 确保可以点击 */
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  min-width: 80rpx;
+  min-height: 60rpx;
+  justify-content: center;
 }
 .note-stat-item.data-v-087d42bb:active {
   opacity: 0.7;
+  transform: scale(0.95);
 }
 .note-icon-box.data-v-087d42bb {
   display: flex;

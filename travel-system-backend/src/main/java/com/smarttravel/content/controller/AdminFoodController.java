@@ -151,6 +151,7 @@ public class AdminFoodController {
         if (foodData.get("cityId") != null) {
             food.setCityId(((Number) foodData.get("cityId")).longValue());
         } else if (cityName != null && !cityName.isEmpty() && province != null && !province.isEmpty()) {
+<<<<<<< HEAD
             City city = null;
 
             // 第一次尝试：使用原始城市名称和省份
@@ -178,13 +179,27 @@ public class AdminFoodController {
                 }
             }
 
+=======
+            // 记录查找参数，便于调试
+            System.out.println("[创建美食] 查找城市: cityName=" + cityName + ", province=" + province);
+            City city = cityMapper.selectByCityNameAndProvince(cityName, province);
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
             if (city != null && city.getId() != null) {
+                System.out.println("[创建美食] 找到城市: id=" + city.getId() + ", cityName=" + city.getCityName() + ", province=" + city.getProvince());
                 food.setCityId(city.getId());
             } else {
+<<<<<<< HEAD
                 // 如果找不到对应的城市，返回更详细的错误信息
                 Map<String, Object> result = new HashMap<>();
                 result.put("code", 400);
                 result.put("msg", String.format("未找到对应的城市（城市：%s，省份：%s），请先在城市管理中创建该城市", cityName, province));
+=======
+                // 如果找不到对应的城市，返回错误
+                System.out.println("[创建美食] 未找到城市: cityName=" + cityName + ", province=" + province);
+                Map<String, Object> result = new HashMap<>();
+                result.put("code", 400);
+                result.put("msg", "未找到对应的城市，请先在城市管理中创建该城市。查找参数：城市=" + cityName + "，省份=" + province);
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
                 return result;
             }
         }
@@ -233,6 +248,7 @@ public class AdminFoodController {
         if (foodData.get("cityId") != null) {
             food.setCityId(((Number) foodData.get("cityId")).longValue());
         } else if (cityName != null && !cityName.isEmpty() && province != null && !province.isEmpty()) {
+<<<<<<< HEAD
             City city = null;
 
             // 第一次尝试：使用原始城市名称和省份
@@ -260,13 +276,27 @@ public class AdminFoodController {
                 }
             }
 
+=======
+            // 记录查找参数，便于调试
+            System.out.println("[更新美食] 查找城市: cityName=" + cityName + ", province=" + province);
+            City city = cityMapper.selectByCityNameAndProvince(cityName, province);
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
             if (city != null && city.getId() != null) {
+                System.out.println("[更新美食] 找到城市: id=" + city.getId() + ", cityName=" + city.getCityName() + ", province=" + city.getProvince());
                 food.setCityId(city.getId());
             } else {
+<<<<<<< HEAD
                 // 如果找不到对应的城市，返回更详细的错误信息
                 Map<String, Object> result = new HashMap<>();
                 result.put("code", 400);
                 result.put("msg", String.format("未找到对应的城市（城市：%s，省份：%s），请先在城市管理中创建该城市", cityName, province));
+=======
+                // 如果找不到对应的城市，返回错误
+                System.out.println("[更新美食] 未找到城市: cityName=" + cityName + ", province=" + province);
+                Map<String, Object> result = new HashMap<>();
+                result.put("code", 400);
+                result.put("msg", "未找到对应的城市，请先在城市管理中创建该城市。查找参数：城市=" + cityName + "，省份=" + province);
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
                 return result;
             }
         }

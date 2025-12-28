@@ -17,14 +17,21 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue'
+
 interface Props {
   visible: boolean
   message?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  message: '登录后即可进行点赞、收藏、评论等操作',
+  message: '请先登录',
 })
+
+// 监听 visible 变化，用于调试
+watch(() => props.visible, (newVal) => {
+  console.log('LoginPrompt visible changed:', newVal)
+}, { immediate: true })
 
 const emit = defineEmits<{
   confirm: []

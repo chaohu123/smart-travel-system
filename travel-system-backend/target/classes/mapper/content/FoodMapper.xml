@@ -111,9 +111,14 @@
                 OR c.province = CONCAT(#{province}, '市')
                 OR c.province = CONCAT(#{province}, '省')
                 OR c.province = CONCAT(#{province}, '自治区')
+<<<<<<< HEAD
                 OR c.province = CONCAT(#{province}, '特别行政区')
                 OR c.province LIKE CONCAT(#{province}, '%')
                 OR #{province} LIKE CONCAT(c.province, '%')
+=======
+                OR REPLACE(REPLACE(REPLACE(c.province, '市', ''), '省', ''), '自治区', '') = #{province}
+                OR REPLACE(REPLACE(REPLACE(#{province}, '市', ''), '省', ''), '自治区', '') = REPLACE(REPLACE(REPLACE(c.province, '市', ''), '省', ''), '自治区', '')
+>>>>>>> 299642f29c0d19bfedecf29490a18cfe2ad7de4f
             )
         </if>
         ORDER BY (f.hot_score * 2 + COALESCE(f.score, 0)) DESC
