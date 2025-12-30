@@ -22,6 +22,13 @@
         (#{routeDayId}, #{poiType}, #{poiId}, #{sort}, #{stayTime}, #{note}, NOW(), NOW(), 0)
     </insert>
 
+    <update id="update" parameterType="com.smarttravel.route.domain.TravelRoutePoi">
+        UPDATE travel_route_poi
+        SET note = #{note},
+            update_time = NOW()
+        WHERE id = #{id} AND del_flag = 0
+    </update>
+
     <select id="selectByRouteDayId" parameterType="long" resultMap="TravelRoutePoiResult">
         SELECT id, route_day_id, poi_type, poi_id, sort, stay_time, note, create_time, update_time, del_flag
         FROM travel_route_poi

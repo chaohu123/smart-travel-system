@@ -64,7 +64,22 @@ public class FoodController {
         response.put("data", result);
         return response;
     }
+
+    /**
+     * 获取用户收藏的美食列表
+     */
+    @GetMapping("/my/favorites")
+    public Map<String, Object> getMyFavorites(@RequestParam Long userId) {
+        Map<String, Object> result = foodService.getMyFavorites(userId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 200);
+        response.put("msg", "success");
+        response.put("data", result);
+        return response;
+    }
 }
+
+
 
 
 

@@ -158,7 +158,7 @@ watch(user, (newUser) => {
 }, { immediate: true })
 
 const navigateToMyRoutes = () => {
-  uni.navigateTo({ url: '/pages/route/detail' })
+  uni.navigateTo({ url: '/pages/itinerary/itinerary-detail' })
 }
 
 const navigateToMyNotes = () => {

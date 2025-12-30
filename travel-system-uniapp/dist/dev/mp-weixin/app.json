@@ -2,7 +2,7 @@
   "pages": [
     "pages/home/home",
     "pages/route/plan",
-    "pages/route/detail",
+    "pages/itinerary/itinerary-detail",
     "pages/route/hot-routes",
     "pages/recommend/interest",
     "pages/checkin/checkin",

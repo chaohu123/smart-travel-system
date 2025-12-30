@@ -24,5 +24,10 @@ public interface FoodService {
      * 查询热门美食（用于首页）
      */
     List<Food> getHotFoods(Long cityId, Integer limit);
+
+    /**
+     * 获取用户收藏的美食列表
+     */
+    Map<String, Object> getMyFavorites(Long userId);
 }
 

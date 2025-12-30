@@ -30,3 +30,8 @@ export function exportUserList(params?: Partial<AdminUser>) {
   return http.get('/admin/user/export', { params, responseType: 'blob' });
 }
 
+// 批量删除用户（软删除）
+export function deleteUsers(ids: number[]) {
+  return http.post('/admin/user/delete', { ids });
+}
+

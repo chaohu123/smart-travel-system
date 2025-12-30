@@ -24,5 +24,10 @@ public interface ScenicSpotService {
      * 查询热门景点（用于首页）
      */
     List<ScenicSpot> getHotSpots(Long cityId, Integer limit);
+
+    /**
+     * 获取用户收藏的景点列表
+     */
+    Map<String, Object> getMyFavorites(Long userId);
 }
 

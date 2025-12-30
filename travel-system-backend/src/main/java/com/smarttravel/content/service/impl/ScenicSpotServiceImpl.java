@@ -3,9 +3,11 @@ package com.smarttravel.content.service.impl;
 import com.smarttravel.content.domain.ContentTag;
 import com.smarttravel.content.domain.ScenicSpot;
 import com.smarttravel.content.domain.Tag;
+import com.smarttravel.content.enums.BehaviorType;
 import com.smarttravel.content.mapper.ContentTagMapper;
 import com.smarttravel.content.mapper.ScenicSpotMapper;
 import com.smarttravel.content.mapper.TagMapper;
+import com.smarttravel.content.mapper.UserBehaviorMapper;
 import com.smarttravel.content.service.ScenicSpotService;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +33,9 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
 
     @Resource
     private TagMapper tagMapper;
+
+    @Resource
+    private UserBehaviorMapper userBehaviorMapper;
 
     @Override
     public Map<String, Object> listSpots(Integer pageNum, Integer pageSize, Long cityId,
@@ -86,6 +91,34 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
     @Override
     public List<ScenicSpot> getHotSpots(Long cityId, Integer limit) {
         return scenicSpotMapper.selectHotByCityId(cityId, limit);
+    }
+
+    @Override
+    public Map<String, Object> getMyFavorites(Long userId) {
+        // 获取用户收藏的景点ID列表
+        List<Long> favoriteIds = userBehaviorMapper.selectContentIds(
+            userId,
+            BehaviorType.FAVORITE.getCode(),
+            "scenic",
+            0,
+            1000
+        );
+
+        // 根据ID列表查询景点详情
+        List<ScenicSpot> favorites = new ArrayList<>();
+        if (favoriteIds != null && !favoriteIds.isEmpty()) {
+            for (Long id : favoriteIds) {
+                ScenicSpot spot = scenicSpotMapper.selectById(id);
+                if (spot != null && spot.getDelFlag() == 0) {
+                    favorites.add(spot);
+                }
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", favorites);
+        result.put("total", favorites.size());
+        return result;
     }
 }
 

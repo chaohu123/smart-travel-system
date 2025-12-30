@@ -15,12 +15,20 @@ export const routeApi = {
     useAi?: boolean
     selectedScenicIds?: number[]  // 用户选择的景点ID列表（必选内容）
     selectedFoodIds?: number[]    // 用户选择的美食ID列表（必选内容）
+    dailySelections?: Array<{     // 每天选择的景点和美食
+      day: number
+      scenicIds?: number[]
+      foodIds?: number[]
+    }>
+    startDate?: string            // 开始日期 YYYY-MM-DD
+    endDate?: string              // 结束日期 YYYY-MM-DD
   }) => {
     return request({
       url: '/route/generate',
       method: 'POST',
       data,
       needAuth: true,
+      showLoading: false, // 禁用系统默认加载提示，使用自定义动画
     })
   },
 
@@ -29,6 +37,7 @@ export const routeApi = {
     return request({
       url: `/route/${id}`,
       method: 'GET',
+      showLoading: false, // 禁用默认加载提示
     })
   },
 

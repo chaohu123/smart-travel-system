@@ -67,8 +67,24 @@ public class RoutePlanController {
             }
         }
 
+        // 获取每天的选择数据
+        List<Map<String, Object>> dailySelections = null;
+        Object dailySelectionsObj = request.get("dailySelections");
+        if (dailySelectionsObj instanceof List) {
+            dailySelections = new java.util.ArrayList<>();
+            for (Object o : (List<?>) dailySelectionsObj) {
+                if (o instanceof Map) {
+                    dailySelections.add((Map<String, Object>) o);
+                }
+            }
+        }
+
+        // 获取开始日期和结束日期
+        String startDate = request.get("startDate") != null ? request.get("startDate").toString() : null;
+        String endDate = request.get("endDate") != null ? request.get("endDate").toString() : null;
+
         Long routeId = routePlanService.generateRoute(cityId, days, tagIds, budget, suitablePeople, useAi,
-            selectedScenicIds, selectedFoodIds);
+            selectedScenicIds, selectedFoodIds, dailySelections, startDate, endDate);
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
         response.put("msg", "success");

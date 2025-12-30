@@ -23,7 +23,34 @@
     </el-card>
 
     <el-card>
-      <el-table :data="list" stripe>
+      <div style="margin-bottom: 12px; display: flex; justify-content: space-between;">
+        <div>
+          <el-button
+            type="danger"
+            @click="handleBatchDelete"
+          >
+            {{ batchDeleteMode ? '取消删除' : '批量删除' }}
+          </el-button>
+          <el-button
+            v-if="batchDeleteMode"
+            type="danger"
+            plain
+            @click="handleConfirmDelete"
+          >
+            确认删除
+          </el-button>
+        </div>
+      </div>
+      <el-table
+        :data="list"
+        stripe
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column
+          v-if="batchDeleteMode"
+          type="selection"
+          width="50"
+        />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="nickname" label="昵称" />
         <el-table-column prop="city" label="城市" />
@@ -83,8 +110,8 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
-import { fetchUserList, updateUserStatus, exportUserList, type AdminUser } from '@/api/user';
-import { ElMessage } from 'element-plus';
+import { fetchUserList, updateUserStatus, exportUserList, deleteUsers, type AdminUser } from '@/api/user';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 const query = reactive({
   nickname: '',
@@ -101,6 +128,8 @@ const pagination = reactive({
 const list = ref<AdminUser[]>([]);
 const detail = ref<AdminUser | null>(null);
 const detailVisible = ref(false);
+const multipleSelection = ref<AdminUser[]>([]);
+const batchDeleteMode = ref(false);
 
 const loadData = async () => {
   try {
@@ -145,6 +174,10 @@ const handleCurrentChange = (val: number) => {
   loadData();
 };
 
+const handleSelectionChange = (val: AdminUser[]) => {
+  multipleSelection.value = val;
+};
+
 const toggleStatus = async (row: AdminUser) => {
   if (!row.id) return;
   const next = row.status === 1 ? 0 : 1;
@@ -178,6 +211,56 @@ const handleExport = async () => {
     window.URL.revokeObjectURL(url);
   } catch (e) {
     ElMessage.error('导出失败');
+  }
+};
+
+const handleBatchDelete = async () => {
+  if (batchDeleteMode.value) {
+    // 取消删除：退出模式并清空选择
+    batchDeleteMode.value = false;
+    multipleSelection.value = [];
+  } else {
+    // 进入批量删除模式
+    batchDeleteMode.value = true;
+    multipleSelection.value = [];
+    ElMessage.info('请选择要删除的用户');
+  }
+};
+
+const handleConfirmDelete = async () => {
+  if (!batchDeleteMode.value) return;
+
+  const ids = multipleSelection.value
+    .map(item => item.id)
+    .filter(id => typeof id === 'number') as number[];
+
+  if (ids.length === 0) {
+    ElMessage.warning('请选择要删除的用户');
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      '确认删除所选数据吗？',
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    );
+
+    const resp = await deleteUsers(ids);
+    if (resp.data.code === 200) {
+      ElMessage.success('删除成功');
+      multipleSelection.value = [];
+      batchDeleteMode.value = false;
+      loadData();
+    } else {
+      ElMessage.error(resp.data.msg || '删除失败');
+    }
+  } catch (e) {
+    // 用户取消，不删除
   }
 };
 

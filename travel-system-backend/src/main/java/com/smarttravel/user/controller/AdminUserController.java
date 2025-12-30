@@ -220,5 +220,45 @@ public class AdminUserController {
         result.put("data", tagIds);
         return result;
     }
+
+    /**
+     * 批量删除用户（软删除，del_flag = 1）
+     */
+    @PostMapping("/delete")
+    public Map<String, Object> batchDelete(@RequestBody Map<String, Object> body) {
+        Map<String, Object> result = new HashMap<>();
+        Object idsObj = body.get("ids");
+        if (!(idsObj instanceof List)) {
+            result.put("code", 400);
+            result.put("msg", "参数错误，ids 必须为数组");
+            return result;
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Object> rawIds = (List<Object>) idsObj;
+        List<Long> ids = new ArrayList<>();
+        for (Object o : rawIds) {
+            if (o == null) {
+                continue;
+            }
+            try {
+                ids.add(Long.parseLong(o.toString()));
+            } catch (NumberFormatException ignore) {
+                // 跳过无效 id
+            }
+        }
+
+        if (ids.isEmpty()) {
+            result.put("code", 400);
+            result.put("msg", "至少选择一个用户");
+            return result;
+        }
+
+        int affected = userMapper.batchDelete(ids);
+        result.put("code", 200);
+        result.put("msg", "success");
+        result.put("data", affected);
+        return result;
+    }
 }
 

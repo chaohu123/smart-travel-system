@@ -45,3 +45,32 @@ public interface UserRouteFavoriteMapper {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

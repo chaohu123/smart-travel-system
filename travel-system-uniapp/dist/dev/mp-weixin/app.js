@@ -4,7 +4,7 @@ var common_vendor = require("./common/vendor.js");
 if (!Math) {
   "./pages/home/home.js";
   "./pages/route/plan.js";
-  "./pages/route/detail.js";
+  "./pages/itinerary/itinerary-detail.js";
   "./pages/route/hot-routes.js";
   "./pages/recommend/interest.js";
   "./pages/checkin/checkin.js";

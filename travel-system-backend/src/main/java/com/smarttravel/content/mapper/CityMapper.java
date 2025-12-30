@@ -15,5 +15,6 @@ public interface CityMapper {
     City selectByCityNameAndProvince(@Param("cityName") String cityName, @Param("province") String province);
     int insert(City city);
     int update(City city);
+    int deleteById(Long id);
 }
 

@@ -154,7 +154,7 @@ const getHotIndex = (route: RouteItem) => {
 
 // 查看路线详情
 const onViewRoute = (route: RouteItem) => {
-  uni.navigateTo({ url: `/pages/route/detail?id=${route.id}` })
+  uni.navigateTo({ url: `/pages/itinerary/itinerary-detail?id=${route.id}` })
 }
 
 // 加载路线列表

@@ -19,7 +19,7 @@
       }
     },
     {
-      "path": "pages/route/detail",
+      "path": "pages/itinerary/itinerary-detail",
       "style": {
         "navigationBarTitleText": "行程详情",
         "navigationBarBackgroundColor": "#3BA272",

@@ -65,6 +65,14 @@ const scenicSpotApi = {
       showLoading: false,
       needAuth: false
     });
+  },
+  getMyFavorites: (userId) => {
+    return utils_http.request({
+      url: "/scenic/my/favorites",
+      method: "GET",
+      data: { userId },
+      needAuth: true
+    });
   }
 };
 const travelNoteApi = {
@@ -181,6 +189,14 @@ const foodApi = {
       method: "GET",
       data: { cityId, limit },
       showLoading: false
+    });
+  },
+  getMyFavorites: (userId) => {
+    return utils_http.request({
+      url: "/food/my/favorites",
+      method: "GET",
+      data: { userId },
+      needAuth: true
     });
   }
 };

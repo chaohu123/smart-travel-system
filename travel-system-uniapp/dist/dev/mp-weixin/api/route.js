@@ -6,13 +6,15 @@ const routeApi = {
       url: "/route/generate",
       method: "POST",
       data,
-      needAuth: true
+      needAuth: true,
+      showLoading: false
     });
   },
   getDetail: (id) => {
     return utils_http.request({
       url: `/route/${id}`,
-      method: "GET"
+      method: "GET",
+      showLoading: false
     });
   },
   toggleFavorite: (userId, routeId) => {

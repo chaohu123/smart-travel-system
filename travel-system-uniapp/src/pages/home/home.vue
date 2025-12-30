@@ -483,7 +483,7 @@ const onFeatureClick = (item: (typeof featureEntries.value)[number]) => {
 
 // 查看跳转
 const onViewRoute = (route: RouteItem) => {
-  uni.navigateTo({ url: `/pages/route/detail?id=${route.id}` })
+  uni.navigateTo({ url: `/pages/itinerary/itinerary-detail?id=${route.id}` })
 }
 
 const onViewNote = (note: NoteItem) => {

@@ -2,12 +2,15 @@ package com.smarttravel.content.service.impl;
 
 import com.smarttravel.content.domain.City;
 import com.smarttravel.content.domain.Food;
+import com.smarttravel.content.enums.BehaviorType;
 import com.smarttravel.content.mapper.CityMapper;
 import com.smarttravel.content.mapper.FoodMapper;
+import com.smarttravel.content.mapper.UserBehaviorMapper;
 import com.smarttravel.content.service.FoodService;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +26,9 @@ public class FoodServiceImpl implements FoodService {
 
     @Resource
     private CityMapper cityMapper;
+
+    @Resource
+    private UserBehaviorMapper userBehaviorMapper;
 
     @Override
     public Map<String, Object> listFoods(Integer pageNum, Integer pageSize, Long cityId,
@@ -93,6 +99,34 @@ public class FoodServiceImpl implements FoodService {
     @Override
     public List<Food> getHotFoods(Long cityId, Integer limit) {
         return foodMapper.selectHotByCityId(cityId, limit);
+    }
+
+    @Override
+    public Map<String, Object> getMyFavorites(Long userId) {
+        // 获取用户收藏的美食ID列表
+        List<Long> favoriteIds = userBehaviorMapper.selectContentIds(
+            userId,
+            BehaviorType.FAVORITE.getCode(),
+            "food",
+            0,
+            1000
+        );
+
+        // 根据ID列表查询美食详情
+        List<Food> favorites = new ArrayList<>();
+        if (favoriteIds != null && !favoriteIds.isEmpty()) {
+            for (Long id : favoriteIds) {
+                Food food = foodMapper.selectById(id);
+                if (food != null && food.getDelFlag() == 0) {
+                    favorites.add(food);
+                }
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", favorites);
+        result.put("total", favorites.size());
+        return result;
     }
 }
 

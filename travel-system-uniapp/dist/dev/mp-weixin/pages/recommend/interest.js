@@ -193,7 +193,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const onViewRoute = (item) => {
-      common_vendor.index.navigateTo({ url: `/pages/route/detail?id=${item.id}` });
+      common_vendor.index.navigateTo({ url: `/pages/itinerary/itinerary-detail?id=${item.id}` });
     };
     const onViewScenic = (item) => {
       common_vendor.index.navigateTo({ url: `/pages/scenic/detail?id=${item.id}` });

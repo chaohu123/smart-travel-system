@@ -365,6 +365,10 @@
   color: #ffffff;
   box-shadow: 0 8rpx 24rpx rgba(64, 158, 255, 0.3);
 }
+.route-btn.added.data-v-44e281b9 {
+  background: linear-gradient(135deg, #3ba272, #6fd3a5);
+  box-shadow: 0 8rpx 24rpx rgba(59, 162, 114, 0.3);
+}
 .btn-icon.data-v-44e281b9 {
   font-size: 32rpx;
   font-weight: 700;

@@ -26,7 +26,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return routeList.value.findIndex((r) => r.id === route.id) + 1;
     };
     const onViewRoute = (route) => {
-      common_vendor.index.navigateTo({ url: `/pages/route/detail?id=${route.id}` });
+      common_vendor.index.navigateTo({ url: `/pages/itinerary/itinerary-detail?id=${route.id}` });
     };
     const loadRoutes = async (reset = false) => {
       var _a;

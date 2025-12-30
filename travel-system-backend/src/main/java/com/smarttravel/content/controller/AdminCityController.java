@@ -88,13 +88,16 @@ public class AdminCityController {
 
     @DeleteMapping("/{id}")
     public Map<String, Object> delete(@PathVariable Long id) {
-        City city = new City();
-        city.setId(id);
-        city.setDelFlag(1);
-        cityMapper.update(city);
+        // 物理删除：直接从数据库中删除记录
+        int rows = cityMapper.deleteById(id);
         Map<String, Object> result = new HashMap<>();
-        result.put("code", 200);
-        result.put("msg", "success");
+        if (rows > 0) {
+            result.put("code", 200);
+            result.put("msg", "删除成功");
+        } else {
+            result.put("code", 500);
+            result.put("msg", "删除失败，记录不存在");
+        }
         return result;
     }
 }

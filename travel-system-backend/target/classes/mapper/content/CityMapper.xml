@@ -105,10 +105,18 @@
     </select>
 
     <insert id="insert" parameterType="com.smarttravel.content.domain.City" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO city (city_name, province, country, latitude, longitude, status,
-               create_time, update_time, del_flag)
-        VALUES (#{cityName}, #{province}, #{country}, #{latitude}, #{longitude}, #{status},
-               NOW(), NOW(), 0)
+        INSERT INTO city
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">id,</if>
+            city_name, province, country, latitude, longitude, status,
+            create_time, update_time, del_flag
+        </trim>
+        VALUES
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null">#{id},</if>
+            #{cityName}, #{province}, #{country}, #{latitude}, #{longitude}, #{status},
+            NOW(), NOW(), 0
+        </trim>
     </insert>
 
     <update id="update" parameterType="com.smarttravel.content.domain.City">
@@ -125,6 +133,10 @@
         </set>
         WHERE id = #{id}
     </update>
+
+    <delete id="deleteById" parameterType="long">
+        DELETE FROM city WHERE id = #{id}
+    </delete>
 
 </mapper>
 

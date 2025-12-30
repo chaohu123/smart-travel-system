@@ -12,12 +12,35 @@
           <el-button type="primary" @click="handleSearch">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
           <el-button type="success" @click="handleAdd">新增</el-button>
+          <el-button
+            type="danger"
+            @click="handleBatchDelete"
+          >
+            {{ batchDeleteMode ? '取消删除' : '批量删除' }}
+          </el-button>
+          <el-button
+            v-if="batchDeleteMode"
+            type="danger"
+            plain
+            @click="handleConfirmDelete"
+          >
+            确认删除
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
 
     <el-card>
-      <el-table :data="list" style="width: 100%">
+      <el-table
+        :data="list"
+        style="width: 100%"
+        @selection-change="handleSelectionChange"
+      >
+        <el-table-column
+          v-if="batchDeleteMode"
+          type="selection"
+          width="50"
+        />
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="routeName" label="路线名称" />
         <el-table-column prop="cityId" label="城市ID" width="100" />
@@ -155,6 +178,8 @@ const pagination = reactive({
 });
 
 const list = ref<TravelRoute[]>([]);
+const multipleSelection = ref<TravelRoute[]>([]);
+const batchDeleteMode = ref(false);
 const dialogVisible = ref(false);
 const dialogTitle = ref('新增路线');
 const form = reactive<TravelRoute>({
@@ -230,6 +255,10 @@ const handleCurrentChange = (val: number) => {
   loadData();
 };
 
+const handleSelectionChange = (val: TravelRoute[]) => {
+  multipleSelection.value = val;
+};
+
 const handleAdd = () => {
   dialogTitle.value = '新增路线';
   Object.assign(form, {
@@ -274,7 +303,8 @@ const addDay = () => {
 };
 
 const editDay = (row: { id?: number; dayNo: number; poiName?: string; note?: string }, index: number) => {
-  dayDrawer.editor = { ...row, index };
+  // 使用 any 暂存 index，避免类型约束报错（此处为前端占位逻辑）
+  (dayDrawer.editor as any) = { ...row, index };
   dayDrawer.editorVisible = true;
 };
 
@@ -363,6 +393,53 @@ const handleDelete = (row: TravelRoute) => {
       }
     })
     .catch(() => {});
+};
+
+const handleBatchDelete = () => {
+  // 切换批量删除模式（进入/取消）
+  if (batchDeleteMode.value) {
+    // 取消删除：退出模式并清空选择
+    batchDeleteMode.value = false;
+    multipleSelection.value = [];
+  } else {
+    // 进入批量删除模式
+    batchDeleteMode.value = true;
+    multipleSelection.value = [];
+    ElMessage.info('请选择要删除的路线');
+  }
+};
+
+const handleConfirmDelete = () => {
+  if (!batchDeleteMode.value) return;
+
+  const ids = multipleSelection.value
+    .map(item => item.id)
+    .filter(id => typeof id === 'number') as number[];
+
+  if (ids.length === 0) {
+    ElMessage.warning('请选择要删除的路线');
+    return;
+  }
+
+  ElMessageBox.confirm('确认删除所选数据吗？', '提示', {
+    type: 'warning',
+    confirmButtonText: '确定',
+    cancelButtonText: '取消'
+  })
+    .then(async () => {
+      try {
+        await Promise.all(ids.map(id => deleteRoute(id)));
+        ElMessage.success('批量删除成功');
+        multipleSelection.value = [];
+        batchDeleteMode.value = false;
+        loadData();
+      } catch (e) {
+        ElMessage.error('批量删除失败，请重试');
+      }
+    })
+    .catch(() => {
+      // 取消，不删除
+    });
 };
 
 onMounted(() => {

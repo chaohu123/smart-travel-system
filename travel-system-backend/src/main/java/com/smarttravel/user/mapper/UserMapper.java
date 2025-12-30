@@ -19,5 +19,10 @@ public interface UserMapper {
     int insert(User user);
 
     User selectByOpenid(@Param("openid") String openid);
+
+    /**
+     * 批量软删除用户（将 del_flag 置为 1）
+     */
+    int batchDelete(@Param("ids") List<Long> ids);
 }
 

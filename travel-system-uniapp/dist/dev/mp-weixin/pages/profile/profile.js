@@ -26,7 +26,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     }, { immediate: true });
     const navigateToMyRoutes = () => {
-      common_vendor.index.navigateTo({ url: "/pages/route/detail" });
+      common_vendor.index.navigateTo({ url: "/pages/itinerary/itinerary-detail" });
     };
     const navigateToMyNotes = () => {
       common_vendor.index.navigateTo({ url: "/pages/travel-note/list" });

@@ -91,6 +91,19 @@ public class ScenicSpotController {
         }
         return response;
     }
+
+    /**
+     * 获取用户收藏的景点列表
+     */
+    @GetMapping("/my/favorites")
+    public Map<String, Object> getMyFavorites(@RequestParam Long userId) {
+        Map<String, Object> result = scenicSpotService.getMyFavorites(userId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 200);
+        response.put("msg", "success");
+        response.put("data", result);
+        return response;
+    }
 }
 
 

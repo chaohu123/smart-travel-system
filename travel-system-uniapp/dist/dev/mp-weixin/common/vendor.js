@@ -103188,6 +103188,7 @@ function install(Vue, prefix) {
 }
 const createHook = (lifecycle) => (hook, target = getCurrentInstance()) => !isInSSRComponentSetup && injectHook(lifecycle, hook, target);
 const onShow = /* @__PURE__ */ createHook(ON_SHOW$1);
+const onLoad = /* @__PURE__ */ createHook(ON_LOAD$1);
 const onReachBottom = /* @__PURE__ */ createHook(ON_REACH_BOTTOM$1);
 const onPullDownRefresh = /* @__PURE__ */ createHook(ON_PULL_DOWN_REFRESH$1);
 exports.Search = Search;
@@ -103202,6 +103203,7 @@ exports.install = install;
 exports.n = n;
 exports.nextTick = nextTick;
 exports.o = o;
+exports.onLoad = onLoad;
 exports.onMounted = onMounted;
 exports.onPullDownRefresh = onPullDownRefresh;
 exports.onReachBottom = onReachBottom;

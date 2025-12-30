@@ -164,9 +164,13 @@
           <text class="btn-icon">✓</text>
           <text class="btn-text">去打卡</text>
         </button>
-        <button class="action-btn route-btn" @click="addToRoute">
-          <text class="btn-icon">+</text>
-          <text class="btn-text">添加到路线</text>
+        <button
+          class="action-btn route-btn"
+          :class="{ 'added': isInPendingList }"
+          @click="addToRoute"
+        >
+          <text class="btn-icon">{{ isInPendingList ? '✓' : '+' }}</text>
+          <text class="btn-text">{{ isInPendingList ? '已添加到路线' : '添加到路线' }}</text>
         </button>
       </view>
     </view>
@@ -175,14 +179,16 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { scenicSpotApi, foodApi } from '@/api/content'
-import { getCache, setCache } from '@/utils/storage'
+import { getCache, setCache, removeCache } from '@/utils/storage'
 import { useUserStore } from '@/store/user'
 
 const scenicId = ref<number | null>(null)
 const loading = ref(false)
 const detail = ref<any>(null)
 const isFavorite = ref(false)
+const isInPendingList = ref(false) // 是否在待选列表中
 const nearbyFoods = ref<any[]>([])
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -194,6 +200,13 @@ const loadFavoriteStatus = () => {
   if (!scenicId.value) return
   const favorites = getCache<number[]>(FAVORITE_KEY) || []
   isFavorite.value = favorites.includes(scenicId.value)
+}
+
+// 检查是否在待选列表中
+const checkPendingStatus = () => {
+  if (!scenicId.value) return
+  const pendingAdditions = getCache<Array<{ type: 'scenic' | 'food', id: number, name: string }>>('route_pending_additions') || []
+  isInPendingList.value = pendingAdditions.some(item => item.type === 'scenic' && item.id === scenicId.value)
 }
 
 const toggleFavorite = () => {
@@ -244,6 +257,8 @@ const loadDetail = async () => {
       }
       // 加载收藏状态
       loadFavoriteStatus()
+      // 检查待选列表状态
+      checkPendingStatus()
       // 加载附近美食
       loadNearbyFoods()
     } else {
@@ -286,10 +301,43 @@ const goCheckin = () => {
 const addToRoute = () => {
   if (!scenicId.value || !detail.value) return
 
-  // 跳转到路线规划页面，并传递景点信息
-  uni.navigateTo({
-    url: `/pages/route/plan?scenicId=${scenicId.value}&scenicName=${encodeURIComponent(detail.value.name || '')}`
-  })
+  // 将景点添加到路线规划的待选列表中，用户可以在路线规划页面选择任意天数添加
+  const pendingAdditions = getCache<Array<{ type: 'scenic' | 'food', id: number, name: string }>>('route_pending_additions') || []
+
+  // 检查是否已存在
+  const exists = pendingAdditions.some(item => item.type === 'scenic' && item.id === scenicId.value)
+
+  if (!exists) {
+    // 添加到待选列表
+    pendingAdditions.push({
+      type: 'scenic',
+      id: scenicId.value,
+      name: detail.value.name || '景点'
+    })
+    setCache('route_pending_additions', pendingAdditions, 60 * 24) // 保存24小时
+    isInPendingList.value = true
+
+    uni.showToast({
+      title: '已添加到待选列表',
+      icon: 'success',
+      duration: 2000
+    })
+  } else {
+    // 从待选列表中移除
+    const filtered = pendingAdditions.filter(item => !(item.type === 'scenic' && item.id === scenicId.value))
+    if (filtered.length > 0) {
+      setCache('route_pending_additions', filtered, 60 * 24)
+    } else {
+      removeCache('route_pending_additions')
+    }
+    isInPendingList.value = false
+
+    uni.showToast({
+      title: '已从待选列表移除',
+      icon: 'success',
+      duration: 2000
+    })
+  }
 }
 
 onMounted(() => {
@@ -300,6 +348,11 @@ onMounted(() => {
     scenicId.value = Number(options.id)
     loadDetail()
   }
+})
+
+// 页面显示时检查待选列表状态（处理从路线规划页返回的情况）
+onShow(() => {
+  checkPendingStatus()
 })
 </script>
 
@@ -719,6 +772,11 @@ onMounted(() => {
   background: linear-gradient(135deg, #409eff, #66b1ff);
   color: #ffffff;
   box-shadow: 0 8rpx 24rpx rgba(64, 158, 255, 0.3);
+}
+
+.route-btn.added {
+  background: linear-gradient(135deg, #3ba272, #6fd3a5);
+  box-shadow: 0 8rpx 24rpx rgba(59, 162, 114, 0.3);
 }
 
 .btn-icon {

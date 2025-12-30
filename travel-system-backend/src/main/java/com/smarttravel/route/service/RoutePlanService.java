@@ -18,11 +18,16 @@ public interface RoutePlanService {
      * @param useAi 是否使用AI生成文案
      * @param selectedScenicIds 用户选择的景点ID列表（必选内容）
      * @param selectedFoodIds 用户选择的美食ID列表（必选内容）
+     * @param dailySelections 每天选择的景点和美食列表，格式：[{day: 1, scenicIds: [1,2], foodIds: [3,4]}]
+     * @param startDate 开始日期 YYYY-MM-DD（可选）
+     * @param endDate 结束日期 YYYY-MM-DD（可选）
      * @return 线路ID
      */
     Long generateRoute(Long cityId, Integer days, List<Long> tagIds,
                       String budget, String suitablePeople, Boolean useAi,
-                      List<Long> selectedScenicIds, List<Long> selectedFoodIds);
+                      List<Long> selectedScenicIds, List<Long> selectedFoodIds,
+                      List<Map<String, Object>> dailySelections,
+                      String startDate, String endDate);
 
     /**
      * 查询线路详情（含每日安排）

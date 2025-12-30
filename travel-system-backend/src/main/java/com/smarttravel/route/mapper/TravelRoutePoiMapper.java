@@ -8,6 +8,7 @@ import java.util.List;
 @Mapper
 public interface TravelRoutePoiMapper {
     int insert(TravelRoutePoi poi);
+    int update(TravelRoutePoi poi);
     List<TravelRoutePoi> selectByRouteDayId(Long routeDayId);
     int deleteByRouteDayId(Long routeDayId);
     int deleteByRouteId(Long routeId);

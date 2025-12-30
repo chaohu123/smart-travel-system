@@ -10,6 +10,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const loading = common_vendor.ref(false);
     const detail = common_vendor.ref(null);
     const isFavorite = common_vendor.ref(false);
+    const isInPendingList = common_vendor.ref(false);
     const nearbyFoods = common_vendor.ref([]);
     const store = store_user.useUserStore();
     const user = common_vendor.computed(() => store.state.profile);
@@ -19,6 +20,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
       const favorites = utils_storage.getCache(FAVORITE_KEY) || [];
       isFavorite.value = favorites.includes(scenicId.value);
+    };
+    const checkPendingStatus = () => {
+      if (!scenicId.value)
+        return;
+      const pendingAdditions = utils_storage.getCache("route_pending_additions") || [];
+      isInPendingList.value = pendingAdditions.some((item) => item.type === "scenic" && item.id === scenicId.value);
     };
     const toggleFavorite = () => {
       if (!user.value) {
@@ -60,6 +67,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             detail.value = data;
           }
           loadFavoriteStatus();
+          checkPendingStatus();
           loadNearbyFoods();
         } else {
           common_vendor.index.showToast({ title: res.data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
@@ -98,9 +106,35 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const addToRoute = () => {
       if (!scenicId.value || !detail.value)
         return;
-      common_vendor.index.navigateTo({
-        url: `/pages/route/plan?scenicId=${scenicId.value}&scenicName=${encodeURIComponent(detail.value.name || "")}`
-      });
+      const pendingAdditions = utils_storage.getCache("route_pending_additions") || [];
+      const exists = pendingAdditions.some((item) => item.type === "scenic" && item.id === scenicId.value);
+      if (!exists) {
+        pendingAdditions.push({
+          type: "scenic",
+          id: scenicId.value,
+          name: detail.value.name || "\u666F\u70B9"
+        });
+        utils_storage.setCache("route_pending_additions", pendingAdditions, 60 * 24);
+        isInPendingList.value = true;
+        common_vendor.index.showToast({
+          title: "\u5DF2\u6DFB\u52A0\u5230\u5F85\u9009\u5217\u8868",
+          icon: "success",
+          duration: 2e3
+        });
+      } else {
+        const filtered = pendingAdditions.filter((item) => !(item.type === "scenic" && item.id === scenicId.value));
+        if (filtered.length > 0) {
+          utils_storage.setCache("route_pending_additions", filtered, 60 * 24);
+        } else {
+          utils_storage.removeCache("route_pending_additions");
+        }
+        isInPendingList.value = false;
+        common_vendor.index.showToast({
+          title: "\u5DF2\u4ECE\u5F85\u9009\u5217\u8868\u79FB\u9664",
+          icon: "success",
+          duration: 2e3
+        });
+      }
     };
     common_vendor.onMounted(() => {
       const pages = getCurrentPages();
@@ -110,6 +144,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         scenicId.value = Number(options.id);
         loadDetail();
       }
+    });
+    common_vendor.onShow(() => {
+      checkPendingStatus();
     });
     return (_ctx, _cache) => {
       var _a, _b;
@@ -185,7 +222,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         E: isFavorite.value ? 1 : "",
         F: common_vendor.o(toggleFavorite),
         G: common_vendor.o(goCheckin),
-        H: common_vendor.o(addToRoute)
+        H: common_vendor.t(isInPendingList.value ? "\u2713" : "+"),
+        I: common_vendor.t(isInPendingList.value ? "\u5DF2\u6DFB\u52A0\u5230\u8DEF\u7EBF" : "\u6DFB\u52A0\u5230\u8DEF\u7EBF"),
+        J: isInPendingList.value ? 1 : "",
+        K: common_vendor.o(addToRoute)
       });
     };
   }

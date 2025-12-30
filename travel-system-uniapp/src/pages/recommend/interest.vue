@@ -465,7 +465,7 @@ const loadMore = () => {
 
 // 查看详情
 const onViewRoute = (item: ContentItem) => {
-  uni.navigateTo({ url: `/pages/route/detail?id=${item.id}` })
+  uni.navigateTo({ url: `/pages/itinerary/itinerary-detail?id=${item.id}` })
 }
 
 const onViewScenic = (item: ContentItem) => {

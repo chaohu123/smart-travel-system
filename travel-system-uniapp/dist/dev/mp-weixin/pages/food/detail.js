@@ -11,6 +11,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const detail = common_vendor.ref(null);
     const nearbyScenics = common_vendor.ref([]);
     const isFavorite = common_vendor.ref(false);
+    const isInPendingList = common_vendor.ref(false);
     const store = store_user.useUserStore();
     const user = common_vendor.computed(() => store.state.profile);
     const FAVORITE_KEY = "food_favorites";
@@ -19,6 +20,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
       const favorites = utils_storage.getCache(FAVORITE_KEY) || [];
       isFavorite.value = favorites.includes(foodId.value);
+    };
+    const checkPendingStatus = () => {
+      if (!foodId.value)
+        return;
+      const pendingAdditions = utils_storage.getCache("route_pending_additions") || [];
+      isInPendingList.value = pendingAdditions.some((item) => item.type === "food" && item.id === foodId.value);
     };
     const loadDetail = async () => {
       if (!foodId.value)
@@ -35,6 +42,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }
           console.log("\u7F8E\u98DF\u8BE6\u60C5\u6570\u636E:", detail.value);
           loadFavoriteStatus();
+          checkPendingStatus();
           loadNearbyScenics();
         } else {
           common_vendor.index.showToast({ title: res.data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
@@ -97,9 +105,35 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const addToRoute = () => {
       if (!foodId.value || !detail.value)
         return;
-      common_vendor.index.navigateTo({
-        url: `/pages/route/plan?foodId=${foodId.value}&foodName=${encodeURIComponent(detail.value.name || "")}`
-      });
+      const pendingAdditions = utils_storage.getCache("route_pending_additions") || [];
+      const exists = pendingAdditions.some((item) => item.type === "food" && item.id === foodId.value);
+      if (!exists) {
+        pendingAdditions.push({
+          type: "food",
+          id: foodId.value,
+          name: detail.value.name || "\u7F8E\u98DF"
+        });
+        utils_storage.setCache("route_pending_additions", pendingAdditions, 60 * 24);
+        isInPendingList.value = true;
+        common_vendor.index.showToast({
+          title: "\u5DF2\u6DFB\u52A0\u5230\u5F85\u9009\u5217\u8868",
+          icon: "success",
+          duration: 2e3
+        });
+      } else {
+        const filtered = pendingAdditions.filter((item) => !(item.type === "food" && item.id === foodId.value));
+        if (filtered.length > 0) {
+          utils_storage.setCache("route_pending_additions", filtered, 60 * 24);
+        } else {
+          utils_storage.removeCache("route_pending_additions");
+        }
+        isInPendingList.value = false;
+        common_vendor.index.showToast({
+          title: "\u5DF2\u4ECE\u5F85\u9009\u5217\u8868\u79FB\u9664",
+          icon: "success",
+          duration: 2e3
+        });
+      }
     };
     common_vendor.onMounted(() => {
       const pages = getCurrentPages();
@@ -109,6 +143,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         foodId.value = Number(options.id);
         loadDetail();
       }
+    });
+    common_vendor.onShow(() => {
+      checkPendingStatus();
     });
     return (_ctx, _cache) => {
       var _a, _b;
@@ -162,7 +199,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         t: isFavorite.value ? 1 : "",
         v: common_vendor.o(toggleFavorite),
         w: common_vendor.o(goCheckin),
-        x: common_vendor.o(addToRoute)
+        x: common_vendor.t(isInPendingList.value ? "\u2713" : "+"),
+        y: common_vendor.t(isInPendingList.value ? "\u5DF2\u6DFB\u52A0\u5230\u8DEF\u7EBF" : "\u6DFB\u52A0\u5230\u8DEF\u7EBF"),
+        z: isInPendingList.value ? 1 : "",
+        A: common_vendor.o(addToRoute)
       });
     };
   }

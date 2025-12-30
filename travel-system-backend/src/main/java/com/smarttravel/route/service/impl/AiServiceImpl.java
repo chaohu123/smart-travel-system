@@ -155,17 +155,31 @@ public class AiServiceImpl implements AiService {
         prompt.append("【输出要求】\n");
         prompt.append("请按照以下格式输出，确保内容生动有趣、实用详细：\n\n");
         prompt.append("SUMMARY: [整体行程概要，150-250字，突出行程亮点和特色]\n");
-        prompt.append("DAY1: [第一天详细行程说明，100-150字，包括主要景点、美食推荐、时间安排建议]\n");
-        prompt.append("DAY2: [第二天详细行程说明，100-150字]\n");
-        prompt.append("DAY3: [第三天详细行程说明，100-150字，如果只有2天则省略]\n");
-        prompt.append("DAY4: [第四天详细行程说明，100-150字，如果只有2-3天则省略]\n");
-        prompt.append("DAY5: [第五天详细行程说明，100-150字，如果只有2-4天则省略]\n\n");
+        prompt.append("DAY1_MORNING: [第一天上午详细行程说明，包括具体景点、时间安排、游览建议、景点之间的交通方式，100-150字]\n");
+        prompt.append("DAY1_AFTERNOON: [第一天下午详细行程说明，包括具体景点、美食推荐、时间安排、景点之间的交通方式，100-150字]\n");
+        prompt.append("DAY1_EVENING: [第一天晚上详细行程说明，包括美食、体验活动、时间安排、交通方式，100-150字]\n");
+        prompt.append("DAY2_MORNING: [第二天上午详细行程说明，100-150字]\n");
+        prompt.append("DAY2_AFTERNOON: [第二天下午详细行程说明，100-150字]\n");
+        prompt.append("DAY2_EVENING: [第二天晚上详细行程说明，100-150字]\n");
+        prompt.append("DAY3_MORNING: [第三天上午详细行程说明，100-150字，如果只有2天则省略]\n");
+        prompt.append("DAY3_AFTERNOON: [第三天下午详细行程说明，100-150字，如果只有2天则省略]\n");
+        prompt.append("DAY3_EVENING: [第三天晚上详细行程说明，100-150字，如果只有2天则省略]\n");
+        prompt.append("DAY4_MORNING: [第四天上午详细行程说明，100-150字，如果只有2-3天则省略]\n");
+        prompt.append("DAY4_AFTERNOON: [第四天下午详细行程说明，100-150字，如果只有2-3天则省略]\n");
+        prompt.append("DAY4_EVENING: [第四天晚上详细行程说明，100-150字，如果只有2-3天则省略]\n");
+        prompt.append("DAY5_MORNING: [第五天上午详细行程说明，100-150字，如果只有2-4天则省略]\n");
+        prompt.append("DAY5_AFTERNOON: [第五天下午详细行程说明，100-150字，如果只有2-4天则省略]\n");
+        prompt.append("DAY5_EVENING: [第五天晚上详细行程说明，100-150字，如果只有2-4天则省略]\n\n");
         prompt.append("要求：\n");
         prompt.append("1. 语言生动有趣，富有吸引力\n");
         prompt.append("2. 突出当地特色和亮点\n");
-        prompt.append("3. 提供实用的时间安排建议\n");
-        prompt.append("4. 结合用户偏好推荐合适的景点和美食\n");
-        prompt.append("5. 确保行程安排合理，避免过于紧凑");
+        prompt.append("3. 提供实用的时间安排建议（上午、下午、晚上分别说明）\n");
+        prompt.append("4. 结合用户偏好和用户每天选择的具体景点、美食推荐\n");
+        prompt.append("5. 确保行程安排合理，避免过于紧凑\n");
+        prompt.append("6. 如果用户为某天选择了特定景点或美食，必须优先安排这些内容\n");
+        prompt.append("7. 每天的早中晚计划应分别详细给出，包含该时间段内的景点和美食信息\n");
+        prompt.append("8. 必须在每个时间段的行程中明确说明景点之间的交通方式（如：从天安门广场步行约10分钟到达前门大街，或乘坐地铁2号线从A站到B站等）\n");
+        prompt.append("9. 交通方式要具体实用，包括步行时间、地铁线路、公交路线等");
         return prompt.toString();
     }
 
@@ -358,15 +372,36 @@ public class AiServiceImpl implements AiService {
                     }
                 }
                 log.debug("开始解析 summary，首行内容: {}", content.length() > 30 ? content.substring(0, 30) + "..." : content);
-            } else if (trimmedLine.matches("^DAY[1-5]:.*")) {
+            } else if (trimmedLine.matches("^DAY[1-5]_(MORNING|AFTERNOON|EVENING):.*")) {
                 // 保存之前的内容
                 if (currentKey != null && currentContent.length() > 0) {
                     String savedContent = currentContent.toString().trim();
                     result.put(currentKey, savedContent);
                     log.debug("保存 {} 内容，长度: {} 字符", currentKey, savedContent.length());
                 }
-                // 提取天数
+                // 提取天数和时间段
                 String dayNum = trimmedLine.substring(3, 4); // 提取DAY后面的数字
+                String timeSlot = trimmedLine.contains("MORNING") ? "MORNING" :
+                                 trimmedLine.contains("AFTERNOON") ? "AFTERNOON" : "EVENING";
+                currentKey = "day" + dayNum + "_" + timeSlot.toLowerCase();
+                currentContent = new StringBuilder();
+                String prefix = "DAY" + dayNum + "_" + timeSlot + ":";
+                String content = trimmedLine.substring(prefix.length()).trim();
+                if (!content.isEmpty()) {
+                    currentContent.append(content);
+                    if (i < lines.length - 1) {
+                        currentContent.append("\n");
+                    }
+                }
+                log.debug("开始解析 day{}_{}，首行内容: {}", dayNum, timeSlot, content.length() > 30 ? content.substring(0, 30) + "..." : content);
+            } else if (trimmedLine.matches("^DAY[1-5]:.*")) {
+                // 兼容旧格式 DAY1: 格式
+                if (currentKey != null && currentContent.length() > 0) {
+                    String savedContent = currentContent.toString().trim();
+                    result.put(currentKey, savedContent);
+                    log.debug("保存 {} 内容，长度: {} 字符", currentKey, savedContent.length());
+                }
+                String dayNum = trimmedLine.substring(3, 4);
                 currentKey = "day" + dayNum;
                 currentContent = new StringBuilder();
                 String content = trimmedLine.substring(("DAY" + dayNum + ":").length()).trim();
@@ -376,7 +411,7 @@ public class AiServiceImpl implements AiService {
                         currentContent.append("\n");
                     }
                 }
-                log.debug("开始解析 day{}，首行内容: {}", dayNum, content.length() > 30 ? content.substring(0, 30) + "..." : content);
+                log.debug("开始解析 day{}（旧格式），首行内容: {}", dayNum, content.length() > 30 ? content.substring(0, 30) + "..." : content);
             } else if (currentKey != null) {
                 // 继续累积当前内容（跳过空行，但保留非空行）
                 if (!trimmedLine.isEmpty()) {
@@ -407,11 +442,47 @@ public class AiServiceImpl implements AiService {
             log.warn("summary 解析失败，使用兜底文案");
             result.put("summary", extractSummary(aiResponse));
         }
+        // 检查是否有早中晚格式，如果没有则使用旧格式兜底
+        boolean hasTimeSlotFormat = false;
         for (int day = 1; day <= 5; day++) {
-            String dayKey = "day" + day;
-            if (!result.containsKey(dayKey) || result.get(dayKey).isEmpty()) {
-                log.warn("{} 解析失败，使用兜底文案", dayKey);
-                result.put(dayKey, extractDayText(aiResponse, day));
+            if (result.containsKey("day" + day + "_morning") ||
+                result.containsKey("day" + day + "_afternoon") ||
+                result.containsKey("day" + day + "_evening")) {
+                hasTimeSlotFormat = true;
+                break;
+            }
+        }
+
+        if (!hasTimeSlotFormat) {
+            // 使用旧格式兜底
+            for (int day = 1; day <= 5; day++) {
+                String dayKey = "day" + day;
+                if (!result.containsKey(dayKey) || result.get(dayKey).isEmpty()) {
+                    log.warn("{} 解析失败，使用兜底文案", dayKey);
+                    String dayText = extractDayText(aiResponse, day);
+                    result.put(dayKey, dayText);
+                    // 将旧格式转换为早中晚格式
+                    result.put("day" + day + "_morning", dayText);
+                    result.put("day" + day + "_afternoon", dayText);
+                    result.put("day" + day + "_evening", dayText);
+                }
+            }
+        } else {
+            // 补充缺失的早中晚计划
+            for (int day = 1; day <= 5; day++) {
+                String morningKey = "day" + day + "_morning";
+                String afternoonKey = "day" + day + "_afternoon";
+                String eveningKey = "day" + day + "_evening";
+
+                if (!result.containsKey(morningKey) || result.get(morningKey).isEmpty()) {
+                    result.put(morningKey, "第" + day + "天上午将带您探索城市的核心景点。");
+                }
+                if (!result.containsKey(afternoonKey) || result.get(afternoonKey).isEmpty()) {
+                    result.put(afternoonKey, "第" + day + "天下午继续游览，体验当地特色。");
+                }
+                if (!result.containsKey(eveningKey) || result.get(eveningKey).isEmpty()) {
+                    result.put(eveningKey, "第" + day + "天晚上享受当地美食，感受城市夜生活。");
+                }
             }
         }
 

@@ -100,6 +100,16 @@ export const scenicSpotApi = {
       needAuth: false,
     })
   },
+
+  // 获取用户收藏的景点列表
+  getMyFavorites: (userId: number) => {
+    return request({
+      url: '/scenic/my/favorites',
+      method: 'GET',
+      data: { userId },
+      needAuth: true,
+    })
+  },
 }
 
 // 游记API
@@ -287,6 +297,16 @@ export const foodApi = {
       method: 'GET',
       data: { cityId, limit },
       showLoading: false,
+    })
+  },
+
+  // 获取用户收藏的美食列表
+  getMyFavorites: (userId: number) => {
+    return request({
+      url: '/food/my/favorites',
+      method: 'GET',
+      data: { userId },
+      needAuth: true,
     })
   },
 }

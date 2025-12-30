@@ -25,6 +25,7 @@ import javax.annotation.Resource;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Comparator;
 
 /**
  * 线路规划服务实现
@@ -66,7 +67,9 @@ public class RoutePlanServiceImpl implements RoutePlanService {
     @Transactional
     public Long generateRoute(Long cityId, Integer days, List<Long> tagIds,
                               String budget, String suitablePeople, Boolean useAi,
-                              List<Long> selectedScenicIds, List<Long> selectedFoodIds) {
+                              List<Long> selectedScenicIds, List<Long> selectedFoodIds,
+                              List<Map<String, Object>> dailySelections,
+                              String startDate, String endDate) {
         // 1. 创建线路主记录
         TravelRoute route = new TravelRoute();
         route.setRouteName("智能规划行程-" + days + "天");
@@ -281,19 +284,98 @@ public class RoutePlanServiceImpl implements RoutePlanService {
             int dayScenicCount = 0;
             int dayFoodCount = 0;
 
+            // 优先使用用户每天选择的内容
+            Map<String, Object> daySelection = null;
+            if (dailySelections != null && !dailySelections.isEmpty()) {
+                for (Map<String, Object> selection : dailySelections) {
+                    Object dayObj = selection.get("day");
+                    if (dayObj != null && dayObj.toString().equals(String.valueOf(day))) {
+                        daySelection = selection;
+                        break;
+                    }
+                }
+            }
+
+            // 添加用户选择的景点
+            if (daySelection != null) {
+                Object scenicIdsObj = daySelection.get("scenicIds");
+                if (scenicIdsObj instanceof List) {
+                    List<?> scenicIdsList = (List<?>) scenicIdsObj;
+                    for (Object idObj : scenicIdsList) {
+                        if (idObj != null) {
+                            Long scenicId = Long.valueOf(idObj.toString());
+                            ScenicSpot spot = scenicSpotMapper.selectById(scenicId);
+                            if (spot != null && spot.getCityId().equals(cityId)) {
+                                TravelRoutePoi poi = new TravelRoutePoi();
+                                poi.setRouteDayId(routeDayId);
+                                poi.setPoiType("scenic");
+                                poi.setPoiId(spot.getId());
+                                poi.setSort(sort++);
+                                poi.setStayTime(120); // 默认2小时
+                                poi.setCreateTime(LocalDateTime.now());
+                                poi.setDelFlag(0);
+                                routePoiMapper.insert(poi);
+                                dayScenicCount++;
+                            }
+                        }
+                    }
+                }
+
+                // 添加用户选择的美食
+                Object foodIdsObj = daySelection.get("foodIds");
+                if (foodIdsObj instanceof List) {
+                    List<?> foodIdsList = (List<?>) foodIdsObj;
+                    for (Object idObj : foodIdsList) {
+                        if (idObj != null) {
+                            Long foodId = Long.valueOf(idObj.toString());
+                            Food food = foodMapper.selectById(foodId);
+                            if (food != null && food.getCityId().equals(cityId)) {
+                                TravelRoutePoi poi = new TravelRoutePoi();
+                                poi.setRouteDayId(routeDayId);
+                                poi.setPoiType("food");
+                                poi.setPoiId(food.getId());
+                                poi.setSort(sort++);
+                                poi.setStayTime(60); // 默认1小时
+                                poi.setCreateTime(LocalDateTime.now());
+                                poi.setDelFlag(0);
+                                routePoiMapper.insert(poi);
+                                dayFoodCount++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 如果用户没有选择或选择不足，从候选集中补充
             // 添加景点（优先保证每天至少有一个景点）
             while (scenicIndex < scenicCandidates.size() && dayScenicCount < scenicPerDay) {
                 ScenicSpot spot = scenicCandidates.get(scenicIndex++);
-                TravelRoutePoi poi = new TravelRoutePoi();
-                poi.setRouteDayId(routeDayId);
-                poi.setPoiType("scenic");
-                poi.setPoiId(spot.getId());
-                poi.setSort(sort++);
-                poi.setStayTime(120); // 默认2小时
-                poi.setCreateTime(LocalDateTime.now());
-                poi.setDelFlag(0);
-                routePoiMapper.insert(poi);
-                dayScenicCount++;
+                // 检查是否已被用户选择
+                boolean alreadySelected = false;
+                if (daySelection != null) {
+                    Object scenicIdsObj = daySelection.get("scenicIds");
+                    if (scenicIdsObj instanceof List) {
+                        List<?> scenicIdsList = (List<?>) scenicIdsObj;
+                        for (Object idObj : scenicIdsList) {
+                            if (idObj != null && Long.valueOf(idObj.toString()).equals(spot.getId())) {
+                                alreadySelected = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (!alreadySelected) {
+                    TravelRoutePoi poi = new TravelRoutePoi();
+                    poi.setRouteDayId(routeDayId);
+                    poi.setPoiType("scenic");
+                    poi.setPoiId(spot.getId());
+                    poi.setSort(sort++);
+                    poi.setStayTime(120); // 默认2小时
+                    poi.setCreateTime(LocalDateTime.now());
+                    poi.setDelFlag(0);
+                    routePoiMapper.insert(poi);
+                    dayScenicCount++;
+                }
             }
 
             // 如果景点数量不足，确保最后几天也有景点（循环分配）
@@ -313,48 +395,84 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                 dayScenicCount++;
             }
 
-            // 添加美食（每天至少一个美食）
-            if (foodIndex < foodCandidates.size()) {
+            // 添加美食（每天至少一个美食，如果用户没有选择）
+            if (dayFoodCount == 0 && foodIndex < foodCandidates.size()) {
                 Food food = foodCandidates.get(foodIndex++);
-                TravelRoutePoi poi = new TravelRoutePoi();
-                poi.setRouteDayId(routeDayId);
-                poi.setPoiType("food");
-                poi.setPoiId(food.getId());
-                poi.setSort(sort++);
-                poi.setStayTime(60); // 默认1小时
-                poi.setCreateTime(LocalDateTime.now());
-                poi.setDelFlag(0);
-                routePoiMapper.insert(poi);
-                dayFoodCount++;
+                // 检查是否已被用户选择
+                boolean alreadySelected = false;
+                if (daySelection != null) {
+                    Object foodIdsObj = daySelection.get("foodIds");
+                    if (foodIdsObj instanceof List) {
+                        List<?> foodIdsList = (List<?>) foodIdsObj;
+                        for (Object idObj : foodIdsList) {
+                            if (idObj != null && Long.valueOf(idObj.toString()).equals(food.getId())) {
+                                alreadySelected = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (!alreadySelected) {
+                    TravelRoutePoi poi = new TravelRoutePoi();
+                    poi.setRouteDayId(routeDayId);
+                    poi.setPoiType("food");
+                    poi.setPoiId(food.getId());
+                    poi.setSort(sort++);
+                    poi.setStayTime(60); // 默认1小时
+                    poi.setCreateTime(LocalDateTime.now());
+                    poi.setDelFlag(0);
+                    routePoiMapper.insert(poi);
+                    dayFoodCount++;
+                }
             }
 
             System.out.println("第" + day + "天: 景点" + dayScenicCount + "个, 美食" + dayFoodCount + "个");
+
+            // 计算并保存路线信息
+            calculateAndSaveRouteInfo(routeDayId);
         }
         System.out.println("=====================================");
 
         // 7. 使用AI生成文案（如果启用）
         if (useAi && aiService.isAvailable()) {
             try {
-                String routeSummary = buildRouteSummary(routeId, tagIds, selectedScenicIds, selectedFoodIds);
+                String routeSummary = buildRouteSummary(routeId, tagIds, selectedScenicIds, selectedFoodIds, dailySelections);
                 String userPreference = buildUserPreference(tagIds, budget, suitablePeople);
                 Map<String, String> aiText = aiService.generateRouteText(routeSummary, userPreference);
 
                 route.setSummary(aiText.get("summary"));
                 routeMapper.update(route);
 
-                // 更新每日简介
+                // 更新每日简介（包含早中晚计划）
                 List<TravelRouteDay> daysList = routeDayMapper.selectByRouteId(routeId);
                 for (int i = 0; i < daysList.size(); i++) {
                     TravelRouteDay day = daysList.get(i);
-                    String dayText = aiText.get("day" + (i + 1));
-                    if (dayText != null && !dayText.isEmpty()) {
-                        day.setIntro(dayText);
-                        routeDayMapper.update(day);
+                    int dayNum = i + 1;
+
+                    // 尝试获取早中晚计划
+                    String morning = aiText.get("day" + dayNum + "_morning");
+                    String afternoon = aiText.get("day" + dayNum + "_afternoon");
+                    String evening = aiText.get("day" + dayNum + "_evening");
+
+                    // 如果有早中晚计划，构建JSON格式存储
+                    if (morning != null || afternoon != null || evening != null) {
+                        StringBuilder introJson = new StringBuilder();
+                        introJson.append("{");
+                        introJson.append("\"morning\":\"").append(morning != null ? escapeJsonString(morning) : "").append("\",");
+                        introJson.append("\"afternoon\":\"").append(afternoon != null ? escapeJsonString(afternoon) : "").append("\",");
+                        introJson.append("\"evening\":\"").append(evening != null ? escapeJsonString(evening) : "").append("\"");
+                        introJson.append("}");
+                        day.setIntro(introJson.toString());
                     } else {
-                        // 如果没有AI生成的描述，使用默认描述
-                        day.setIntro("第" + (i + 1) + "天将带您探索城市的核心景点，体验当地特色美食。");
-                        routeDayMapper.update(day);
+                        // 兼容旧格式
+                        String dayText = aiText.get("day" + dayNum);
+                        if (dayText != null && !dayText.isEmpty()) {
+                            day.setIntro(dayText);
+                        } else {
+                            day.setIntro("第" + dayNum + "天将带您探索城市的核心景点，体验当地特色美食。");
+                        }
                     }
+                    routeDayMapper.update(day);
                 }
             } catch (Exception e) {
                 // AI失败时使用规则生成的简要说明
@@ -387,9 +505,13 @@ public class RoutePlanServiceImpl implements RoutePlanService {
             dayMap.put("day", day);
 
             List<TravelRoutePoi> pois = routePoiMapper.selectByRouteDayId(day.getId());
+            // 按sort排序
+            pois.sort(Comparator.comparing(TravelRoutePoi::getSort));
+
             List<Map<String, Object>> poiDetails = new ArrayList<>();
 
-            for (TravelRoutePoi poi : pois) {
+            for (int i = 0; i < pois.size(); i++) {
+                TravelRoutePoi poi = pois.get(i);
                 Map<String, Object> poiMap = new HashMap<>();
                 poiMap.put("poi", poi);
 
@@ -401,6 +523,15 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                     poiMap.put("detail", food);
                 }
 
+                // 添加路线信息（从前一个POI到当前POI）
+                if (i > 0) {
+                    TravelRoutePoi prevPoi = pois.get(i - 1);
+                    Map<String, Object> routeInfo = getRouteInfo(prevPoi, poi);
+                    if (routeInfo != null) {
+                        poiMap.put("route", routeInfo);
+                    }
+                }
+
                 poiDetails.add(poiMap);
             }
 
@@ -410,6 +541,200 @@ public class RoutePlanServiceImpl implements RoutePlanService {
 
         result.put("days", dayDetails);
         return result;
+    }
+
+    /**
+     * 计算并保存路线信息到POI的note字段
+     */
+    private void calculateAndSaveRouteInfo(Long routeDayId) {
+        List<TravelRoutePoi> pois = routePoiMapper.selectByRouteDayId(routeDayId);
+        if (pois == null || pois.size() < 2) {
+            return;
+        }
+
+        // 按sort排序
+        pois.sort(Comparator.comparing(TravelRoutePoi::getSort));
+
+        for (int i = 1; i < pois.size(); i++) {
+            TravelRoutePoi currentPoi = pois.get(i);
+            TravelRoutePoi prevPoi = pois.get(i - 1);
+
+            // 计算路线信息
+            Map<String, Object> routeInfo = calculateRouteInfo(prevPoi, currentPoi);
+
+            if (routeInfo != null && !routeInfo.isEmpty()) {
+                // 将路线信息保存到当前POI的note字段（JSON格式）
+                try {
+                    StringBuilder noteJson = new StringBuilder();
+                    noteJson.append("{");
+                    noteJson.append("\"from\":\"").append(routeInfo.get("from")).append("\",");
+                    noteJson.append("\"to\":\"").append(routeInfo.get("to")).append("\",");
+                    noteJson.append("\"suggestedRoute\":\"").append(routeInfo.get("suggestedRoute")).append("\",");
+                    noteJson.append("\"transport\":\"").append(routeInfo.get("transport")).append("\",");
+                    noteJson.append("\"distance\":\"").append(routeInfo.get("distance")).append("\"");
+                    noteJson.append("}");
+
+                    currentPoi.setNote(noteJson.toString());
+                    routePoiMapper.update(currentPoi);
+                } catch (Exception e) {
+                    System.err.println("保存路线信息失败: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * 计算两个POI之间的路线信息
+     */
+    private Map<String, Object> calculateRouteInfo(TravelRoutePoi fromPoi, TravelRoutePoi toPoi) {
+        Map<String, Object> routeInfo = new HashMap<>();
+
+        // 获取起点和终点信息
+        String fromName = getPoiName(fromPoi);
+        String toName = getPoiName(toPoi);
+
+        routeInfo.put("from", fromName);
+        routeInfo.put("to", toName);
+
+        // 获取坐标信息
+        Double fromLat = null, fromLng = null, toLat = null, toLng = null;
+
+        if ("scenic".equals(fromPoi.getPoiType())) {
+            ScenicSpot spot = scenicSpotMapper.selectById(fromPoi.getPoiId());
+            if (spot != null) {
+                fromLat = spot.getLatitude() != null ? spot.getLatitude().doubleValue() : null;
+                fromLng = spot.getLongitude() != null ? spot.getLongitude().doubleValue() : null;
+            }
+        } else if ("food".equals(fromPoi.getPoiType())) {
+            Food food = foodMapper.selectById(fromPoi.getPoiId());
+            if (food != null) {
+                fromLat = food.getLatitude() != null ? food.getLatitude().doubleValue() : null;
+                fromLng = food.getLongitude() != null ? food.getLongitude().doubleValue() : null;
+            }
+        }
+
+        if ("scenic".equals(toPoi.getPoiType())) {
+            ScenicSpot spot = scenicSpotMapper.selectById(toPoi.getPoiId());
+            if (spot != null) {
+                toLat = spot.getLatitude() != null ? spot.getLatitude().doubleValue() : null;
+                toLng = spot.getLongitude() != null ? spot.getLongitude().doubleValue() : null;
+            }
+        } else if ("food".equals(toPoi.getPoiType())) {
+            Food food = foodMapper.selectById(toPoi.getPoiId());
+            if (food != null) {
+                toLat = food.getLatitude() != null ? food.getLatitude().doubleValue() : null;
+                toLng = food.getLongitude() != null ? food.getLongitude().doubleValue() : null;
+            }
+        }
+
+        // 计算距离
+        if (fromLat != null && fromLng != null && toLat != null && toLng != null) {
+            double distance = calculateDistance(fromLat, fromLng, toLat, toLng);
+            if (distance < 1.0) {
+                routeInfo.put("distance", String.format("%.0f米", distance * 1000));
+                routeInfo.put("transport", "步行");
+                routeInfo.put("suggestedRoute", "建议步行前往，距离较近");
+            } else if (distance < 5.0) {
+                routeInfo.put("distance", String.format("%.1f公里", distance));
+                routeInfo.put("transport", "步行/公交");
+                routeInfo.put("suggestedRoute", "建议步行或乘坐公交前往");
+            } else {
+                routeInfo.put("distance", String.format("%.1f公里", distance));
+                routeInfo.put("transport", "公交/地铁/打车");
+                routeInfo.put("suggestedRoute", "建议乘坐公交、地铁或打车前往");
+            }
+        } else {
+            // 如果没有坐标信息，使用默认值
+            routeInfo.put("distance", "约1公里");
+            routeInfo.put("transport", "步行/公交");
+            routeInfo.put("suggestedRoute", "建议使用导航前往");
+        }
+
+        return routeInfo;
+    }
+
+    /**
+     * 获取POI名称
+     */
+    private String getPoiName(TravelRoutePoi poi) {
+        if ("scenic".equals(poi.getPoiType())) {
+            ScenicSpot spot = scenicSpotMapper.selectById(poi.getPoiId());
+            return spot != null ? spot.getName() : "未知景点";
+        } else if ("food".equals(poi.getPoiType())) {
+            Food food = foodMapper.selectById(poi.getPoiId());
+            return food != null ? food.getName() : "未知美食";
+        }
+        return "未知地点";
+    }
+
+    /**
+     * 计算两点之间的距离（公里）
+     * 使用Haversine公式
+     */
+    private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371; // 地球半径（公里）
+
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        double distance = R * c;
+
+        return distance;
+    }
+
+    /**
+     * 从POI的note字段解析路线信息
+     */
+    private Map<String, Object> getRouteInfo(TravelRoutePoi fromPoi, TravelRoutePoi toPoi) {
+        // 优先从toPoi的note字段读取路线信息
+        if (toPoi.getNote() != null && !toPoi.getNote().isEmpty()) {
+            try {
+                // 简单解析JSON（如果note字段是JSON格式）
+                String note = toPoi.getNote();
+                if (note.startsWith("{") && note.contains("from")) {
+                    Map<String, Object> routeInfo = new HashMap<>();
+                    // 简单解析JSON字符串
+                    String from = extractJsonValue(note, "from");
+                    String to = extractJsonValue(note, "to");
+                    String suggestedRoute = extractJsonValue(note, "suggestedRoute");
+                    String transport = extractJsonValue(note, "transport");
+                    String distance = extractJsonValue(note, "distance");
+
+                    routeInfo.put("from", from != null ? from : getPoiName(fromPoi));
+                    routeInfo.put("to", to != null ? to : getPoiName(toPoi));
+                    routeInfo.put("suggestedRoute", suggestedRoute != null ? suggestedRoute : "建议使用导航");
+                    routeInfo.put("transport", transport != null ? transport : "步行/公交");
+                    routeInfo.put("distance", distance != null ? distance : "约1公里");
+
+                    return routeInfo;
+                }
+            } catch (Exception e) {
+                // 解析失败，使用计算方式
+            }
+        }
+
+        // 如果没有保存的路线信息，实时计算
+        return calculateRouteInfo(fromPoi, toPoi);
+    }
+
+    /**
+     * 从JSON字符串中提取值
+     */
+    private String extractJsonValue(String json, String key) {
+        try {
+            String pattern = "\"" + key + "\"\\s*:\\s*\"([^\"]+)\"";
+            java.util.regex.Pattern p = java.util.regex.Pattern.compile(pattern);
+            java.util.regex.Matcher m = p.matcher(json);
+            if (m.find()) {
+                return m.group(1);
+            }
+        } catch (Exception e) {
+            // 忽略解析错误
+        }
+        return null;
     }
 
     @Override
@@ -444,7 +769,8 @@ public class RoutePlanServiceImpl implements RoutePlanService {
     }
 
     private String buildRouteSummary(Long routeId, List<Long> tagIds,
-                                     List<Long> selectedScenicIds, List<Long> selectedFoodIds) {
+                                     List<Long> selectedScenicIds, List<Long> selectedFoodIds,
+                                     List<Map<String, Object>> dailySelections) {
         TravelRoute route = routeMapper.selectById(routeId);
         if (route == null) {
             return "行程ID: " + routeId;
@@ -534,29 +860,68 @@ public class RoutePlanServiceImpl implements RoutePlanService {
             }
         }
 
-        // 获取每日行程详情
-        List<TravelRouteDay> days = routeDayMapper.selectByRouteId(routeId);
-        summary.append("\n每日行程安排:\n");
-        for (TravelRouteDay day : days) {
-            summary.append("第").append(day.getDayNo()).append("天: ");
+        // 添加每天的选择信息（如果用户有选择）
+        if (dailySelections != null && !dailySelections.isEmpty()) {
+            summary.append("\n用户每日选择安排:\n");
+            for (Map<String, Object> daySelection : dailySelections) {
+                Object dayObj = daySelection.get("day");
+                if (dayObj != null) {
+                    int day = Integer.parseInt(dayObj.toString());
+                    summary.append("第").append(day).append("天用户选择:\n");
 
-            List<TravelRoutePoi> pois = routePoiMapper.selectByRouteDayId(day.getId());
-            List<String> poiNames = new ArrayList<>();
-            for (TravelRoutePoi poi : pois) {
-                if ("scenic".equals(poi.getPoiType())) {
-                    ScenicSpot spot = scenicSpotMapper.selectById(poi.getPoiId());
-                    if (spot != null) {
-                        poiNames.add("景点-" + spot.getName());
+                    Object scenicIdsObj = daySelection.get("scenicIds");
+                    if (scenicIdsObj instanceof List) {
+                        List<?> scenicIdsList = (List<?>) scenicIdsObj;
+                        if (!scenicIdsList.isEmpty()) {
+                            summary.append("  景点: ");
+                            List<String> scenicNames = new ArrayList<>();
+                            for (Object idObj : scenicIdsList) {
+                                if (idObj != null) {
+                                    Long scenicId = Long.valueOf(idObj.toString());
+                                    ScenicSpot spot = scenicSpotMapper.selectById(scenicId);
+                                    if (spot != null) {
+                                        scenicNames.add(spot.getName());
+                                    }
+                                }
+                            }
+                            summary.append(String.join("、", scenicNames)).append("\n");
+                        }
                     }
-                } else if ("food".equals(poi.getPoiType())) {
-                    Food food = foodMapper.selectById(poi.getPoiId());
-                    if (food != null) {
-                        poiNames.add("美食-" + food.getName());
+
+                    Object foodIdsObj = daySelection.get("foodIds");
+                    if (foodIdsObj instanceof List) {
+                        List<?> foodIdsList = (List<?>) foodIdsObj;
+                        if (!foodIdsList.isEmpty()) {
+                            summary.append("  美食: ");
+                            List<String> foodNames = new ArrayList<>();
+                            for (Object idObj : foodIdsList) {
+                                if (idObj != null) {
+                                    Long foodId = Long.valueOf(idObj.toString());
+                                    Food food = foodMapper.selectById(foodId);
+                                    if (food != null) {
+                                        foodNames.add(food.getName());
+                                    }
+                                }
+                            }
+                            summary.append(String.join("、", foodNames)).append("\n");
+                        }
                     }
                 }
             }
-            summary.append(String.join("、", poiNames)).append("\n");
         }
+
+        /*
+         * 注意：
+         * 这里原本会再次根据数据库中的实际行程（包括系统自动补充的景点 / 美食）
+         * 生成一段“每日行程安排”。这样做会带来几个问题：
+         * 1. 这段“每日行程安排”中会出现用户在表单中没有勾选的景点 / 美食（例如根据标签自动推荐的 POI）；
+         * 2. 某些景点会在不同天被系统自动分配，从而看起来像是“重复的地点”；
+         * 3. 日志 / Prompt 中展示的每日行程，与前端表单里“用户每日选择安排”的内容不一致，导致困惑。
+         *
+         * 对于大模型来说，我们真正想强调的是“用户每天一定要去的地点”，
+         * 这些信息在上面的【用户每日选择安排】中已经完整表达，因此这里不再追加
+         * 基于数据库实际行程的“每日行程安排”，避免把系统自动补充的 POI 混入“用户必选”描述中。
+         */
 
         return summary.toString();
     }
@@ -584,6 +949,24 @@ public class RoutePlanServiceImpl implements RoutePlanService {
         }
 
         return preference.toString();
+    }
+
+    /**
+     * 转义JSON字符串中的特殊字符
+     * 转义：双引号、反斜杠、换行符、回车符、制表符等
+     */
+    private String escapeJsonString(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input
+            .replace("\\", "\\\\")  // 先转义反斜杠，避免后续转义被影响
+            .replace("\"", "\\\"")  // 转义双引号
+            .replace("\n", "\\n")   // 转义换行符
+            .replace("\r", "\\r")   // 转义回车符
+            .replace("\t", "\\t")   // 转义制表符
+            .replace("\b", "\\b")   // 转义退格符
+            .replace("\f", "\\f");  // 转义换页符
     }
 }
 

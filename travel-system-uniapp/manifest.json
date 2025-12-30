@@ -43,6 +43,10 @@
   "quickapp": {},
   "mp-weixin": {
     "appid": "wxcfae6ad33cbdce3d",
+    "map": {
+      "provider": "amap",
+      "key": "b49d114eb175a158b25db7bf30156a3d"
+    },
     "setting": {
       "urlCheck": false,
       "es6": true,
@@ -81,9 +85,12 @@
     "usingComponents": true,
     "permission": {
       "scope.userLocation": {
-        "desc": "你的位置信息将用于小程序位置接口的效果展示"
+        "desc": "你的位置信息将用于小程序位置接口的效果展示和地图功能"
       }
     },
+    "requiredPrivateInfos": [
+      "getLocation"
+    ],
     "optimization": {
       "subPackages": true
     },
