@@ -19,6 +19,14 @@ export const routeApi = {
       day: number
       scenicIds?: number[]
       foodIds?: number[]
+      scenicTimeSlots?: Array<{   // 景点的时间段分配
+        scenicId: number
+        timeSlot: string          // 'morning' | 'afternoon' | 'evening' | 'night'
+      }>
+      foodTimeSlots?: Array<{     // 美食的时间段分配
+        foodId: number
+        timeSlot: string          // 'breakfast' | 'lunch' | 'dinner' | 'snack'
+      }>
     }>
     startDate?: string            // 开始日期 YYYY-MM-DD
     endDate?: string              // 结束日期 YYYY-MM-DD

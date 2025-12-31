@@ -1,65 +1,176 @@
 <template>
   <view class="plan-page">
     <view class="page-bg"></view>
+    
+    <!-- 步骤指示器 -->
+    <view class="step-indicator">
+      <view class="step-indicator-header">
+        <text class="step-indicator-title">生成属于自己的专属路线</text>
+      </view>
+      <view class="step-indicator-content">
+        <view 
+          v-for="(step, index) in steps" 
+          :key="index"
+          class="step-item"
+          :class="{ 
+            active: currentStep === index, 
+            completed: currentStep > index 
+          }"
+          @click="goToStep(index)"
+        >
+          <view class="step-circle">
+            <text v-if="currentStep > index" class="step-check">✓</text>
+            <text v-else class="step-number">{{ index + 1 }}</text>
+          </view>
+          <text class="step-label">{{ step.label }}</text>
+        </view>
+      </view>
+    </view>
+
     <scroll-view scroll-y class="plan-scroll">
-      <!-- 条件选择区（卡片） -->
-      <view class="plan-form">
-        <!-- 标题 -->
-        <view class="form-header">
-          <text class="header-title">智能生成你的完美行程</text>
+      <!-- 步骤1: 目的地选择 -->
+      <view v-show="currentStep === 0" class="step-content">
+        <view class="step-header">
+          <text class="step-title">选择目的地</text>
+          <text class="step-subtitle">告诉我们你想去哪里</text>
+        </view>
+        
+        <!-- 热门城市卡片 - 一行显示4个 -->
+        <view class="city-cards">
+          <view
+            v-for="city in popularCities.slice(0, 4)"
+            :key="city.id"
+            class="city-card"
+            :class="{ active: selectedCity?.id === city.id }"
+            @click="selectCity(city)"
+          >
+            <view 
+              class="city-card-bg" 
+              :style="{ 
+                backgroundImage: city.image ? `url(${city.image})` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundColor: city.image ? 'transparent' : '#667eea'
+              }"
+            >
+              <view class="city-card-overlay"></view>
+            </view>
+            <view class="city-card-content">
+              <text class="city-name">{{ city.name }}</text>
+              <text class="city-desc">{{ city.desc || '热门旅游城市' }}</text>
+            </view>
+            <view v-if="selectedCity?.id === city.id" class="city-check-icon">✓</view>
+          </view>
         </view>
 
-        <!-- 目的地 -->
-        <view class="form-item">
-          <text class="form-label">目的地</text>
+        <!-- 自定义输入 -->
+        <view class="custom-destination">
+          <text class="custom-label">或输入其他目的地</text>
           <input
             class="destination-input"
             v-model="destination"
-            placeholder="北京"
-            placeholder-style="color: #999999; font-weight: normal;"
+            placeholder="输入城市名称..."
+            placeholder-style="color: #999999;"
             @input="onDestinationInput"
             type="text"
             maxlength="50"
           />
-          <text class="form-hint">支持自然输入，如"北京3日游"</text>
         </view>
 
-        <!-- 出行日期选择 -->
-        <view class="form-item">
-          <text class="form-label">游玩时间</text>
-          <view class="date-picker-container">
-            <view class="date-input-wrapper">
-              <picker mode="date" :value="startDate" :start="minDate" @change="onStartDateChange" class="date-picker-item">
-                <view class="date-input">
-                  <text class="date-label">开始日期</text>
-                  <text class="date-value" :class="{ placeholder: !startDate }">
-                    {{ startDate ? formatDate(startDate) : '选择开始日期' }}
-                  </text>
-                </view>
-              </picker>
-              <text class="date-separator">至</text>
-              <picker mode="date" :value="endDate" :start="startDate || minDate" @change="onEndDateChange" class="date-picker-item">
-                <view class="date-input">
-                  <text class="date-label">结束日期</text>
-                  <text class="date-value" :class="{ placeholder: !endDate }">
-                    {{ endDate ? formatDate(endDate) : '选择结束日期' }}
-                  </text>
-                </view>
-              </picker>
-              <view class="calendar-icon-wrapper">
-                <text class="calendar-icon">📅</text>
-              </view>
+
+        <!-- 快速标签入口 -->
+        <view class="quick-tags-section">
+          <view class="quick-tags-header">
+            <text class="quick-tags-title">快速选择</text>
+          </view>
+          <view class="quick-tags-list">
+            <view
+              v-for="tag in quickTags"
+              :key="tag.id"
+              class="quick-tag-item"
+              :class="{ active: selectedQuickTags.includes(tag.id) }"
+              @click="toggleQuickTag(tag.id)"
+            >
+              <text class="quick-tag-icon">{{ tag.icon }}</text>
+              <text class="quick-tag-text">{{ tag.name }}</text>
             </view>
           </view>
-          <text class="form-hint">点击输入框右侧日历图标选择具体游玩时间</text>
+        </view>
+
+        <!-- 底部自然语言输入提示 -->
+        <view class="nlp-trigger-section">
+          <view class="nlp-trigger-btn" @tap="openNlpModal">
+            <text class="nlp-trigger-icon">💭</text>
+            <text class="nlp-trigger-text">点击输入我的想法</text>
+            <text class="nlp-trigger-arrow">›</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 步骤2: 时间与成员选择 -->
+      <view v-show="currentStep === 1" class="step-content">
+        <view class="step-header">
+          <text class="step-title">选择出行时间与成员</text>
+          <text class="step-subtitle">规划你的旅行日期和同行人员</text>
+        </view>
+
+        <!-- 日期选择 -->
+        <view class="date-picker-container">
+          <view class="date-input-wrapper">
+            <view class="date-input date-input-clickable" @click="openDatePicker('start')">
+              <text class="date-label">开始日期</text>
+              <text class="date-value" :class="{ placeholder: !startDate }">
+                {{ startDate ? formatDate(startDate) : '选择开始日期' }}
+              </text>
+            </view>
+            <text class="date-separator">至</text>
+            <view class="date-input date-input-clickable" @click="openDatePicker('end')">
+              <text class="date-label">结束日期</text>
+              <text class="date-value" :class="{ placeholder: !endDate }">
+                {{ endDate ? formatDate(endDate) : '选择结束日期' }}
+              </text>
+            </view>
+          </view>
+          
           <view v-if="travelDays > 0" class="days-display">
             <text class="days-text">共 {{ travelDays }} 天 {{ travelDays - 1 }} 晚</text>
           </view>
+
+          <!-- 日期提示信息 -->
+          <view v-if="dateTips" class="date-tips">
+            <text class="date-tips-icon">ℹ️</text>
+            <text class="date-tips-text">{{ dateTips }}</text>
+          </view>
         </view>
 
-        <!-- 旅行偏好（多选 Tag） -->
-        <view class="form-item">
-          <text class="form-label">旅行偏好 <text class="label-optional">(可多选)</text></text>
+        <!-- 成员选择 -->
+        <view class="companion-section">
+          <text class="section-label">选择同行成员</text>
+          <view class="companion-grid">
+            <view
+              v-for="companion in companionList"
+              :key="companion.id"
+              class="companion-card"
+              :class="{ active: selectedCompanion === companion.id }"
+              @click="selectCompanion(companion.id)"
+            >
+              <view class="companion-icon-wrapper">
+                <text class="companion-icon">{{ companion.icon }}</text>
+              </view>
+              <text class="companion-name">{{ companion.name }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 步骤3: 偏好设置 -->
+      <view v-show="currentStep === 2" class="step-content">
+        <view class="step-header">
+          <text class="step-title">设置旅行偏好</text>
+          <text class="step-subtitle">帮助我们更好地为你规划</text>
+        </view>
+
+        <!-- 偏好标签 -->
+        <view class="preference-tags-section">
+          <text class="section-label">旅行风格</text>
           <view class="tag-list">
             <view
               v-for="tag in tagList"
@@ -74,130 +185,320 @@
           </view>
         </view>
 
-        <!-- 同行人 -->
-        <view class="form-item">
-          <text class="form-label">同行人</text>
-          <view class="companion-list">
-            <view
-              v-for="companion in companionList"
-              :key="companion.id"
-              class="companion-item"
-              :class="{ active: selectedCompanion === companion.id }"
-              @click="selectCompanion(companion.id)"
-            >
-              <text>{{ companion.name }}</text>
+        <!-- 松弛感滑块 -->
+        <view class="slider-section">
+          <view class="slider-header">
+            <text class="slider-label">行程节奏</text>
+            <text class="slider-value">{{ relaxationText }}</text>
+          </view>
+          <view class="slider-container">
+            <view class="slider-labels">
+              <text class="slider-left">😴 睡到自然醒</text>
+              <text class="slider-right">⚡ 打卡狂魔</text>
             </view>
+            <slider
+              class="preference-slider"
+              :value="relaxationValue"
+              min="0"
+              max="100"
+              step="10"
+              activeColor="#3ba272"
+              backgroundColor="#e5e5e5"
+              block-color="#3ba272"
+              block-size="20"
+              @change="onRelaxationChange"
+            />
           </view>
         </view>
 
-        <!-- 每天选择景点和美食 -->
-        <view class="form-item">
-          <text class="form-label">每日行程选择 <text class="label-optional">(可选)</text></text>
-          <text class="form-hint">为每一天选择想要去的景点和美食，可从待选列表、收藏列表或全部列表中选择</text>
+        <!-- 预算滑块 -->
+        <view class="slider-section">
+          <view class="slider-header">
+            <text class="slider-label">预算偏好</text>
+            <text class="slider-value">{{ budgetText }}</text>
+          </view>
+          <view class="slider-container">
+            <view class="slider-labels">
+              <text class="slider-left">💰 经济实惠</text>
+              <text class="slider-right">💎 奢华享受</text>
+            </view>
+            <slider
+              class="preference-slider"
+              :value="budgetValue"
+              min="0"
+              max="100"
+              step="10"
+              activeColor="#3ba272"
+              backgroundColor="#e5e5e5"
+              block-color="#3ba272"
+              block-size="20"
+              @change="onBudgetChange"
+            />
+          </view>
+        </view>
 
-          <!-- 待选列表提示 -->
-          <view v-if="pendingScenics.length > 0 || pendingFoods.length > 0" class="pending-notice">
-            <text class="pending-notice-icon">📋</text>
-            <text class="pending-notice-text">
-              您有{{ pendingScenics.length + pendingFoods.length }}个待选项目，可在选择时添加到任意天数
-            </text>
+        <!-- 景点和美食日期分配 -->
+        <view v-if="travelDays > 0 && (pendingScenics.length > 0 || pendingFoods.length > 0)" class="item-schedule-section">
+          <text class="section-label">安排已添加的景点和美食</text>
+          <text class="section-hint">将您从详情页添加的景点和美食分配到具体的日期和时间段</text>
+          
+          <!-- 待分配的景点 -->
+          <view v-if="pendingScenics.length > 0" class="schedule-items">
+            <text class="schedule-items-title">待分配景点</text>
+            <view
+              v-for="scenic in pendingScenics"
+              :key="scenic.id"
+              class="schedule-item-card"
+            >
+              <view class="schedule-item-info">
+                <text class="schedule-item-name">📍 {{ scenic.name }}</text>
+                <text v-if="getScenicSchedule(scenic.id)" class="schedule-item-time">
+                  {{ getScenicScheduleText(scenic.id) }}
+                </text>
+              </view>
+              <view class="schedule-item-actions">
+                <button class="schedule-btn" @tap="openScenicScheduleModal(scenic)">安排时间</button>
+                <text v-if="getScenicSchedule(scenic.id)" class="schedule-remove" @tap="removeScenicSchedule(scenic.id)">移除</text>
+              </view>
+            </view>
           </view>
 
-          <view class="daily-selections">
+          <!-- 待分配的美食 -->
+          <view v-if="pendingFoods.length > 0" class="schedule-items">
+            <text class="schedule-items-title">待分配美食</text>
             <view
-              v-for="(day, dayIndex) in dailySelections"
-              :key="dayIndex"
-              class="day-selection-card"
+              v-for="food in pendingFoods"
+              :key="food.id"
+              class="schedule-item-card"
             >
-              <view class="day-selection-header">
-                <text class="day-selection-title">第{{ dayIndex + 1 }}天</text>
-                <view class="day-selection-actions">
-                  <text class="action-link" @click="openDaySelector(dayIndex, 'scenic')">
-                    选择景点 ({{ day.scenicIds.length }})
-                  </text>
-                  <text class="action-link" @click="openDaySelector(dayIndex, 'food')">
-                    选择美食 ({{ day.foodIds.length }})
-                  </text>
-                </view>
+              <view class="schedule-item-info">
+                <text class="schedule-item-name">🍜 {{ food.name }}</text>
+                <text v-if="getFoodSchedule(food.id)" class="schedule-item-time">
+                  {{ getFoodScheduleText(food.id) }}
+                </text>
               </view>
-
-              <view v-if="day.scenicIds.length > 0 || day.foodIds.length > 0" class="day-selection-content">
-                <view v-if="day.scenicIds.length > 0" class="selection-items">
-                  <text class="selection-label">景点：</text>
-                  <view class="selection-tags">
-                    <view
-                      v-for="scenicId in day.scenicIds"
-                      :key="scenicId"
-                      class="selection-tag"
-                    >
-                      <text>{{ getScenicName(scenicId) }}</text>
-                      <text class="tag-close" @click="removeScenic(dayIndex, scenicId)">×</text>
-                    </view>
-                  </view>
-                </view>
-                <view v-if="day.foodIds.length > 0" class="selection-items">
-                  <text class="selection-label">美食：</text>
-                  <view class="selection-tags">
-                    <view
-                      v-for="foodId in day.foodIds"
-                      :key="foodId"
-                      class="selection-tag"
-                    >
-                      <text>{{ getFoodName(foodId) }}</text>
-                      <text class="tag-close" @click="removeFood(dayIndex, foodId)">×</text>
-                    </view>
-                  </view>
-                </view>
+              <view class="schedule-item-actions">
+                <button class="schedule-btn" @tap="openFoodScheduleModal(food)">安排时间</button>
+                <text v-if="getFoodSchedule(food.id)" class="schedule-remove" @tap="removeFoodSchedule(food.id)">移除</text>
               </view>
             </view>
           </view>
         </view>
       </view>
 
-      <!-- "开始智能规划"按钮（核心按钮） -->
-      <view class="submit-section">
+      <!-- 导航按钮 -->
+      <view class="step-navigation">
         <button
-          class="submit-btn"
-          :class="{ disabled: !canSubmit }"
-          @click="generateRoute"
+          v-if="currentStep > 0"
+          class="nav-btn prev-btn"
+          @click="prevStep"
         >
-          <text>开始智能规划</text>
+          上一步
         </button>
-      </view>
-
-      <!-- 线路结果展示（如果有历史记录） -->
-      <view v-if="recentRoutes.length > 0" class="recent-routes">
-        <view class="section-title">最近生成的线路</view>
-        <view
-          v-for="route in recentRoutes"
-          :key="route.id"
-          class="route-item"
-          @click="viewRoute(route.id)"
+        <button
+          class="nav-btn next-btn"
+          :class="{ disabled: !canGoNext }"
+          @click="nextStep"
         >
-          <text class="route-item-title">{{ route.title }}</text>
-          <text class="route-item-arrow">›</text>
-        </view>
+          {{ currentStep === steps.length - 1 ? '开始智能规划' : '下一步' }}
+        </button>
       </view>
     </scroll-view>
 
-    <!-- 加载中 - 飞机飞向旋转地球动画 -->
+    <!-- 日期选择弹窗 - 使用picker-view实现滚动选择器 -->
+    <view v-if="showDatePicker" class="date-picker-modal" @tap.stop="closeDatePicker">
+      <view class="date-picker-modal-content" @tap.stop>
+        <view class="date-picker-header">
+          <text class="date-picker-cancel" @tap.stop="closeDatePicker">取消</text>
+          <text class="date-picker-title">{{ datePickerType === 'start' ? '选择开始日期' : '选择结束日期' }}</text>
+          <text class="date-picker-confirm" @tap.stop="confirmDatePicker">确定</text>
+        </view>
+        <view class="date-picker-body">
+          <picker-view
+            :value="datePickerValue"
+            @change="onPickerViewChange"
+            class="date-picker-view"
+          >
+            <!-- 年份列 -->
+            <picker-view-column>
+              <view
+                v-for="(year, index) in yearList"
+                :key="index"
+                class="picker-view-item"
+              >
+                {{ year }}年
+              </view>
+            </picker-view-column>
+            <!-- 月份列 -->
+            <picker-view-column>
+              <view
+                v-for="(month, index) in monthList"
+                :key="index"
+                class="picker-view-item"
+              >
+                {{ month }}月
+              </view>
+            </picker-view-column>
+            <!-- 日期列 -->
+            <picker-view-column>
+              <view
+                v-for="(day, index) in dayList"
+                :key="index"
+                class="picker-view-item"
+              >
+                {{ day }}日
+              </view>
+            </picker-view-column>
+          </picker-view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 景点时间段分配弹窗 -->
+    <view v-if="showScenicScheduleModal" class="schedule-modal" @tap.stop="closeScenicScheduleModal">
+      <view class="schedule-modal-content" @tap.stop>
+        <view class="schedule-modal-header">
+          <text class="schedule-modal-title">安排景点时间</text>
+          <text class="schedule-modal-close" @tap.stop="closeScenicScheduleModal">×</text>
+        </view>
+        <view class="schedule-modal-body">
+          <text class="schedule-item-name-large">📍 {{ currentScheduleItem?.name }}</text>
+          
+          <view class="schedule-day-selector">
+            <text class="schedule-label">选择日期</text>
+            <view class="schedule-day-options">
+              <view
+                v-for="day in travelDays"
+                :key="day"
+                class="schedule-day-option"
+                :class="{ active: scenicScheduleForm.day === day }"
+                @tap="scenicScheduleForm.day = day"
+              >
+                第{{ day }}天
+              </view>
+            </view>
+          </view>
+
+          <view class="schedule-time-selector">
+            <text class="schedule-label">选择时间段</text>
+            <view class="schedule-time-options">
+              <view
+                v-for="slot in scenicTimeSlots"
+                :key="slot.value"
+                class="schedule-time-option"
+                :class="{ active: scenicScheduleForm.timeSlot === slot.value }"
+                @tap="scenicScheduleForm.timeSlot = slot.value"
+              >
+                <text class="schedule-time-icon">{{ slot.icon }}</text>
+                <text class="schedule-time-text">{{ slot.label }}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view class="schedule-modal-footer">
+          <button class="schedule-cancel-btn" @tap.stop="closeScenicScheduleModal">取消</button>
+          <button class="schedule-confirm-btn" @tap.stop="confirmScenicSchedule">确定</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 美食时间段分配弹窗 -->
+    <view v-if="showFoodScheduleModal" class="schedule-modal" @tap.stop="closeFoodScheduleModal">
+      <view class="schedule-modal-content" @tap.stop>
+        <view class="schedule-modal-header">
+          <text class="schedule-modal-title">安排美食时间</text>
+          <text class="schedule-modal-close" @tap.stop="closeFoodScheduleModal">×</text>
+        </view>
+        <view class="schedule-modal-body">
+          <text class="schedule-item-name-large">🍜 {{ currentScheduleItem?.name }}</text>
+          
+          <view class="schedule-day-selector">
+            <text class="schedule-label">选择日期</text>
+            <view class="schedule-day-options">
+              <view
+                v-for="day in travelDays"
+                :key="day"
+                class="schedule-day-option"
+                :class="{ active: foodScheduleForm.day === day }"
+                @tap="foodScheduleForm.day = day"
+              >
+                第{{ day }}天
+              </view>
+            </view>
+          </view>
+
+          <view class="schedule-time-selector">
+            <text class="schedule-label">选择时间段</text>
+            <view class="schedule-time-options">
+              <view
+                v-for="slot in foodTimeSlots"
+                :key="slot.value"
+                class="schedule-time-option"
+                :class="{ active: foodScheduleForm.timeSlot === slot.value }"
+                @tap="foodScheduleForm.timeSlot = slot.value"
+              >
+                <text class="schedule-time-icon">{{ slot.icon }}</text>
+                <text class="schedule-time-text">{{ slot.label }}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view class="schedule-modal-footer">
+          <button class="schedule-cancel-btn" @tap.stop="closeFoodScheduleModal">取消</button>
+          <button class="schedule-confirm-btn" @tap.stop="confirmFoodSchedule">确定</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 自然语言输入弹窗 -->
+    <view v-if="showNlpInput" class="nlp-modal" @tap.stop="closeNlpModal">
+      <view class="nlp-modal-content" @tap.stop>
+        <view class="nlp-header">
+          <text class="nlp-title">💬 一句话生成行程</text>
+          <text class="nlp-close" @tap.stop="closeNlpModal">×</text>
+        </view>
+        <textarea
+          class="nlp-input"
+          v-model="nlpText"
+          placeholder="我想下周去大理玩三天，预算3000，喜欢安静，不去热门景点..."
+          placeholder-style="color: #999999;"
+          @input="onNlpInput"
+          maxlength="200"
+          :focus="showNlpInput"
+        />
+        <view class="nlp-hint">
+          <text>支持自然语言描述，系统将自动解析您的需求</text>
+        </view>
+        <button class="nlp-submit-btn" @tap.stop="parseNlpText">智能解析</button>
+      </view>
+    </view>
+
+    <!-- 增强的加载动画 -->
     <view v-if="loading" class="loading-overlay">
       <view class="loading-content">
         <view class="loading-animation">
-          <!-- 旋转的地球 -->
           <view class="earth-container">
             <text class="earth-icon">🌍</text>
           </view>
-          <!-- 飞行的飞机 -->
           <view class="airplane-container">
             <text class="airplane-icon">✈️</text>
           </view>
         </view>
-        <text class="loading-text">正在为您规划行程...</text>
+        <view class="loading-steps">
+          <view
+            v-for="(step, index) in loadingSteps"
+            :key="index"
+            class="loading-step-item"
+            :class="{ active: currentLoadingStep === index }"
+          >
+            <text class="loading-step-icon">{{ currentLoadingStep > index ? '✓' : '○' }}</text>
+            <text class="loading-step-text">{{ step }}</text>
+          </view>
+        </view>
       </view>
     </view>
 
-    <!-- 选择器弹窗 -->
+    <!-- 选择器弹窗（保留原有功能） -->
     <view v-if="selectorVisible" class="selector-modal" @click="closeSelector">
       <view class="selector-content" @click.stop>
         <view class="selector-header">
@@ -266,27 +567,153 @@ interface ApiResponse<T = any> {
   data: T
 }
 
-const cityList = ref<{ id: number; name: string }[]>([])
-const destination = ref('北京')
-const selectedDayIndex = ref(1) // 默认选择"3天"
-const selectedTags = ref<number[]>([])
-const selectedCompanion = ref<number>(1) // 默认选择"独行"
-const loading = ref(false)
-const recentRoutes = ref<any[]>([])
-const store = useUserStore()
-const user = computed(() => store.state.profile)
+// 步骤定义
+const steps = [
+  { label: '目的地', key: 'destination' },
+  { label: '时间与成员', key: 'timeAndCompanion' },
+  { label: '偏好', key: 'preference' }
+]
 
-// 日期选择相关
+const currentStep = ref(0)
+const showNlpInput = ref(false)
+const nlpText = ref('')
+
+// 城市相关
+const cityList = ref<{ id: number; name: string; image?: string; desc?: string }[]>([])
+const popularCities = ref<Array<{ id: number; name: string; image?: string; desc?: string }>>([])
+const selectedCity = ref<{ id: number; name: string } | null>(null)
+const destination = ref('')
+
+// 日期相关
 const startDate = ref<string>('')
 const endDate = ref<string>('')
 const minDate = ref<string>(new Date().toISOString().split('T')[0])
+const dateTips = ref('')
 
-// 每天的选择数据
-const dailySelections = ref<Array<{ scenicIds: number[], foodIds: number[] }>>([])
+// 成员相关
+const selectedCompanion = ref<number>(1)
+const companionList = ref([
+  { id: 1, name: '独行', icon: '🚶' },
+  { id: 2, name: '情侣', icon: '💑' },
+  { id: 3, name: '家庭', icon: '👨‍👩‍👧' },
+  { id: 4, name: '朋友', icon: '👥' },
+  { id: 5, name: '亲子', icon: '👨‍👩‍👦' },
+  { id: 6, name: '带老人', icon: '👴' },
+])
+
+// 偏好相关
+const selectedTags = ref<number[]>([])
+const tagList = ref<Array<{ id: number; name: string; color: string }>>([])
+const relaxationValue = ref(50) // 0-100, 0=松弛, 100=紧凑
+const budgetValue = ref(50) // 0-100, 0=经济, 100=奢华
+
+// 快速标签
+const quickTags = ref([
+  { id: 1, name: '带娃出游', icon: '👶' },
+  { id: 2, name: '深度摄影', icon: '📷' },
+  { id: 3, name: '特种兵行程', icon: '⚡' },
+  { id: 4, name: '休闲度假', icon: '🏖️' },
+  { id: 5, name: '美食之旅', icon: '🍜' },
+  { id: 6, name: '文化探索', icon: '🏛️' },
+])
+const selectedQuickTags = ref<number[]>([])
+
+// 加载相关
+const loading = ref(false)
+const currentLoadingStep = ref(0)
+const loadingSteps = ref([
+  '正在分析您的需求...',
+  '正在匹配最佳景点...',
+  '正在优化交通路线...',
+  '正在生成行程安排...',
+  '即将完成...'
+])
+
+// 其他状态
+const store = useUserStore()
+const user = computed(() => store.state.profile)
+
+// 每天的选择数据 - 新的数据结构，支持时间段分配
+interface DaySelection {
+  scenicIds: number[]
+  foodIds: number[]
+  // 景点分配到时间段：{ scenicId: { day: number, timeSlot: 'morning' | 'afternoon' | 'evening' | 'night' } }
+  scenicTimeSlots: Record<number, { day: number, timeSlot: string }>
+  // 美食分配到时间段：{ foodId: { day: number, timeSlot: 'breakfast' | 'lunch' | 'dinner' | 'snack' } }
+  foodTimeSlots: Record<number, { day: number, timeSlot: string }>
+}
+
+const dailySelections = ref<DaySelection[]>([])
+
+// 日期选择弹窗
+const showDatePicker = ref(false)
+const datePickerType = ref<'start' | 'end'>('start')
+const datePickerValue = ref<number[]>([0, 0, 0]) // [年索引, 月索引, 日索引]
+const tempSelectedDate = ref<string>('') // 临时选择的日期
+
+// 生成年份列表（当前年份前后各10年）
+const yearList = computed(() => {
+  const currentYear = new Date().getFullYear()
+  const years: number[] = []
+  for (let i = currentYear - 10; i <= currentYear + 10; i++) {
+    years.push(i)
+  }
+  return years
+})
+
+// 生成月份列表
+const monthList = computed(() => {
+  return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+})
+
+// 生成日期列表（根据年月动态计算）
+const dayList = computed(() => {
+  const yearIndex = datePickerValue.value[0]
+  const monthIndex = datePickerValue.value[1]
+  const year = yearList.value[yearIndex]
+  const month = monthList.value[monthIndex]
+  
+  // 计算该月的天数
+  const daysInMonth = new Date(year, month, 0).getDate()
+  const days: number[] = []
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push(i)
+  }
+  return days
+})
+
+// 景点和美食时间段分配
+const showScenicScheduleModal = ref(false)
+const showFoodScheduleModal = ref(false)
+const currentScheduleItem = ref<{ id: number, name: string } | null>(null)
+
+// 景点时间段选项
+const scenicTimeSlots = [
+  { value: 'morning', label: '上午', icon: '🌅' },
+  { value: 'afternoon', label: '下午', icon: '☀️' },
+  { value: 'evening', label: '傍晚', icon: '🌆' },
+  { value: 'night', label: '晚上', icon: '🌙' },
+]
+
+// 美食时间段选项
+const foodTimeSlots = [
+  { value: 'breakfast', label: '早餐', icon: '🌅' },
+  { value: 'lunch', label: '午餐', icon: '☀️' },
+  { value: 'dinner', label: '晚餐', icon: '🌆' },
+  { value: 'snack', label: '小吃', icon: '🍡' },
+]
+
+// 时间段分配表单
+const scenicScheduleForm = ref({ day: 1, timeSlot: 'morning' })
+const foodScheduleForm = ref({ day: 1, timeSlot: 'breakfast' })
+
+// 存储所有景点和美食的时间段分配
+const allScenicSchedules = ref<Record<number, { day: number, timeSlot: string }>>({})
+const allFoodSchedules = ref<Record<number, { day: number, timeSlot: string }>>({})
 
 // 选择器相关
 const selectorVisible = ref(false)
-const selectorTab = ref<'pending' | 'favorite' | 'all'>('pending') // 添加待选列表标签
+const selectorTab = ref<'pending' | 'favorite' | 'all'>('pending')
 const selectorType = ref<'scenic' | 'food'>('scenic')
 const selectorDayIndex = ref(0)
 const selectorList = ref<Array<{ id: number, name: string }>>([])
@@ -298,68 +725,17 @@ const favoriteFoods = ref<Array<{ id: number, name: string }>>([])
 const allScenics = ref<Array<{ id: number, name: string }>>([])
 const allFoods = ref<Array<{ id: number, name: string }>>([])
 
-// 待选列表（从详情页添加的景点和美食）
+// 待选列表
 const pendingScenics = ref<Array<{ id: number, name: string }>>([])
 const pendingFoods = ref<Array<{ id: number, name: string }>>([])
 
-// 天数选项
-const dayOptions = ref([
-  { label: '2天', value: 2 },
-  { label: '3天', value: 3 },
-  { label: '4天', value: 4 },
-  { label: '5天', value: 5 },
-  { label: '6天', value: 6 },
-  { label: '7天', value: 7 },
-  { label: '2天1晚', value: 2 },
-  { label: '3天2晚', value: 3 },
-  { label: '5天4晚', value: 5 },
-])
-
-// 旅行偏好标签（从API获取）
-const tagList = ref<Array<{ id: number; name: string; color: string }>>([])
-
-// 标签颜色预设（循环使用）
+// 标签颜色预设
 const tagColors = [
-  '#3ba272', // 绿色
-  '#ff6b9d', // 粉色
-  '#ff9800', // 橙色
-  '#9c27b0', // 紫色
-  '#2196f3', // 蓝色
-  '#f44336', // 红色
-  '#00bcd4', // 青色
-  '#ffc107', // 黄色
+  '#3ba272', '#ff6b9d', '#ff9800', '#9c27b0',
+  '#2196f3', '#f44336', '#00bcd4', '#ffc107',
 ]
 
-// 同行人选项
-const companionList = ref([
-  { id: 1, name: '独行' },
-  { id: 2, name: '情侣' },
-  { id: 3, name: '家庭' },
-  { id: 4, name: '朋友' },
-  { id: 5, name: '亲子' },
-])
-
-const canSubmit = computed(() => {
-  return destination.value.trim() !== '' && selectedTags.value.length > 0 && startDate.value !== '' && endDate.value !== ''
-})
-
-// 目的地输入处理（支持自然语言解析，如"北京3日游"）
-const onDestinationInput = (e: any) => {
-  const input = e.detail.value
-  destination.value = input
-
-  // 尝试从输入中解析天数，如"北京3日游" -> 提取"3"
-  const dayMatch = input.match(/(\d+)[日天]/)
-  if (dayMatch) {
-    const days = parseInt(dayMatch[1])
-    const dayOption = dayOptions.value.find(opt => opt.value === days)
-    if (dayOption) {
-      selectedDayIndex.value = dayOptions.value.indexOf(dayOption)
-    }
-  }
-}
-
-// 计算出行天数
+// 计算属性
 const travelDays = computed(() => {
   if (!startDate.value || !endDate.value) return 0
   const start = new Date(startDate.value)
@@ -369,57 +745,230 @@ const travelDays = computed(() => {
   return diffDays
 })
 
-// 格式化日期显示
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr)
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-  const weekday = weekdays[date.getDay()]
-  return `${month}月${day}日(${weekday})`
+const relaxationText = computed(() => {
+  if (relaxationValue.value < 30) return '非常轻松'
+  if (relaxationValue.value < 60) return '适度安排'
+  if (relaxationValue.value < 80) return '紧凑充实'
+  return '极限挑战'
+})
+
+const budgetText = computed(() => {
+  if (budgetValue.value < 30) return '经济实惠'
+  if (budgetValue.value < 60) return '中等消费'
+  if (budgetValue.value < 80) return '品质享受'
+  return '奢华体验'
+})
+
+const canGoNext = computed(() => {
+  switch (currentStep.value) {
+    case 0:
+      return selectedCity.value !== null || destination.value.trim() !== ''
+    case 1:
+      return startDate.value !== '' && endDate.value !== '' && selectedCompanion.value > 0
+    case 2:
+      return selectedTags.value.length > 0
+    default:
+      return false
+  }
+})
+
+const selectorTitle = computed(() => {
+  const dayText = `第${selectorDayIndex.value + 1}天`
+  const typeText = selectorType.value === 'scenic' ? '景点' : '美食'
+  return `${dayText} - 选择${typeText}`
+})
+
+// 方法
+// 日期选择相关方法
+const openDatePicker = (type: 'start' | 'end') => {
+  datePickerType.value = type
+  const currentDate = type === 'start' ? startDate.value : endDate.value
+  const dateStr = currentDate || minDate.value
+  
+  // 解析当前日期，设置picker-view的初始值
+  if (dateStr) {
+    const date = new Date(dateStr)
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    
+    // 找到对应的索引
+    const yearIndex = yearList.value.findIndex(y => y === year)
+    const monthIndex = monthList.value.findIndex(m => m === month)
+    const dayIndex = dayList.value.findIndex(d => d === day)
+    
+    datePickerValue.value = [
+      yearIndex >= 0 ? yearIndex : 10, // 默认当前年份
+      monthIndex >= 0 ? monthIndex : new Date().getMonth(),
+      dayIndex >= 0 ? dayIndex : new Date().getDate() - 1
+    ]
+  } else {
+    // 如果没有日期，使用当前日期
+    const now = new Date()
+    const yearIndex = yearList.value.findIndex(y => y === now.getFullYear())
+    datePickerValue.value = [
+      yearIndex >= 0 ? yearIndex : 10,
+      now.getMonth(),
+      now.getDate() - 1
+    ]
+  }
+  
+  showDatePicker.value = true
 }
 
-// 开始日期变化
-const onStartDateChange = (e: any) => {
-  const selectedDate = e.detail.value
-  if (!endDate.value || selectedDate <= endDate.value) {
-    startDate.value = selectedDate
-    updateDailySelections()
-  } else {
-    uni.showToast({
-      title: '开始日期不能晚于结束日期',
-      icon: 'none'
-    })
+const closeDatePicker = () => {
+  showDatePicker.value = false
+  tempSelectedDate.value = ''
+}
+
+// picker-view的change事件
+const onPickerViewChange = (e: any) => {
+  const newValue = e.detail.value
+  datePickerValue.value = newValue
+  
+  // 更新日期列表（因为月份或年份改变时，天数可能变化）
+  const yearIndex = newValue[0]
+  const monthIndex = newValue[1]
+  const dayIndex = newValue[2]
+  
+  const year = yearList.value[yearIndex]
+  const month = monthList.value[monthIndex]
+  
+  // 计算该月的最大天数
+  const maxDays = new Date(year, month, 0).getDate()
+  
+  // 如果当前选择的日期超过了最大天数，调整为最大天数
+  if (dayIndex >= maxDays) {
+    datePickerValue.value[2] = maxDays - 1
   }
 }
 
-// 结束日期变化
-const onEndDateChange = (e: any) => {
-  const selectedDate = e.detail.value
-  if (!startDate.value) {
+// 确认日期选择
+const confirmDatePicker = () => {
+  const yearIndex = datePickerValue.value[0]
+  const monthIndex = datePickerValue.value[1]
+  const dayIndex = datePickerValue.value[2]
+  
+  const year = yearList.value[yearIndex]
+  const month = monthList.value[monthIndex]
+  
+  // 重新计算日期列表以确保获取正确的日期
+  const maxDays = new Date(year, month, 0).getDate()
+  const actualDayIndex = Math.min(dayIndex, maxDays - 1)
+  const day = actualDayIndex + 1
+  
+  const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  
+  onDatePickerChange({ detail: { value: dateStr } })
+  closeDatePicker()
+}
+
+const goToStep = (index: number) => {
+  if (index <= currentStep.value) {
+    currentStep.value = index
+  }
+}
+
+const nextStep = () => {
+  if (!canGoNext.value) {
     uni.showToast({
-      title: '请先选择开始日期',
+      title: '请完成当前步骤',
       icon: 'none'
     })
     return
   }
-  if (selectedDate >= startDate.value) {
-    endDate.value = selectedDate
-    updateDailySelections()
+  
+  if (currentStep.value < steps.length - 1) {
+    currentStep.value++
   } else {
-    uni.showToast({
-      title: '结束日期不能早于开始日期',
-      icon: 'none'
-    })
+    generateRoute()
   }
 }
 
-// 更新每天选择数组
+const prevStep = () => {
+  if (currentStep.value > 0) {
+    currentStep.value--
+  }
+}
+
+const selectCity = (city: { id: number; name: string }) => {
+  selectedCity.value = city
+  destination.value = city.name
+}
+
+const onDestinationInput = (e: any) => {
+  destination.value = e.detail.value
+  selectedCity.value = null
+}
+
+const onDatePickerChange = (e: any) => {
+  const selectedDate = e.detail.value
+  if (datePickerType.value === 'start') {
+    if (!endDate.value || selectedDate <= endDate.value) {
+      startDate.value = selectedDate
+      updateDateTips()
+      updateDailySelections()
+    } else {
+      uni.showToast({
+        title: '开始日期不能晚于结束日期',
+        icon: 'none'
+      })
+      return
+    }
+  } else {
+    if (!startDate.value) {
+      uni.showToast({
+        title: '请先选择开始日期',
+        icon: 'none'
+      })
+      return
+    }
+    if (selectedDate >= startDate.value) {
+      endDate.value = selectedDate
+      updateDateTips()
+      updateDailySelections()
+    } else {
+      uni.showToast({
+        title: '结束日期不能早于开始日期',
+        icon: 'none'
+      })
+      return
+    }
+  }
+  closeDatePicker()
+}
+
+const updateDateTips = () => {
+  if (!startDate.value) {
+    dateTips.value = ''
+    return
+  }
+  
+  const date = new Date(startDate.value)
+  const month = date.getMonth() + 1
+  
+  // 简单的季节提示
+  if (month >= 3 && month <= 5) {
+    dateTips.value = '春季是旅游的好时节，气候宜人'
+  } else if (month >= 6 && month <= 8) {
+    dateTips.value = '夏季旅游，注意防暑降温'
+  } else if (month >= 9 && month <= 11) {
+    dateTips.value = '秋季风景优美，适合出行'
+  } else {
+    dateTips.value = '冬季旅游，注意保暖'
+  }
+}
+
 const updateDailySelections = () => {
   const days = travelDays.value
   if (days > 0) {
     while (dailySelections.value.length < days) {
-      dailySelections.value.push({ scenicIds: [], foodIds: [] })
+      dailySelections.value.push({ 
+        scenicIds: [], 
+        foodIds: [],
+        scenicTimeSlots: {},
+        foodTimeSlots: {}
+      })
     }
     while (dailySelections.value.length > days) {
       dailySelections.value.pop()
@@ -427,28 +976,172 @@ const updateDailySelections = () => {
   }
 }
 
-// 天数选择变化（保留兼容性）
-const onDayChange = (e: any) => {
-  selectedDayIndex.value = e.detail.value
-  const days = dayOptions.value[selectedDayIndex.value]?.value || 3
-  // 更新每天选择数组
-  while (dailySelections.value.length < days) {
-    dailySelections.value.push({ scenicIds: [], foodIds: [] })
+// 景点时间段分配方法
+const openScenicScheduleModal = (scenic: { id: number, name: string }) => {
+  currentScheduleItem.value = scenic
+  // 如果已有分配，恢复表单
+  if (allScenicSchedules.value[scenic.id]) {
+    scenicScheduleForm.value = { ...allScenicSchedules.value[scenic.id] }
+  } else {
+    scenicScheduleForm.value = { day: 1, timeSlot: 'morning' }
   }
-  while (dailySelections.value.length > days) {
-    dailySelections.value.pop()
+  showScenicScheduleModal.value = true
+}
+
+const closeScenicScheduleModal = () => {
+  showScenicScheduleModal.value = false
+  currentScheduleItem.value = null
+}
+
+const confirmScenicSchedule = () => {
+  if (!currentScheduleItem.value) return
+  
+  const scenicId = currentScheduleItem.value.id
+  const schedule = {
+    day: scenicScheduleForm.value.day,
+    timeSlot: scenicScheduleForm.value.timeSlot
+  }
+  
+  // 保存到allScenicSchedules（主要存储）
+  allScenicSchedules.value[scenicId] = schedule
+  
+  // 更新dailySelections（同步存储，确保数据一致性）
+  const dayIndex = scenicScheduleForm.value.day - 1
+  if (dailySelections.value[dayIndex]) {
+    if (!dailySelections.value[dayIndex].scenicIds.includes(scenicId)) {
+      dailySelections.value[dayIndex].scenicIds.push(scenicId)
+    }
+    dailySelections.value[dayIndex].scenicTimeSlots[scenicId] = schedule
+  }
+  
+  console.log('景点时间段分配:', {
+    scenicId,
+    schedule,
+    allScenicSchedules: allScenicSchedules.value,
+    dailySelections: dailySelections.value[dayIndex]
+  })
+  
+  closeScenicScheduleModal()
+  uni.showToast({
+    title: '安排成功',
+    icon: 'success'
+  })
+}
+
+const removeScenicSchedule = (scenicId: number) => {
+  if (allScenicSchedules.value[scenicId]) {
+    const schedule = allScenicSchedules.value[scenicId]
+    const dayIndex = schedule.day - 1
+    if (dailySelections.value[dayIndex]) {
+      const index = dailySelections.value[dayIndex].scenicIds.indexOf(scenicId)
+      if (index > -1) {
+        dailySelections.value[dayIndex].scenicIds.splice(index, 1)
+      }
+      delete dailySelections.value[dayIndex].scenicTimeSlots[scenicId]
+    }
+    delete allScenicSchedules.value[scenicId]
+    uni.showToast({
+      title: '已移除',
+      icon: 'success'
+    })
   }
 }
 
-// 选择同行人
+const getScenicSchedule = (scenicId: number) => {
+  return allScenicSchedules.value[scenicId] || null
+}
+
+const getScenicScheduleText = (scenicId: number) => {
+  const schedule = allScenicSchedules.value[scenicId]
+  if (!schedule) return ''
+  const timeSlot = scenicTimeSlots.find(s => s.value === schedule.timeSlot)
+  return `第${schedule.day}天 ${timeSlot?.label || schedule.timeSlot}`
+}
+
+// 美食时间段分配方法
+const openFoodScheduleModal = (food: { id: number, name: string }) => {
+  currentScheduleItem.value = food
+  // 如果已有分配，恢复表单
+  if (allFoodSchedules.value[food.id]) {
+    foodScheduleForm.value = { ...allFoodSchedules.value[food.id] }
+  } else {
+    foodScheduleForm.value = { day: 1, timeSlot: 'breakfast' }
+  }
+  showFoodScheduleModal.value = true
+}
+
+const closeFoodScheduleModal = () => {
+  showFoodScheduleModal.value = false
+  currentScheduleItem.value = null
+}
+
+const confirmFoodSchedule = () => {
+  if (!currentScheduleItem.value) return
+  
+  const foodId = currentScheduleItem.value.id
+  const schedule = {
+    day: foodScheduleForm.value.day,
+    timeSlot: foodScheduleForm.value.timeSlot
+  }
+  
+  // 保存到allFoodSchedules（主要存储）
+  allFoodSchedules.value[foodId] = schedule
+  
+  // 更新dailySelections（同步存储，确保数据一致性）
+  const dayIndex = foodScheduleForm.value.day - 1
+  if (dailySelections.value[dayIndex]) {
+    if (!dailySelections.value[dayIndex].foodIds.includes(foodId)) {
+      dailySelections.value[dayIndex].foodIds.push(foodId)
+    }
+    dailySelections.value[dayIndex].foodTimeSlots[foodId] = schedule
+  }
+  
+  console.log('美食时间段分配:', {
+    foodId,
+    schedule,
+    allFoodSchedules: allFoodSchedules.value,
+    dailySelections: dailySelections.value[dayIndex]
+  })
+  
+  closeFoodScheduleModal()
+  uni.showToast({
+    title: '安排成功',
+    icon: 'success'
+  })
+}
+
+const removeFoodSchedule = (foodId: number) => {
+  if (allFoodSchedules.value[foodId]) {
+    const schedule = allFoodSchedules.value[foodId]
+    const dayIndex = schedule.day - 1
+    if (dailySelections.value[dayIndex]) {
+      const index = dailySelections.value[dayIndex].foodIds.indexOf(foodId)
+      if (index > -1) {
+        dailySelections.value[dayIndex].foodIds.splice(index, 1)
+      }
+      delete dailySelections.value[dayIndex].foodTimeSlots[foodId]
+    }
+    delete allFoodSchedules.value[foodId]
+    uni.showToast({
+      title: '已移除',
+      icon: 'success'
+    })
+  }
+}
+
+const getFoodSchedule = (foodId: number) => {
+  return allFoodSchedules.value[foodId] || null
+}
+
+const getFoodScheduleText = (foodId: number) => {
+  const schedule = allFoodSchedules.value[foodId]
+  if (!schedule) return ''
+  const timeSlot = foodTimeSlots.find(s => s.value === schedule.timeSlot)
+  return `第${schedule.day}天 ${timeSlot?.label || schedule.timeSlot}`
+}
+
 const selectCompanion = (companionId: number) => {
   selectedCompanion.value = companionId
-}
-
-const viewRoute = (routeId: number) => {
-  uni.navigateTo({
-    url: `/pages/itinerary/itinerary-detail?id=${routeId}`,
-  })
 }
 
 const toggleTag = (tagId: number) => {
@@ -460,14 +1153,117 @@ const toggleTag = (tagId: number) => {
   }
 }
 
-// 从目的地文本中提取城市名称
+const toggleQuickTag = (tagId: number) => {
+  const index = selectedQuickTags.value.indexOf(tagId)
+  if (index > -1) {
+    selectedQuickTags.value.splice(index, 1)
+  } else {
+    selectedQuickTags.value.push(tagId)
+  }
+}
+
+const onRelaxationChange = (e: any) => {
+  relaxationValue.value = e.detail.value
+}
+
+const onBudgetChange = (e: any) => {
+  budgetValue.value = e.detail.value
+}
+
+const onNlpInput = (e: any) => {
+  nlpText.value = e.detail.value
+}
+
+const openNlpModal = () => {
+  showNlpInput.value = true
+  // 清空之前的输入
+  nlpText.value = ''
+}
+
+const closeNlpModal = () => {
+  showNlpInput.value = false
+}
+
+const parseNlpText = () => {
+  if (!nlpText.value.trim()) {
+    uni.showToast({
+      title: '请输入您的需求',
+      icon: 'none'
+    })
+    return
+  }
+  
+  // 简单的NLP解析（实际应该调用后端API）
+  const text = nlpText.value
+  
+  // 提取城市
+  const cityMatch = text.match(/(去|到|前往)(.{1,10}?)(玩|旅游|旅行|游)/)
+  if (cityMatch) {
+    destination.value = cityMatch[2].trim()
+  }
+  
+  // 提取天数
+  const dayMatch = text.match(/(\d+)[日天]/)
+  if (dayMatch) {
+    const days = parseInt(dayMatch[1])
+    const today = new Date()
+    startDate.value = today.toISOString().split('T')[0]
+    const end = new Date(today)
+    end.setDate(today.getDate() + days - 1)
+    endDate.value = end.toISOString().split('T')[0]
+    updateDailySelections()
+  }
+  
+  // 提取预算
+  const budgetMatch = text.match(/预算(\d+)/)
+  if (budgetMatch) {
+    const budget = parseInt(budgetMatch[1])
+    if (budget < 2000) budgetValue.value = 20
+    else if (budget < 5000) budgetValue.value = 50
+    else budgetValue.value = 80
+  }
+  
+  // 提取偏好
+  if (text.includes('安静') || text.includes('休闲')) {
+    relaxationValue.value = 20
+  } else if (text.includes('紧凑') || text.includes('特种兵')) {
+    relaxationValue.value = 90
+  }
+  
+  if (text.includes('带娃') || text.includes('亲子')) {
+    selectedCompanion.value = 5
+  } else if (text.includes('情侣')) {
+    selectedCompanion.value = 2
+  }
+  
+  showNlpInput.value = false
+  uni.showToast({
+    title: '解析完成',
+    icon: 'success'
+  })
+  
+  // 自动跳转到下一步
+  setTimeout(() => {
+    if (currentStep.value === 0 && destination.value) {
+      nextStep()
+    }
+  }, 500)
+}
+
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr)
+  const month = date.getMonth() + 1
+  const day = date.getDate()
+  const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const weekday = weekdays[date.getDay()]
+  return `${month}月${day}日(${weekday})`
+}
+
 const extractCityFromDestination = (dest: string): string => {
-  // 移除天数相关文字，如"3日游"、"3天"等
   const cleaned = dest.replace(/\d+[日天]游?/g, '').trim()
   return cleaned || dest
 }
 
-// 根据城市名称查找城市ID
 const findCityId = (cityName: string): number | null => {
   const city = cityList.value.find(c =>
     c.name.includes(cityName) || cityName.includes(c.name)
@@ -476,26 +1272,32 @@ const findCityId = (cityName: string): number | null => {
 }
 
 const generateRoute = async () => {
-  if (!canSubmit.value) {
+  if (!canGoNext.value) {
     uni.showToast({
-      title: '请完成必填项',
+      title: '请完成所有必填项',
       icon: 'none',
     })
     return
   }
 
-  // 先隐藏系统默认的加载提示（防止API调用时显示）
   uni.hideLoading()
   loading.value = true
+  currentLoadingStep.value = 0
+
+  // 模拟加载步骤
+  const stepInterval = setInterval(() => {
+    if (currentLoadingStep.value < loadingSteps.value.length - 1) {
+      currentLoadingStep.value++
+    } else {
+      clearInterval(stepInterval)
+    }
+  }, 1500)
 
   try {
-    // 从目的地中提取城市名称
     const cityName = extractCityFromDestination(destination.value)
-    let cityId = findCityId(cityName)
+    let cityId = selectedCity.value?.id || findCityId(cityName)
 
-    // 如果找不到城市，尝试使用第一个城市或提示用户
     if (!cityId && cityList.value.length > 0) {
-      // 可以尝试模糊匹配或使用默认城市
       cityId = cityList.value[0].id
     }
 
@@ -506,35 +1308,121 @@ const generateRoute = async () => {
         duration: 2000,
       })
       loading.value = false
+      clearInterval(stepInterval)
       return
     }
 
-    // 优先使用日期选择的天数，否则使用下拉选择的天数
     let selectedDays = travelDays.value
     if (selectedDays === 0) {
-      selectedDays = dayOptions.value[selectedDayIndex.value]?.value || 3
+      selectedDays = 3
     }
 
-    // 验证日期选择
     if (!startDate.value || !endDate.value) {
       uni.showToast({
         title: '请选择游玩时间',
         icon: 'none',
       })
       loading.value = false
+      clearInterval(stepInterval)
       return
     }
 
-    // 获取同行人名称
     const companion = companionList.value.find(c => c.id === selectedCompanion.value)
     const suitablePeople = companion ? companion.name : '独行'
 
-    // 构建每天选择的数据
-    const dailySelectionsData = dailySelections.value.map((day, index) => ({
-      day: index + 1,
-      scenicIds: day.scenicIds || [],
-      foodIds: day.foodIds || [],
-    }))
+    // 构建包含时间段信息的dailySelections数据
+    const dailySelectionsData = dailySelections.value.map((day, index) => {
+      const dayNum = index + 1
+      
+      // 构建景点的时间段分配
+      const scenicTimeSlots: Array<{ scenicId: number, timeSlot: string }> = []
+      
+      // 优先从allScenicSchedules中获取（这是主要存储）
+      if (allScenicSchedules.value) {
+        Object.keys(allScenicSchedules.value).forEach(scenicIdStr => {
+          const scenicId = parseInt(scenicIdStr)
+          const schedule = allScenicSchedules.value[scenicId]
+          // 如果这个景点被分配到了当前这一天，就添加到时间段列表中
+          if (schedule && schedule.day === dayNum) {
+            scenicTimeSlots.push({
+              scenicId: scenicId,
+              timeSlot: schedule.timeSlot
+            })
+          }
+        })
+      }
+      
+      // 同时也从day.scenicTimeSlots中获取（作为备用，确保数据完整性）
+      if (day.scenicTimeSlots) {
+        Object.keys(day.scenicTimeSlots).forEach(scenicIdStr => {
+          const scenicId = parseInt(scenicIdStr)
+          const schedule = day.scenicTimeSlots[scenicId]
+          // 检查是否已经添加过，避免重复
+          if (schedule && schedule.day === dayNum && !scenicTimeSlots.find(s => s.scenicId === scenicId)) {
+            scenicTimeSlots.push({
+              scenicId: scenicId,
+              timeSlot: schedule.timeSlot
+            })
+          }
+        })
+      }
+      
+      // 构建美食的时间段分配
+      const foodTimeSlots: Array<{ foodId: number, timeSlot: string }> = []
+      
+      // 优先从allFoodSchedules中获取（这是主要存储）
+      if (allFoodSchedules.value) {
+        Object.keys(allFoodSchedules.value).forEach(foodIdStr => {
+          const foodId = parseInt(foodIdStr)
+          const schedule = allFoodSchedules.value[foodId]
+          // 如果这个美食被分配到了当前这一天，就添加到时间段列表中
+          if (schedule && schedule.day === dayNum) {
+            foodTimeSlots.push({
+              foodId: foodId,
+              timeSlot: schedule.timeSlot
+            })
+          }
+        })
+      }
+      
+      // 同时也从day.foodTimeSlots中获取（作为备用，确保数据完整性）
+      if (day.foodTimeSlots) {
+        Object.keys(day.foodTimeSlots).forEach(foodIdStr => {
+          const foodId = parseInt(foodIdStr)
+          const schedule = day.foodTimeSlots[foodId]
+          // 检查是否已经添加过，避免重复
+          if (schedule && schedule.day === dayNum && !foodTimeSlots.find(f => f.foodId === foodId)) {
+            foodTimeSlots.push({
+              foodId: foodId,
+              timeSlot: schedule.timeSlot
+            })
+          }
+        })
+      }
+      
+      const dayData = {
+        day: dayNum,
+        scenicIds: day.scenicIds || [],
+        foodIds: day.foodIds || [],
+        scenicTimeSlots: scenicTimeSlots.length > 0 ? scenicTimeSlots : undefined,
+        foodTimeSlots: foodTimeSlots.length > 0 ? foodTimeSlots : undefined,
+      }
+      
+      // 调试输出
+      if (scenicTimeSlots.length > 0 || foodTimeSlots.length > 0) {
+        console.log(`第${dayNum}天的时间段分配:`, {
+          scenicTimeSlots,
+          foodTimeSlots
+        })
+      }
+      
+      return dayData
+    })
+    
+    // 调试输出，检查时间段信息
+    console.log('提交的dailySelections数据:', JSON.stringify(dailySelectionsData, null, 2))
+    console.log('allScenicSchedules:', allScenicSchedules.value)
+    console.log('allFoodSchedules:', allFoodSchedules.value)
 
     const res = await routeApi.generate({
       cityId: cityId,
@@ -546,6 +1434,9 @@ const generateRoute = async () => {
       startDate: startDate.value,
       endDate: endDate.value,
     })
+
+    clearInterval(stepInterval)
+    currentLoadingStep.value = loadingSteps.value.length - 1
 
     if (res.statusCode === 200 && res.data.code === 200) {
       const routeId = res.data.data.routeId
@@ -559,13 +1450,10 @@ const generateRoute = async () => {
         return
       }
 
-      // 关闭加载动画
       loading.value = false
 
-      // 等待一小段时间确保后端数据完全生成，避免跳转超时
       await new Promise(resolve => setTimeout(resolve, 800))
 
-      // 跳转到详情页，使用 encodeURIComponent 确保参数正确传递
       const detailUrl = `/pages/itinerary/itinerary-detail?id=${encodeURIComponent(routeId)}`
       console.log('[generateRoute] 准备跳转到详情页:', detailUrl)
 
@@ -576,12 +1464,8 @@ const generateRoute = async () => {
         },
         fail: (err) => {
           console.error('[generateRoute] navigateTo 失败:', err)
-          // 如果跳转失败，尝试使用 redirectTo
           uni.redirectTo({
             url: detailUrl,
-            success: () => {
-              console.log('[generateRoute] redirectTo 成功')
-            },
             fail: (redirectErr) => {
               console.error('[generateRoute] redirectTo 也失败:', redirectErr)
               uni.showToast({
@@ -598,13 +1482,13 @@ const generateRoute = async () => {
         title: res.data.msg || '生成失败',
         icon: 'none',
       })
+      loading.value = false
     }
   } catch (error) {
     uni.showToast({
       title: '网络错误',
       icon: 'none',
     })
-  } finally {
     loading.value = false
   }
 }
@@ -618,54 +1502,50 @@ const loadCities = async () => {
       cityList.value = cities.map((city: any) => ({
         id: city.id,
         name: city.cityName || city.name,
+        image: city.imageUrl,
+        desc: city.description,
       }))
+      
+      // 取前6个作为热门城市
+      popularCities.value = cityList.value.slice(0, 6)
     }
   } catch (error) {
     console.error('加载城市列表失败', error)
   }
 }
 
-// 加载标签列表
 const loadTags = async () => {
   try {
     const res = await tagApi.list()
     const response = res.data as ApiResponse<any[]>
     if (res.statusCode === 200 && response.code === 200) {
       const tags = response.data || []
-      // 将标签数据转换为前端需要的格式，并分配颜色
       tagList.value = tags.map((tag: any, index: number) => ({
         id: tag.id,
         name: tag.tagName || tag.name,
-        color: tagColors[index % tagColors.length], // 循环使用颜色
+        color: tagColors[index % tagColors.length],
       }))
-      console.log('标签列表加载成功:', tagList.value)
     }
   } catch (error) {
     console.error('加载标签列表失败', error)
-    // 如果加载失败，使用空数组
     tagList.value = []
   }
 }
 
-// 打开选择器
+// 选择器相关方法（保留原有功能）
 const openDaySelector = async (dayIndex: number, type: 'scenic' | 'food') => {
   selectorDayIndex.value = dayIndex
   selectorType.value = type
-
-  // 优先显示待选列表（如果有的话）
   loadPendingAdditions()
   const hasPending = type === 'scenic' ? pendingScenics.value.length > 0 : pendingFoods.value.length > 0
   selectorTab.value = hasPending ? 'pending' : (user.value ? 'favorite' : 'all')
-
   selectorTempSelected.value = [...(type === 'scenic'
     ? dailySelections.value[dayIndex].scenicIds
     : dailySelections.value[dayIndex].foodIds)]
-
   await loadSelectorList()
   selectorVisible.value = true
 }
 
-// 获取待选列表数量
 const getPendingCount = () => {
   if (selectorType.value === 'scenic') {
     return pendingScenics.value.length
@@ -674,18 +1554,15 @@ const getPendingCount = () => {
   }
 }
 
-// 加载选择器列表
 const loadSelectorList = async () => {
   try {
     if (selectorTab.value === 'pending') {
-      // 显示待选列表
       if (selectorType.value === 'scenic') {
         selectorList.value = pendingScenics.value
       } else {
         selectorList.value = pendingFoods.value
       }
     } else if (selectorTab.value === 'favorite') {
-      // 加载收藏列表
       if (selectorType.value === 'scenic') {
         if (favoriteScenics.value.length === 0) {
           const res = await scenicSpotApi.getMyFavorites(user.value!.id)
@@ -710,9 +1587,8 @@ const loadSelectorList = async () => {
         selectorList.value = favoriteFoods.value
       }
     } else {
-      // 加载全部列表（根据城市筛选）
       const cityName = extractCityFromDestination(destination.value)
-      const cityId = findCityId(cityName)
+      const cityId = selectedCity.value?.id || findCityId(cityName)
 
       if (selectorType.value === 'scenic') {
         if (allScenics.value.length === 0 || cityId) {
@@ -744,17 +1620,14 @@ const loadSelectorList = async () => {
   }
 }
 
-// 监听选择器标签切换
 watch(selectorTab, () => {
   loadSelectorList()
 })
 
-// 判断是否已选择
 const isSelected = (id: number) => {
   return selectorTempSelected.value.includes(id)
 }
 
-// 切换选择
 const toggleSelect = (id: number) => {
   const index = selectorTempSelected.value.indexOf(id)
   if (index > -1) {
@@ -764,19 +1637,13 @@ const toggleSelect = (id: number) => {
   }
 }
 
-// 确认选择
 const confirmSelection = () => {
   if (selectorType.value === 'scenic') {
     dailySelections.value[selectorDayIndex.value].scenicIds = [...selectorTempSelected.value]
-    // 注意：不从待选列表中移除，允许用户在不同天数重复选择
   } else {
     dailySelections.value[selectorDayIndex.value].foodIds = [...selectorTempSelected.value]
-    // 注意：不从待选列表中移除，允许用户在不同天数重复选择
   }
-
   closeSelector()
-
-  // 显示成功提示
   const count = selectorTempSelected.value.length
   if (count > 0) {
     uni.showToast({
@@ -787,13 +1654,11 @@ const confirmSelection = () => {
   }
 }
 
-// 关闭选择器
 const closeSelector = () => {
   selectorVisible.value = false
   selectorTempSelected.value = []
 }
 
-// 移除景点
 const removeScenic = (dayIndex: number, scenicId: number) => {
   const index = dailySelections.value[dayIndex].scenicIds.indexOf(scenicId)
   if (index > -1) {
@@ -801,7 +1666,6 @@ const removeScenic = (dayIndex: number, scenicId: number) => {
   }
 }
 
-// 移除美食
 const removeFood = (dayIndex: number, foodId: number) => {
   const index = dailySelections.value[dayIndex].foodIds.indexOf(foodId)
   if (index > -1) {
@@ -809,52 +1673,32 @@ const removeFood = (dayIndex: number, foodId: number) => {
   }
 }
 
-// 获取景点名称
 const getScenicName = (id: number) => {
-  // 优先从待选列表查找，然后从收藏列表，最后从全部列表
   const scenic = [...pendingScenics.value, ...favoriteScenics.value, ...allScenics.value].find(s => s.id === id)
   return scenic?.name || `景点${id}`
 }
 
-// 获取美食名称
 const getFoodName = (id: number) => {
-  // 优先从待选列表查找，然后从收藏列表，最后从全部列表
   const food = [...pendingFoods.value, ...favoriteFoods.value, ...allFoods.value].find(f => f.id === id)
   return food?.name || `美食${id}`
 }
 
-// 计算选择器标题
-const selectorTitle = computed(() => {
-  const dayText = `第${selectorDayIndex.value + 1}天`
-  const typeText = selectorType.value === 'scenic' ? '景点' : '美食'
-  return `${dayText} - 选择${typeText}`
-})
-
-// 加载待选列表（从详情页添加的景点和美食）
 const loadPendingAdditions = () => {
   const pendingAdditions = getCache<Array<{ type: 'scenic' | 'food', id: number, name: string }>>('route_pending_additions')
-
-  // 清空现有待选列表
   pendingScenics.value = []
   pendingFoods.value = []
-
   if (pendingAdditions && pendingAdditions.length > 0) {
-    // 处理每个待添加项
     pendingAdditions.forEach((item) => {
       if (item.type === 'scenic') {
-        // 检查是否已存在
         if (!pendingScenics.value.find(s => s.id === item.id)) {
           pendingScenics.value.push({ id: item.id, name: item.name })
-          // 同时更新allScenics以便显示名称
           if (!allScenics.value.find(s => s.id === item.id)) {
             allScenics.value.push({ id: item.id, name: item.name })
           }
         }
       } else if (item.type === 'food') {
-        // 检查是否已存在
         if (!pendingFoods.value.find(f => f.id === item.id)) {
           pendingFoods.value.push({ id: item.id, name: item.name })
-          // 同时更新allFoods以便显示名称
           if (!allFoods.value.find(f => f.id === item.id)) {
             allFoods.value.push({ id: item.id, name: item.name })
           }
@@ -864,44 +1708,19 @@ const loadPendingAdditions = () => {
   }
 }
 
-// 从待选列表中移除已选择的项（当用户选择后）
-const removeFromPending = (type: 'scenic' | 'food', id: number) => {
-  const pendingAdditions = getCache<Array<{ type: 'scenic' | 'food', id: number, name: string }>>('route_pending_additions')
-
-  if (pendingAdditions && pendingAdditions.length > 0) {
-    const filtered = pendingAdditions.filter(item => !(item.type === type && item.id === id))
-    if (filtered.length !== pendingAdditions.length) {
-      if (filtered.length > 0) {
-        setCache('route_pending_additions', filtered, 60 * 24)
-      } else {
-        removeCache('route_pending_additions')
-      }
-      // 重新加载待选列表
-      loadPendingAdditions()
-    }
-  }
-}
-
 onMounted(() => {
   loadCities()
   loadTags()
-  // 初始化每天选择数组
-  const days = dayOptions.value[selectedDayIndex.value]?.value || 3
-  for (let i = 0; i < days; i++) {
-    dailySelections.value.push({ scenicIds: [], foodIds: [] })
-  }
-
-  // 加载待选列表
   loadPendingAdditions()
 })
 
-// 页面显示时也加载待选列表（处理从详情页返回的情况）
 onShow(() => {
   loadPendingAdditions()
 })
 </script>
 
 <style scoped>
+/* 基础样式 */
 .plan-page {
   min-height: 100vh;
   background-color: #f7f8fa;
@@ -924,108 +1743,492 @@ onShow(() => {
   flex: 1;
   position: relative;
   z-index: 1;
+  padding-top: 180rpx;
 }
 
-.plan-form {
+/* 步骤指示器 */
+.step-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
   background-color: #ffffff;
-  border-radius: 32rpx;
-  padding: 48rpx 32rpx;
-  margin: 32rpx 24rpx;
-  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  z-index: 100;
 }
 
-.form-header {
-  margin-bottom: 48rpx;
-  padding-bottom: 32rpx;
+.step-indicator-header {
+  padding: 20rpx 32rpx 12rpx;
+  text-align: center;
   border-bottom: 1rpx solid #f0f0f0;
 }
 
-.header-title {
-  font-size: 38rpx;
-  font-weight: 700;
+.step-indicator-title {
+  font-size: 26rpx;
+  color: #3ba272;
+  font-weight: 600;
+}
+
+.step-indicator-content {
+  padding: 16rpx 32rpx 24rpx;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  flex: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.step-item:active {
+  opacity: 0.7;
+}
+
+.step-circle {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background-color: #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.step-item.active .step-circle {
+  background-color: #3ba272;
+  transform: scale(1.1);
+}
+
+.step-item.completed .step-circle {
+  background-color: #3ba272;
+}
+
+.step-number {
+  font-size: 28rpx;
+  color: #999999;
+  font-weight: 600;
+}
+
+.step-item.active .step-number {
+  color: #ffffff;
+}
+
+.step-check {
+  font-size: 32rpx;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.step-label {
+  font-size: 22rpx;
+  color: #999999;
+}
+
+.step-item.active .step-label {
+  color: #3ba272;
+  font-weight: 600;
+}
+
+.step-item.completed .step-label {
+  color: #3ba272;
+}
+
+/* 自然语言输入弹窗 */
+.nlp-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.nlp-modal-content {
+  width: 85%;
+  max-width: 600rpx;
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease-out;
+  position: relative;
+  z-index: 3001;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100rpx);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.nlp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.nlp-title {
+  font-size: 32rpx;
+  font-weight: 600;
   color: #333333;
-  line-height: 1.4;
 }
 
-.form-item {
-  margin-bottom: 48rpx;
+.nlp-close {
+  font-size: 48rpx;
+  color: #999999;
+  line-height: 1;
 }
 
-.form-item:last-child {
-  margin-bottom: 0;
-}
-
-.form-label {
-  display: block;
+.nlp-input {
+  width: 100%;
+  min-height: 200rpx;
+  padding: 24rpx;
+  background-color: #f7f8fa;
+  border-radius: 16rpx;
   font-size: 28rpx;
   color: #333333;
+  line-height: 1.6;
+  box-sizing: border-box;
+  margin-bottom: 16rpx;
+}
+
+.nlp-hint {
+  font-size: 24rpx;
+  color: #999999;
+  margin-bottom: 24rpx;
+}
+
+.nlp-submit-btn {
+  width: 100%;
+  padding: 24rpx;
+  background: linear-gradient(135deg, #3ba272, #6fd3a5);
+  color: #ffffff;
+  border-radius: 16rpx;
+  font-size: 28rpx;
   font-weight: 600;
+  border: none;
+}
+
+/* 底部自然语言输入触发按钮 */
+.nlp-trigger-section {
+  margin-top: 48rpx;
+  padding: 24rpx 0;
+}
+
+.nlp-trigger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 32rpx;
+  background: linear-gradient(135deg, #f7f8fa 0%, #ffffff 100%);
+  border-radius: 16rpx;
+  border: 2rpx dashed #3ba272;
+  transition: all 0.3s;
+}
+
+.nlp-trigger-btn:active {
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+  transform: scale(0.98);
+}
+
+.nlp-trigger-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+}
+
+.nlp-trigger-text {
+  flex: 1;
+  font-size: 28rpx;
+  color: #3ba272;
+  font-weight: 500;
+}
+
+.nlp-trigger-arrow {
+  font-size: 32rpx;
+  color: #3ba272;
+  font-weight: 300;
+}
+
+/* 快速标签 */
+.quick-tags-section {
+  margin-top: 48rpx;
+  margin-bottom: 24rpx;
+}
+
+.quick-tags-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20rpx;
 }
 
-.label-optional {
-  font-weight: 400;
-  color: #999999;
-  font-size: 24rpx;
+.quick-tags-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
 }
 
-.form-hint {
+.quick-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.quick-tag-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 16rpx 24rpx;
+  background-color: #ffffff;
+  border-radius: 999rpx;
+  border: 2rpx solid #e5e5e5;
+  transition: all 0.2s;
+}
+
+.quick-tag-item:active {
+  transform: scale(0.95);
+}
+
+.quick-tag-item.active {
+  background-color: #3ba272;
+  border-color: #3ba272;
+  box-shadow: 0 4rpx 12rpx rgba(59, 162, 114, 0.3);
+}
+
+.quick-tag-icon {
+  font-size: 32rpx;
+}
+
+.quick-tag-text {
+  font-size: 26rpx;
+  color: #666666;
+}
+
+.quick-tag-item.active .quick-tag-text {
+  color: #ffffff;
+}
+
+/* 步骤内容 */
+.step-content {
+  padding: 24rpx 24rpx 32rpx;
+  min-height: calc(100vh - 200rpx);
+}
+
+.step-header {
+  margin-bottom: 32rpx;
+  text-align: center;
+}
+
+.step-title {
   display: block;
-  font-size: 22rpx;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #333333;
+  margin-bottom: 12rpx;
+}
+
+.step-subtitle {
+  display: block;
+  font-size: 26rpx;
   color: #999999;
-  margin-top: 12rpx;
-  line-height: 1.5;
-  word-wrap: break-word;
-  white-space: normal;
+}
+
+/* 城市卡片 */
+.city-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12rpx;
+  margin-bottom: 32rpx;
+}
+
+.city-card {
+  position: relative;
+  height: 180rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
+}
+
+.city-card.active {
+  transform: scale(1.02);
+  box-shadow: 0 8rpx 24rpx rgba(59, 162, 114, 0.4);
+  border: 4rpx solid #3ba272;
+}
+
+.city-card:active {
+  transform: scale(0.98);
+}
+
+.city-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+}
+
+.city-card-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+.city-card-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12rpx 6rpx;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.city-name {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.city-desc {
+  display: block;
+  font-size: 18rpx;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.city-check-icon {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  width: 36rpx;
+  height: 36rpx;
+  background-color: #3ba272;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #ffffff;
+  font-weight: 600;
+  z-index: 2;
+  box-shadow: 0 4rpx 12rpx rgba(59, 162, 114, 0.4);
+}
+
+/* 自定义目的地 */
+.custom-destination {
+  margin-top: 32rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.custom-label {
+  display: block;
+  font-size: 26rpx;
+  color: #666666;
+  margin-bottom: 16rpx;
 }
 
 .destination-input {
   width: 100%;
   padding: 28rpx 24rpx;
-  background-color: #f7f8fa;
+  background-color: #ffffff;
   border-radius: 16rpx;
   font-size: 32rpx;
-  font-weight: 600;
+  font-weight: 500;
   color: #333333;
-  border: 2rpx solid transparent;
+  border: 2rpx solid #e5e5e5;
   transition: all 0.2s;
   box-sizing: border-box;
   line-height: 1.5;
   min-height: 88rpx;
   display: block;
+  word-wrap: break-word;
+  word-break: break-all;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .destination-input:focus {
-  background-color: #ffffff;
   border-color: #3ba272;
 }
 
-.picker-view {
+/* 实时预测反馈 */
+.prediction-feedback {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 28rpx 24rpx;
-  background-color: #f7f8fa;
+  gap: 12rpx;
+  margin-top: 24rpx;
+  padding: 20rpx;
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
   border-radius: 16rpx;
-  color: #333333;
-  font-size: 28rpx;
-  border: 2rpx solid transparent;
-  transition: all 0.2s;
+  border-left: 4rpx solid #3ba272;
+  animation: fadeInUp 0.3s ease-out;
 }
 
-.picker-view:active {
-  background-color: #ffffff;
-  border-color: #3ba272;
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.picker-arrow {
+.prediction-icon {
   font-size: 32rpx;
-  color: #cccccc;
-  margin-left: 12rpx;
-  font-weight: 300;
+  flex-shrink: 0;
 }
 
-/* 日期选择器样式 */
+.prediction-text {
+  font-size: 24rpx;
+  color: #2e7d32;
+  line-height: 1.5;
+  flex: 1;
+}
+
+/* 日期选择 */
 .date-picker-container {
   width: 100%;
 }
@@ -1035,19 +2238,19 @@ onShow(() => {
   align-items: center;
   gap: 16rpx;
   padding: 28rpx 24rpx;
-  background-color: #f7f8fa;
+  background-color: #ffffff;
   border-radius: 16rpx;
-  border: 2rpx solid transparent;
+  border: 2rpx solid #e5e5e5;
   transition: all 0.2s;
-  position: relative;
+}
+
+.date-input-wrapper:active {
+  border-color: #3ba272;
+  background-color: #f7f8fa;
 }
 
 .date-picker-item {
   flex: 1;
-}
-
-.date-picker-item:active {
-  opacity: 0.8;
 }
 
 .date-input {
@@ -1055,6 +2258,15 @@ onShow(() => {
   display: flex;
   flex-direction: column;
   gap: 8rpx;
+}
+
+.date-input-clickable {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.date-input-clickable:active {
+  opacity: 0.7;
 }
 
 .date-label {
@@ -1080,41 +2292,120 @@ onShow(() => {
   padding-top: 24rpx;
 }
 
-.calendar-icon-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56rpx;
-  height: 56rpx;
-  background-color: #3ba272;
-  border-radius: 12rpx;
-  flex-shrink: 0;
-}
-
-.calendar-icon {
-  font-size: 32rpx;
-  line-height: 1;
-}
-
 .days-display {
-  margin-top: 12rpx;
-  padding: 12rpx 20rpx;
+  margin-top: 20rpx;
+  padding: 16rpx 24rpx;
   background-color: #e8f5e9;
-  border-radius: 8rpx;
+  border-radius: 12rpx;
   display: inline-block;
 }
 
 .days-text {
-  font-size: 24rpx;
+  font-size: 26rpx;
   color: #2e7d32;
+  font-weight: 600;
+}
+
+.date-tips {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 20rpx;
+  padding: 16rpx 20rpx;
+  background-color: #fff3e0;
+  border-radius: 12rpx;
+  border-left: 4rpx solid #ff9800;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.date-tips-icon {
+  font-size: 28rpx;
+  flex-shrink: 0;
+}
+
+.date-tips-text {
+  font-size: 24rpx;
+  color: #e65100;
+  line-height: 1.5;
+  flex: 1;
+}
+
+/* 成员选择 */
+.companion-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+}
+
+.companion-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 32rpx 24rpx;
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  border: 2rpx solid #e5e5e5;
+  transition: all 0.3s;
+}
+
+.companion-card:active {
+  transform: scale(0.95);
+}
+
+.companion-card.active {
+  background-color: #3ba272;
+  border-color: #3ba272;
+  box-shadow: 0 8rpx 24rpx rgba(59, 162, 114, 0.3);
+  transform: translateY(-4rpx);
+}
+
+.companion-icon-wrapper {
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f7f8fa;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.companion-card.active .companion-icon-wrapper {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.companion-icon {
+  font-size: 48rpx;
+}
+
+.companion-name {
+  font-size: 26rpx;
+  color: #333333;
   font-weight: 500;
+}
+
+.companion-card.active .companion-name {
+  color: #ffffff;
+}
+
+/* 偏好设置 */
+.preference-tags-section {
+  margin-bottom: 48rpx;
+}
+
+.section-label {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 20rpx;
 }
 
 .tag-list {
   display: flex;
   flex-wrap: wrap;
   gap: 16rpx;
-  margin-top: 8rpx;
 }
 
 .tag-item {
@@ -1128,6 +2419,10 @@ onShow(() => {
   line-height: 1;
 }
 
+.tag-item:active {
+  transform: scale(0.95);
+}
+
 .tag-item.active {
   color: #ffffff;
   border-color: transparent;
@@ -1135,114 +2430,130 @@ onShow(() => {
   transform: translateY(-2rpx);
 }
 
-.companion-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-  margin-top: 8rpx;
-}
-
-.companion-item {
-  padding: 18rpx 32rpx;
-  background-color: #f7f8fa;
-  border-radius: 999rpx;
-  font-size: 26rpx;
-  color: #666666;
-  border: 2rpx solid #e5e5e5;
-  transition: all 0.2s;
-  line-height: 1;
-}
-
-.companion-item.active {
-  background-color: #3ba272;
-  color: #ffffff;
-  border-color: #3ba272;
-  box-shadow: 0 4rpx 12rpx rgba(59, 162, 114, 0.3);
-  transform: translateY(-2rpx);
-}
-
-.submit-section {
-  padding: 0 24rpx 32rpx;
-}
-
-.submit-btn {
-  width: 100%;
+/* 滑块样式 */
+.slider-section {
+  margin-bottom: 48rpx;
   padding: 32rpx;
-  background: linear-gradient(135deg, #3ba272 0%, #6fd3a5 100%);
-  color: #ffffff;
-  border-radius: 24rpx;
-  font-size: 32rpx;
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.slider-label {
+  font-size: 28rpx;
   font-weight: 600;
-  box-shadow: 0 12rpx 32rpx rgba(59, 162, 114, 0.4);
+  color: #333333;
+}
+
+.slider-value {
+  font-size: 26rpx;
+  color: #3ba272;
+  font-weight: 600;
+  padding: 8rpx 16rpx;
+  background-color: #e8f5e9;
+  border-radius: 16rpx;
+}
+
+.slider-container {
+  width: 100%;
+}
+
+.slider-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.slider-left,
+.slider-right {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.preference-slider {
+  width: 100%;
+  margin: 0;
+}
+
+/* 导航按钮 */
+.step-navigation {
+  display: flex;
+  gap: 20rpx;
+  padding: 32rpx 24rpx;
+  background-color: #ffffff;
+  border-top: 1rpx solid #f0f0f0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 28rpx;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
   border: none;
   transition: all 0.3s;
 }
 
-.submit-btn:active:not(.disabled) {
-  transform: translateY(2rpx);
+.prev-btn {
+  background-color: #f7f8fa;
+  color: #666666;
+}
+
+.prev-btn:active {
+  background-color: #e5e5e5;
+}
+
+.next-btn {
+  background: linear-gradient(135deg, #3ba272 0%, #6fd3a5 100%);
+  color: #ffffff;
   box-shadow: 0 8rpx 24rpx rgba(59, 162, 114, 0.3);
 }
 
-.submit-btn.disabled {
+.next-btn:active:not(.disabled) {
+  transform: translateY(2rpx);
+  box-shadow: 0 4rpx 16rpx rgba(59, 162, 114, 0.3);
+}
+
+.next-btn.disabled {
   background: #cccccc;
   box-shadow: none;
   opacity: 0.6;
 }
 
-.recent-routes {
-  padding: 24rpx;
-}
-
-.section-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #333333;
-  margin-bottom: 16rpx;
-}
-
-.route-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24rpx;
-  background-color: #ffffff;
-  border-radius: 16rpx;
-  margin-bottom: 16rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
-}
-
-.route-item-title {
-  font-size: 28rpx;
-  color: #333333;
-}
-
-.route-item-arrow {
-  font-size: 32rpx;
-  color: #cccccc;
-}
-
+/* 增强的加载动画 */
 .loading-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 2000;
 }
 
 .loading-content {
   background-color: #ffffff;
   border-radius: 32rpx;
-  padding: 80rpx 60rpx;
+  padding: 60rpx 48rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 40rpx;
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.2);
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.3);
+  max-width: 80%;
 }
 
 .loading-animation {
@@ -1254,7 +2565,6 @@ onShow(() => {
   justify-content: center;
 }
 
-/* 旋转的地球 */
 .earth-container {
   position: absolute;
   width: 200rpx;
@@ -1279,7 +2589,6 @@ onShow(() => {
   }
 }
 
-/* 飞行的飞机 */
 .airplane-container {
   position: absolute;
   width: 300rpx;
@@ -1314,95 +2623,49 @@ onShow(() => {
   }
 }
 
-.loading-text {
-  font-size: 30rpx;
-  color: #333333;
-  font-weight: 600;
-  text-align: center;
-}
-
-/* 每天选择区域 */
-.daily-selections {
+.loading-steps {
   display: flex;
   flex-direction: column;
   gap: 16rpx;
-  margin-top: 16rpx;
+  width: 100%;
+  min-width: 400rpx;
 }
 
-.day-selection-card {
-  background-color: #f7f8fa;
-  border-radius: 16rpx;
-  padding: 24rpx;
-  border: 2rpx solid #e5e5e5;
-}
-
-.day-selection-header {
+.loading-step-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16rpx;
+  gap: 16rpx;
+  padding: 12rpx 0;
+  opacity: 0.4;
+  transition: all 0.3s;
 }
 
-.day-selection-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: #333333;
+.loading-step-item.active {
+  opacity: 1;
 }
 
-.day-selection-actions {
-  display: flex;
-  gap: 24rpx;
-}
-
-.action-link {
+.loading-step-icon {
   font-size: 24rpx;
   color: #3ba272;
-  text-decoration: underline;
+  font-weight: 600;
+  width: 32rpx;
+  text-align: center;
 }
 
-.day-selection-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
+.loading-step-item.active .loading-step-icon {
+  color: #3ba272;
+  font-size: 28rpx;
 }
 
-.selection-items {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
-  align-items: center;
-}
-
-.selection-label {
-  font-size: 24rpx;
-  color: #666666;
-  flex-shrink: 0;
-}
-
-.selection-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
+.loading-step-text {
+  font-size: 26rpx;
+  color: #333333;
   flex: 1;
 }
 
-.selection-tag {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  padding: 8rpx 16rpx;
-  background-color: #ffffff;
-  border-radius: 8rpx;
-  font-size: 24rpx;
-  color: #333333;
-  border: 1rpx solid #e5e5e5;
-}
-
-.tag-close {
-  font-size: 32rpx;
-  color: #999999;
-  line-height: 1;
-  cursor: pointer;
+.loading-step-item.active .loading-step-text {
+  font-weight: 600;
+  color: #3ba272;
 }
 
 /* 选择器弹窗 */
@@ -1462,6 +2725,7 @@ onShow(() => {
   font-size: 28rpx;
   color: #666666;
   border-bottom: 4rpx solid transparent;
+  position: relative;
 }
 
 .selector-tab.active {
@@ -1484,6 +2748,7 @@ onShow(() => {
   border-radius: 12rpx;
   margin-bottom: 12rpx;
   border: 2rpx solid transparent;
+  transition: all 0.2s;
 }
 
 .selector-item.selected {
@@ -1526,31 +2791,6 @@ onShow(() => {
   border: none;
 }
 
-/* 待选列表提示 */
-.pending-notice {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  padding: 16rpx 20rpx;
-  background-color: #e8f5e9;
-  border-radius: 12rpx;
-  margin-top: 16rpx;
-  border-left: 4rpx solid #3ba272;
-}
-
-.pending-notice-icon {
-  font-size: 32rpx;
-  flex-shrink: 0;
-}
-
-.pending-notice-text {
-  font-size: 24rpx;
-  color: #2e7d32;
-  line-height: 1.5;
-  flex: 1;
-}
-
-/* 标签页徽章 */
 .tab-badge {
   display: inline-block;
   min-width: 32rpx;
@@ -1564,6 +2804,320 @@ onShow(() => {
   text-align: center;
   margin-left: 8rpx;
 }
+
+/* 日期选择弹窗 */
+.date-picker-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.date-picker-modal-content {
+  width: 85%;
+  max-width: 600rpx;
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.2);
+}
+
+.date-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx 32rpx;
+  background-color: #f5f5f5;
+  border-radius: 24rpx 24rpx 0 0;
+  margin: -32rpx -32rpx 0 -32rpx;
+}
+
+.date-picker-cancel {
+  font-size: 28rpx;
+  color: #666666;
+  padding: 8rpx 16rpx;
+}
+
+.date-picker-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+  flex: 1;
+  text-align: center;
+}
+
+.date-picker-confirm {
+  font-size: 28rpx;
+  color: #3ba272;
+  font-weight: 600;
+  padding: 8rpx 16rpx;
+}
+
+.date-picker-body {
+  padding: 32rpx 0;
+  height: 400rpx;
+}
+
+.date-picker-view {
+  width: 100%;
+  height: 100%;
+}
+
+.picker-view-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 80rpx;
+  font-size: 32rpx;
+  color: #333333;
+}
+
+/* 成员选择区域 */
+.companion-section {
+  margin-top: 48rpx;
+}
+
+/* 景点和美食时间段分配 */
+.item-schedule-section {
+  margin-top: 48rpx;
+  padding: 32rpx;
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.section-hint {
+  display: block;
+  font-size: 24rpx;
+  color: #999999;
+  margin-top: 8rpx;
+  margin-bottom: 24rpx;
+  line-height: 1.5;
+}
+
+.schedule-items {
+  margin-top: 32rpx;
+}
+
+.schedule-items-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 20rpx;
+}
+
+.schedule-item-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24rpx;
+  background-color: #f7f8fa;
+  border-radius: 16rpx;
+  margin-bottom: 16rpx;
+  border: 2rpx solid #e5e5e5;
+}
+
+.schedule-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.schedule-item-name {
+  font-size: 28rpx;
+  color: #333333;
+  font-weight: 500;
+}
+
+.schedule-item-time {
+  font-size: 24rpx;
+  color: #3ba272;
+}
+
+.schedule-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.schedule-btn {
+  padding: 12rpx 24rpx;
+  background-color: #3ba272;
+  color: #ffffff;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  border: none;
+}
+
+.schedule-remove {
+  font-size: 24rpx;
+  color: #ff5722;
+  text-decoration: underline;
+}
+
+/* 时间段分配弹窗 */
+.schedule-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.schedule-modal-content {
+  width: 85%;
+  max-width: 600rpx;
+  max-height: 80vh;
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.schedule-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.schedule-modal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.schedule-modal-close {
+  font-size: 48rpx;
+  color: #999999;
+  line-height: 1;
+}
+
+.schedule-modal-body {
+  flex: 1;
+  padding: 32rpx;
+  overflow-y: auto;
+}
+
+.schedule-item-name-large {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 32rpx;
+  text-align: center;
+}
+
+.schedule-day-selector,
+.schedule-time-selector {
+  margin-bottom: 32rpx;
+}
+
+.schedule-label {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 20rpx;
+}
+
+.schedule-day-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.schedule-day-option {
+  padding: 16rpx 24rpx;
+  background-color: #f7f8fa;
+  border-radius: 12rpx;
+  border: 2rpx solid #e5e5e5;
+  font-size: 26rpx;
+  color: #666666;
+  transition: all 0.2s;
+}
+
+.schedule-day-option.active {
+  background-color: #3ba272;
+  border-color: #3ba272;
+  color: #ffffff;
+}
+
+.schedule-time-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+}
+
+.schedule-time-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  padding: 24rpx;
+  background-color: #f7f8fa;
+  border-radius: 16rpx;
+  border: 2rpx solid #e5e5e5;
+  transition: all 0.2s;
+}
+
+.schedule-time-option.active {
+  background-color: #3ba272;
+  border-color: #3ba272;
+}
+
+.schedule-time-icon {
+  font-size: 40rpx;
+}
+
+.schedule-time-text {
+  font-size: 26rpx;
+  color: #666666;
+}
+
+.schedule-time-option.active .schedule-time-text {
+  color: #ffffff;
+}
+
+.schedule-modal-footer {
+  display: flex;
+  gap: 16rpx;
+  padding: 24rpx 32rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.schedule-cancel-btn,
+.schedule-confirm-btn {
+  flex: 1;
+  padding: 24rpx;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.schedule-cancel-btn {
+  background-color: #f7f8fa;
+  color: #666666;
+}
+
+.schedule-confirm-btn {
+  background: linear-gradient(135deg, #3ba272, #6fd3a5);
+  color: #ffffff;
+}
 </style>
-
-

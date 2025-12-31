@@ -869,7 +869,30 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                     int day = Integer.parseInt(dayObj.toString());
                     summary.append("第").append(day).append("天用户选择:\n");
 
+                    // 处理景点（包含时间段信息）
                     Object scenicIdsObj = daySelection.get("scenicIds");
+                    Object scenicTimeSlotsObj = daySelection.get("scenicTimeSlots");
+                    
+                    // 构建景点时间段映射
+                    Map<Long, String> scenicTimeSlotMap = new HashMap<>();
+                    if (scenicTimeSlotsObj instanceof List) {
+                        List<?> scenicTimeSlotsList = (List<?>) scenicTimeSlotsObj;
+                        for (Object slotObj : scenicTimeSlotsList) {
+                            if (slotObj instanceof Map) {
+                                Map<?, ?> slotMap = (Map<?, ?>) slotObj;
+                                Object scenicIdObj = slotMap.get("scenicId");
+                                Object timeSlotObj = slotMap.get("timeSlot");
+                                if (scenicIdObj != null && timeSlotObj != null) {
+                                    Long scenicId = Long.valueOf(scenicIdObj.toString());
+                                    String timeSlot = timeSlotObj.toString();
+                                    // 转换时间段为中文
+                                    String timeSlotCn = convertTimeSlotToChinese(timeSlot, "scenic");
+                                    scenicTimeSlotMap.put(scenicId, timeSlotCn);
+                                }
+                            }
+                        }
+                    }
+                    
                     if (scenicIdsObj instanceof List) {
                         List<?> scenicIdsList = (List<?>) scenicIdsObj;
                         if (!scenicIdsList.isEmpty()) {
@@ -880,7 +903,12 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                                     Long scenicId = Long.valueOf(idObj.toString());
                                     ScenicSpot spot = scenicSpotMapper.selectById(scenicId);
                                     if (spot != null) {
-                                        scenicNames.add(spot.getName());
+                                        String scenicName = spot.getName();
+                                        // 如果有时间段信息，添加到景点名称后面
+                                        if (scenicTimeSlotMap.containsKey(scenicId)) {
+                                            scenicName += "（" + scenicTimeSlotMap.get(scenicId) + "）";
+                                        }
+                                        scenicNames.add(scenicName);
                                     }
                                 }
                             }
@@ -888,7 +916,30 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                         }
                     }
 
+                    // 处理美食（包含时间段信息）
                     Object foodIdsObj = daySelection.get("foodIds");
+                    Object foodTimeSlotsObj = daySelection.get("foodTimeSlots");
+                    
+                    // 构建美食时间段映射
+                    Map<Long, String> foodTimeSlotMap = new HashMap<>();
+                    if (foodTimeSlotsObj instanceof List) {
+                        List<?> foodTimeSlotsList = (List<?>) foodTimeSlotsObj;
+                        for (Object slotObj : foodTimeSlotsList) {
+                            if (slotObj instanceof Map) {
+                                Map<?, ?> slotMap = (Map<?, ?>) slotObj;
+                                Object foodIdObj = slotMap.get("foodId");
+                                Object timeSlotObj = slotMap.get("timeSlot");
+                                if (foodIdObj != null && timeSlotObj != null) {
+                                    Long foodId = Long.valueOf(foodIdObj.toString());
+                                    String timeSlot = timeSlotObj.toString();
+                                    // 转换时间段为中文
+                                    String timeSlotCn = convertTimeSlotToChinese(timeSlot, "food");
+                                    foodTimeSlotMap.put(foodId, timeSlotCn);
+                                }
+                            }
+                        }
+                    }
+                    
                     if (foodIdsObj instanceof List) {
                         List<?> foodIdsList = (List<?>) foodIdsObj;
                         if (!foodIdsList.isEmpty()) {
@@ -899,7 +950,12 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                                     Long foodId = Long.valueOf(idObj.toString());
                                     Food food = foodMapper.selectById(foodId);
                                     if (food != null) {
-                                        foodNames.add(food.getName());
+                                        String foodName = food.getName();
+                                        // 如果有时间段信息，添加到美食名称后面
+                                        if (foodTimeSlotMap.containsKey(foodId)) {
+                                            foodName += "（" + foodTimeSlotMap.get(foodId) + "）";
+                                        }
+                                        foodNames.add(foodName);
                                     }
                                 }
                             }
@@ -924,6 +980,45 @@ public class RoutePlanServiceImpl implements RoutePlanService {
          */
 
         return summary.toString();
+    }
+
+    /**
+     * 将时间段转换为中文描述
+     */
+    private String convertTimeSlotToChinese(String timeSlot, String type) {
+        if (timeSlot == null || timeSlot.isEmpty()) {
+            return "";
+        }
+        
+        if ("scenic".equals(type)) {
+            switch (timeSlot) {
+                case "morning":
+                    return "上午";
+                case "afternoon":
+                    return "下午";
+                case "evening":
+                    return "傍晚";
+                case "night":
+                    return "晚上";
+                default:
+                    return timeSlot;
+            }
+        } else if ("food".equals(type)) {
+            switch (timeSlot) {
+                case "breakfast":
+                    return "早餐";
+                case "lunch":
+                    return "午餐";
+                case "dinner":
+                    return "晚餐";
+                case "snack":
+                    return "小吃";
+                default:
+                    return timeSlot;
+            }
+        }
+        
+        return timeSlot;
     }
 
     private String buildUserPreference(List<Long> tagIds, String budget, String suitablePeople) {
