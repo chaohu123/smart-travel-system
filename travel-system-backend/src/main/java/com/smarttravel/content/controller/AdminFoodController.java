@@ -34,6 +34,25 @@ public class AdminFoodController {
             query = new Food();
         }
         query.setDelFlag(0);
+        
+        // 确保查询参数不为空字符串（Spring Boot 会自动绑定，但空字符串需要处理）
+        if (query.getProvince() != null && query.getProvince().trim().isEmpty()) {
+            query.setProvince(null);
+        }
+        if (query.getCity() != null && query.getCity().trim().isEmpty()) {
+            query.setCity(null);
+        }
+        if (query.getFoodType() != null && query.getFoodType().trim().isEmpty()) {
+            query.setFoodType(null);
+        }
+        if (query.getName() != null && query.getName().trim().isEmpty()) {
+            query.setName(null);
+        }
+        
+        // 调试日志
+        System.out.println("[美食查询] 查询参数: name=" + query.getName() + ", province=" + query.getProvince() + 
+                          ", city=" + query.getCity() + ", foodType=" + query.getFoodType() + 
+                          ", pageNum=" + pageNum + ", pageSize=" + pageSize);
 
         // 计算offset
         Integer offset = (pageNum - 1) * pageSize;

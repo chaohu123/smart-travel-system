@@ -79,7 +79,17 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       const month = monthList.value[monthIndex];
       const daysInMonth = new Date(year, month, 0).getDate();
       const days = [];
-      for (let i = 1; i <= daysInMonth; i++) {
+      const today = new Date();
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth() + 1;
+      const todayDay = today.getDate();
+      let minDay = 1;
+      if (year === todayYear && month === todayMonth) {
+        minDay = todayDay;
+      } else if (year < todayYear || year === todayYear && month < todayMonth) {
+        minDay = daysInMonth + 1;
+      }
+      for (let i = minDay; i <= daysInMonth; i++) {
         days.push(i);
       }
       return days;
@@ -173,27 +183,58 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       datePickerType.value = type;
       const currentDate = type === "start" ? startDate.value : endDate.value;
       const dateStr = currentDate || minDate.value;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth() + 1;
+      const todayDay = today.getDate();
       if (dateStr) {
         const date = new Date(dateStr);
+        date.setHours(0, 0, 0, 0);
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
         const day = date.getDate();
-        const yearIndex = yearList.value.findIndex((y) => y === year);
-        const monthIndex = monthList.value.findIndex((m) => m === month);
-        const dayIndex = dayList.value.findIndex((d) => d === day);
+        let finalYear = year;
+        let finalMonth = month;
+        let finalDay = day;
+        if (date < today) {
+          finalYear = todayYear;
+          finalMonth = todayMonth;
+          finalDay = todayDay;
+        }
+        const yearIndex = yearList.value.findIndex((y) => y === finalYear);
+        const monthIndex = monthList.value.findIndex((m) => m === finalMonth);
         datePickerValue.value = [
           yearIndex >= 0 ? yearIndex : 10,
-          monthIndex >= 0 ? monthIndex : new Date().getMonth(),
-          dayIndex >= 0 ? dayIndex : new Date().getDate() - 1
+          monthIndex >= 0 ? monthIndex : todayMonth - 1,
+          0
         ];
+        setTimeout(() => {
+          const availableDays = dayList.value;
+          if (availableDays.length > 0) {
+            let dayIndex = availableDays.findIndex((d) => d >= finalDay);
+            if (dayIndex < 0) {
+              dayIndex = availableDays.length - 1;
+            }
+            datePickerValue.value[2] = dayIndex;
+          } else {
+            datePickerValue.value[2] = 0;
+          }
+        }, 0);
       } else {
-        const now = new Date();
-        const yearIndex = yearList.value.findIndex((y) => y === now.getFullYear());
+        const yearIndex = yearList.value.findIndex((y) => y === todayYear);
         datePickerValue.value = [
           yearIndex >= 0 ? yearIndex : 10,
-          now.getMonth(),
-          now.getDate() - 1
+          todayMonth - 1,
+          0
         ];
+        setTimeout(() => {
+          const availableDays = dayList.value;
+          if (availableDays.length > 0) {
+            const todayIndex = availableDays.findIndex((d) => d >= todayDay);
+            datePickerValue.value[2] = todayIndex >= 0 ? todayIndex : 0;
+          }
+        }, 0);
       }
       showDatePicker.value = true;
     };
@@ -209,9 +250,35 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       const dayIndex = newValue[2];
       const year = yearList.value[yearIndex];
       const month = monthList.value[monthIndex];
+      const today = new Date();
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth() + 1;
+      const todayDay = today.getDate();
       const maxDays = new Date(year, month, 0).getDate();
+      if (year === todayYear && month === todayMonth)
+        ;
+      else if (year < todayYear || year === todayYear && month < todayMonth) {
+        const currentYearIndex = yearList.value.findIndex((y) => y === todayYear);
+        const currentMonthIndex = todayMonth - 1;
+        datePickerValue.value = [
+          currentYearIndex >= 0 ? currentYearIndex : 10,
+          currentMonthIndex,
+          todayDay - 1
+        ];
+        return;
+      }
       if (dayIndex >= maxDays) {
         datePickerValue.value[2] = maxDays - 1;
+      }
+      const availableDays = dayList.value;
+      if (availableDays.length > 0 && dayIndex < availableDays.length) {
+        const selectedDay = availableDays[dayIndex];
+        if (year === todayYear && month === todayMonth && selectedDay < todayDay) {
+          const todayIndex = availableDays.findIndex((d) => d >= todayDay);
+          if (todayIndex >= 0) {
+            datePickerValue.value[2] = todayIndex;
+          }
+        }
       }
     };
     const confirmDatePicker = () => {
@@ -220,11 +287,35 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       const dayIndex = datePickerValue.value[2];
       const year = yearList.value[yearIndex];
       const month = monthList.value[monthIndex];
-      const maxDays = new Date(year, month, 0).getDate();
-      const actualDayIndex = Math.min(dayIndex, maxDays - 1);
-      const day = actualDayIndex + 1;
-      const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      onDatePickerChange({ detail: { value: dateStr } });
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayYear = today.getFullYear();
+      const todayMonth = today.getMonth() + 1;
+      const todayDay = today.getDate();
+      new Date(year, month, 0).getDate();
+      const availableDays = dayList.value;
+      let actualDayIndex = dayIndex;
+      if (availableDays.length > 0) {
+        if (dayIndex >= availableDays.length) {
+          actualDayIndex = availableDays.length - 1;
+        }
+        const selectedDay = availableDays[actualDayIndex];
+        if (year < todayYear || year === todayYear && month < todayMonth || year === todayYear && month === todayMonth && selectedDay < todayDay) {
+          common_vendor.index.showToast({
+            title: "\u4E0D\u80FD\u9009\u62E9\u8FC7\u53BB\u7684\u65E5\u671F",
+            icon: "none"
+          });
+          return;
+        }
+        const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(selectedDay).padStart(2, "0")}`;
+        onDatePickerChange({ detail: { value: dateStr } });
+      } else {
+        common_vendor.index.showToast({
+          title: "\u4E0D\u80FD\u9009\u62E9\u8FC7\u53BB\u7684\u65E5\u671F",
+          icon: "none"
+        });
+        return;
+      }
       closeDatePicker();
     };
     const goToStep = (index) => {
@@ -261,8 +352,32 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const onDatePickerChange = (e) => {
       const selectedDate = e.detail.value;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selected = new Date(selectedDate);
+      selected.setHours(0, 0, 0, 0);
+      if (selected < today) {
+        common_vendor.index.showToast({
+          title: "\u4E0D\u80FD\u9009\u62E9\u8FC7\u53BB\u7684\u65E5\u671F",
+          icon: "none"
+        });
+        return;
+      }
       if (datePickerType.value === "start") {
         if (!endDate.value || selectedDate <= endDate.value) {
+          if (endDate.value) {
+            const start = new Date(selectedDate);
+            const end = new Date(endDate.value);
+            const diffTime = Math.abs(end.getTime() - start.getTime());
+            const diffDays = Math.ceil(diffTime / (1e3 * 60 * 60 * 24));
+            if (diffDays > 6) {
+              common_vendor.index.showToast({
+                title: "\u65C5\u6E38\u65E5\u671F\u8DE8\u5EA6\u4E0D\u80FD\u8D85\u8FC77\u5929",
+                icon: "none"
+              });
+              return;
+            }
+          }
           startDate.value = selectedDate;
           updateDateTips();
           updateDailySelections();
@@ -282,6 +397,17 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           return;
         }
         if (selectedDate >= startDate.value) {
+          const start = new Date(startDate.value);
+          const end = new Date(selectedDate);
+          const diffTime = Math.abs(end.getTime() - start.getTime());
+          const diffDays = Math.ceil(diffTime / (1e3 * 60 * 60 * 24));
+          if (diffDays > 6) {
+            common_vendor.index.showToast({
+              title: "\u65C5\u6E38\u65E5\u671F\u8DE8\u5EA6\u4E0D\u80FD\u8D85\u8FC77\u5929",
+              icon: "none"
+            });
+            return;
+          }
           endDate.value = selectedDate;
           updateDateTips();
           updateDailySelections();

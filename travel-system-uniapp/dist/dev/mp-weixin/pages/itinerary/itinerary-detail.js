@@ -22,13 +22,24 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return routeData.value.days[selectedDayIndex.value] || routeData.value.days[0];
     });
     const currentDayScenics = common_vendor.computed(() => {
-      var _a;
+      var _a, _b;
       if (!((_a = currentDayData.value) == null ? void 0 : _a.pois))
         return [];
-      return currentDayData.value.pois.filter((poi) => {
+      const sortedPois = [...currentDayData.value.pois].sort((a, b) => {
+        var _a2, _b2;
+        const sortA = ((_a2 = a.poi) == null ? void 0 : _a2.sort) || 0;
+        const sortB = ((_b2 = b.poi) == null ? void 0 : _b2.sort) || 0;
+        return sortA - sortB;
+      });
+      const scenicPois = sortedPois.filter((poi) => {
         var _a2;
         return ((_a2 = poi.poi) == null ? void 0 : _a2.poiType) === "scenic" && poi.detail;
-      }).map((poi) => poi.detail);
+      });
+      const firstScenic = scenicPois[0];
+      if (((_b = firstScenic == null ? void 0 : firstScenic.detail) == null ? void 0 : _b.suggestedVisitTime) && (firstScenic.detail.suggestedVisitTime.includes("\u5168\u5929") || firstScenic.detail.suggestedVisitTime.includes("\u4E00\u5929"))) {
+        return [firstScenic.detail];
+      }
+      return scenicPois.map((poi) => poi.detail);
     });
     const currentDayFoods = common_vendor.computed(() => {
       var _a;
@@ -188,72 +199,136 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       mapPolyline.value = polylines;
     };
     const formatDayContent = (dayData) => {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
       if (!dayData || !dayData.pois || dayData.pois.length === 0)
         return [];
       const sortedPois = [...dayData.pois].sort((a, b) => {
-        var _a, _b;
-        const sortA = ((_a = a.poi) == null ? void 0 : _a.sort) || 0;
-        const sortB = ((_b = b.poi) == null ? void 0 : _b.sort) || 0;
+        var _a2, _b2;
+        const sortA = ((_a2 = a.poi) == null ? void 0 : _a2.sort) || 0;
+        const sortB = ((_b2 = b.poi) == null ? void 0 : _b2.sort) || 0;
         return sortA - sortB;
       });
-      const groups = [];
-      const timeGroups = {};
-      sortedPois.forEach((poi, index) => {
-        var _a, _b;
-        const sort = ((_a = poi.poi) == null ? void 0 : _a.sort) || index + 1;
-        let timeLabel = "\u4E0A\u5348";
-        if (((_b = poi.poi) == null ? void 0 : _b.poiType) === "food") {
-          if (sort <= 1) {
-            timeLabel = "\u4E0A\u5348";
-          } else if (sort <= 3) {
-            timeLabel = "\u4E2D\u5348";
-          } else {
-            timeLabel = "\u665A\u4E0A";
-          }
-        } else {
-          timeLabel = sort <= sortedPois.length / 2 ? "\u4E0A\u5348" : "\u4E0B\u5348";
-        }
-        if (!timeGroups[timeLabel]) {
-          timeGroups[timeLabel] = [];
-        }
-        timeGroups[timeLabel].push(poi);
+      const scenicPois = sortedPois.filter((p) => {
+        var _a2;
+        return ((_a2 = p.poi) == null ? void 0 : _a2.poiType) === "scenic";
       });
-      Object.keys(timeGroups).forEach((timeLabel) => {
-        const pois = timeGroups[timeLabel];
-        const group = {
-          timeLabel,
-          items: []
-        };
-        if (timeLabel === "\u4E0A\u5348") {
-          const breakfastPoi = pois.find((p) => {
-            var _a;
-            return ((_a = p.poi) == null ? void 0 : _a.poiType) === "food";
+      sortedPois.filter((p) => {
+        var _a2;
+        return ((_a2 = p.poi) == null ? void 0 : _a2.poiType) === "food";
+      });
+      const firstScenic = scenicPois[0];
+      const isFullDay = ((_a = firstScenic == null ? void 0 : firstScenic.detail) == null ? void 0 : _a.suggestedVisitTime) && (firstScenic.detail.suggestedVisitTime.includes("\u5168\u5929") || firstScenic.detail.suggestedVisitTime.includes("\u4E00\u5929"));
+      const groups = [];
+      const morningGroup = {
+        timeLabel: "\u4E0A\u5348",
+        items: []
+      };
+      if (isFullDay) {
+        const breakfastPoi = sortedPois.find((p) => {
+          var _a2, _b2;
+          const timeSlot = ((_a2 = p.poi) == null ? void 0 : _a2.timeSlot) || "";
+          return ((_b2 = p.poi) == null ? void 0 : _b2.poiType) === "food" && timeSlot === "breakfast";
+        }) || sortedPois.find((p) => {
+          var _a2;
+          return ((_a2 = p.poi) == null ? void 0 : _a2.poiType) === "food";
+        });
+        if (breakfastPoi && breakfastPoi.detail) {
+          morningGroup.breakfast = {
+            name: breakfastPoi.detail.name || "\u65E9\u9910",
+            address: breakfastPoi.detail.address,
+            specialty: breakfastPoi.detail.specialty || breakfastPoi.detail.intro,
+            price: breakfastPoi.detail.avgPrice || breakfastPoi.detail.price
+          };
+        }
+        if (firstScenic) {
+          const scenic = firstScenic.detail;
+          let lastLocation2 = morningGroup.breakfast ? morningGroup.breakfast.name : "";
+          if (lastLocation2) {
+            let routeInfo = null;
+            if (firstScenic.route) {
+              routeInfo = firstScenic.route;
+            } else if ((_b = firstScenic.poi) == null ? void 0 : _b.note) {
+              try {
+                const noteJson = JSON.parse(firstScenic.poi.note);
+                if (noteJson.from && noteJson.to) {
+                  routeInfo = {
+                    from: noteJson.from,
+                    to: noteJson.to,
+                    suggestedRoute: noteJson.suggestedRoute || "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                    transport: noteJson.transport || "\u6B65\u884C/\u516C\u4EA4",
+                    distance: noteJson.distance || "\u7EA61\u516C\u91CC"
+                  };
+                }
+              } catch (e) {
+              }
+            }
+            if (!routeInfo) {
+              routeInfo = {
+                from: lastLocation2,
+                to: scenic.name,
+                suggestedRoute: "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                transport: "\u6B65\u884C/\u516C\u4EA4",
+                distance: "\u7EA61\u516C\u91CC"
+              };
+            }
+            morningGroup.items.push({ route: routeInfo });
+          }
+          let suggestedVisitTime = scenic.suggestedVisitTime;
+          if (!suggestedVisitTime && ((_c = firstScenic.poi) == null ? void 0 : _c.stayTime)) {
+            const stayMinutes = firstScenic.poi.stayTime;
+            if (stayMinutes >= 60) {
+              const hours = Math.floor(stayMinutes / 60);
+              const minutes = stayMinutes % 60;
+              suggestedVisitTime = minutes > 0 ? `\u7EA6${hours}\u5C0F\u65F6${minutes}\u5206\u949F` : `\u7EA6${hours}\u5C0F\u65F6`;
+            } else {
+              suggestedVisitTime = `\u7EA6${stayMinutes}\u5206\u949F`;
+            }
+          }
+          let notes = ((_d = firstScenic.poi) == null ? void 0 : _d.note) || scenic.notes || scenic.ticketInfo;
+          if (notes && typeof notes === "string" && notes.startsWith("{") && notes.includes("from")) {
+            notes = scenic.notes || scenic.ticketInfo;
+          }
+          morningGroup.items.push({
+            scenic: {
+              name: scenic.name,
+              intro: scenic.intro || scenic.description,
+              suggestedVisitTime,
+              notes,
+              address: scenic.address,
+              stationLabel: getStationLabel(1),
+              sort: (_e = firstScenic.poi) == null ? void 0 : _e.sort
+            }
           });
-          if (breakfastPoi && breakfastPoi.detail) {
-            group.breakfast = {
-              name: breakfastPoi.detail.name || "\u65E9\u9910",
-              address: breakfastPoi.detail.address,
-              specialty: breakfastPoi.detail.specialty || breakfastPoi.detail.intro,
-              price: breakfastPoi.detail.avgPrice || breakfastPoi.detail.price
+        }
+        if (morningGroup.items.length > 0 || morningGroup.breakfast) {
+          groups.push(morningGroup);
+        }
+        return groups;
+      }
+      let lastLocation = "";
+      let stationIndex = 1;
+      let consumedFoodIds = [];
+      for (const poi of sortedPois) {
+        const poiType = (_f = poi.poi) == null ? void 0 : _f.poiType;
+        const timeSlot = ((_g = poi.poi) == null ? void 0 : _g.timeSlot) || "";
+        if (poiType === "food" && timeSlot === "breakfast" && !consumedFoodIds.includes((_h = poi.detail) == null ? void 0 : _h.id)) {
+          if (poi.detail) {
+            morningGroup.breakfast = {
+              name: poi.detail.name || "\u65E9\u9910",
+              address: poi.detail.address,
+              specialty: poi.detail.specialty || poi.detail.intro,
+              price: poi.detail.avgPrice || poi.detail.price
             };
+            lastLocation = poi.detail.name;
+            consumedFoodIds.push(poi.detail.id);
           }
-        }
-        let lastLocation = "";
-        if (group.breakfast) {
-          lastLocation = group.breakfast.name;
-        }
-        pois.forEach((poi, index) => {
-          var _a, _b, _c, _d, _e, _f, _g;
-          if (((_a = poi.poi) == null ? void 0 : _a.poiType) === "food" && timeLabel === "\u4E0A\u5348") {
-            return;
-          }
-          if (((_b = poi.poi) == null ? void 0 : _b.poiType) === "scenic" && poi.detail) {
-            const scenic = poi.detail;
+        } else if (poiType === "food" && timeSlot === "lunch" && !consumedFoodIds.includes((_i = poi.detail) == null ? void 0 : _i.id)) {
+          if (poi.detail) {
             if (lastLocation) {
               let routeInfo = null;
               if (poi.route) {
                 routeInfo = poi.route;
-              } else if ((_c = poi.poi) == null ? void 0 : _c.note) {
+              } else if ((_j = poi.poi) == null ? void 0 : _j.note) {
                 try {
                   const noteJson = JSON.parse(poi.poi.note);
                   if (noteJson.from && noteJson.to) {
@@ -271,79 +346,136 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               if (!routeInfo) {
                 routeInfo = {
                   from: lastLocation,
-                  to: scenic.name,
+                  to: poi.detail.name,
                   suggestedRoute: "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
                   transport: "\u6B65\u884C/\u516C\u4EA4",
                   distance: "\u7EA61\u516C\u91CC"
                 };
               }
-              group.items.push({
-                route: routeInfo
-              });
+              morningGroup.items.push({ route: routeInfo });
             }
-            let notes = ((_d = poi.poi) == null ? void 0 : _d.note) || scenic.notes || scenic.ticketInfo;
-            if (notes && typeof notes === "string" && notes.startsWith("{") && notes.includes("from")) {
-              notes = scenic.notes || scenic.ticketInfo;
-            }
-            let suggestedVisitTime = scenic.suggestedVisitTime;
-            if (!suggestedVisitTime && ((_e = poi.poi) == null ? void 0 : _e.stayTime)) {
-              const stayMinutes = poi.poi.stayTime;
-              if (stayMinutes >= 60) {
-                const hours = Math.floor(stayMinutes / 60);
-                const minutes = stayMinutes % 60;
-                suggestedVisitTime = minutes > 0 ? `\u7EA6${hours}\u5C0F\u65F6${minutes}\u5206\u949F` : `\u7EA6${hours}\u5C0F\u65F6`;
-              } else {
-                suggestedVisitTime = `\u7EA6${stayMinutes}\u5206\u949F`;
-              }
-            }
-            group.items.push({
-              scenic: {
-                name: scenic.name,
-                intro: scenic.intro || scenic.description,
-                suggestedVisitTime,
-                notes,
-                address: scenic.address,
-                time: formatTime((_f = poi.poi) == null ? void 0 : _f.sort, timeLabel),
-                sort: (_g = poi.poi) == null ? void 0 : _g.sort
-              }
-            });
-            lastLocation = scenic.name;
+            morningGroup.lunch = {
+              name: poi.detail.name || "\u5348\u9910",
+              address: poi.detail.address,
+              specialty: poi.detail.specialty || poi.detail.intro,
+              price: poi.detail.avgPrice || poi.detail.price
+            };
+            lastLocation = poi.detail.name;
+            consumedFoodIds.push(poi.detail.id);
           }
-        });
-        if (group.items.length > 0 || group.breakfast) {
-          groups.push(group);
+        } else if (poiType === "food" && timeSlot === "dinner" && !consumedFoodIds.includes((_k = poi.detail) == null ? void 0 : _k.id)) {
+          if (poi.detail) {
+            if (lastLocation) {
+              let routeInfo = null;
+              if (poi.route) {
+                routeInfo = poi.route;
+              } else if ((_l = poi.poi) == null ? void 0 : _l.note) {
+                try {
+                  const noteJson = JSON.parse(poi.poi.note);
+                  if (noteJson.from && noteJson.to) {
+                    routeInfo = {
+                      from: noteJson.from,
+                      to: noteJson.to,
+                      suggestedRoute: noteJson.suggestedRoute || "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                      transport: noteJson.transport || "\u6B65\u884C/\u516C\u4EA4",
+                      distance: noteJson.distance || "\u7EA61\u516C\u91CC"
+                    };
+                  }
+                } catch (e) {
+                }
+              }
+              if (!routeInfo) {
+                routeInfo = {
+                  from: lastLocation,
+                  to: poi.detail.name,
+                  suggestedRoute: "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                  transport: "\u6B65\u884C/\u516C\u4EA4",
+                  distance: "\u7EA61\u516C\u91CC"
+                };
+              }
+              morningGroup.items.push({ route: routeInfo });
+            }
+            morningGroup.dinner = {
+              name: poi.detail.name || "\u665A\u9910",
+              address: poi.detail.address,
+              specialty: poi.detail.specialty || poi.detail.intro,
+              price: poi.detail.avgPrice || poi.detail.price
+            };
+            lastLocation = poi.detail.name;
+            consumedFoodIds.push(poi.detail.id);
+          }
+        } else if (poiType === "scenic" && poi.detail) {
+          const scenic = poi.detail;
+          if (lastLocation) {
+            let routeInfo = null;
+            if (poi.route) {
+              routeInfo = poi.route;
+            } else if ((_m = poi.poi) == null ? void 0 : _m.note) {
+              try {
+                const noteJson = JSON.parse(poi.poi.note);
+                if (noteJson.from && noteJson.to) {
+                  routeInfo = {
+                    from: noteJson.from,
+                    to: noteJson.to,
+                    suggestedRoute: noteJson.suggestedRoute || "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                    transport: noteJson.transport || "\u6B65\u884C/\u516C\u4EA4",
+                    distance: noteJson.distance || "\u7EA61\u516C\u91CC"
+                  };
+                }
+              } catch (e) {
+              }
+            }
+            if (!routeInfo) {
+              routeInfo = {
+                from: lastLocation,
+                to: scenic.name,
+                suggestedRoute: "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                transport: "\u6B65\u884C/\u516C\u4EA4",
+                distance: "\u7EA61\u516C\u91CC"
+              };
+            }
+            morningGroup.items.push({ route: routeInfo });
+          }
+          let suggestedVisitTime = scenic.suggestedVisitTime;
+          if (!suggestedVisitTime && ((_n = poi.poi) == null ? void 0 : _n.stayTime)) {
+            const stayMinutes = poi.poi.stayTime;
+            if (stayMinutes >= 60) {
+              const hours = Math.floor(stayMinutes / 60);
+              const minutes = stayMinutes % 60;
+              suggestedVisitTime = minutes > 0 ? `\u7EA6${hours}\u5C0F\u65F6${minutes}\u5206\u949F` : `\u7EA6${hours}\u5C0F\u65F6`;
+            } else {
+              suggestedVisitTime = `\u7EA6${stayMinutes}\u5206\u949F`;
+            }
+          }
+          let notes = ((_o = poi.poi) == null ? void 0 : _o.note) || scenic.notes || scenic.ticketInfo;
+          if (notes && typeof notes === "string" && notes.startsWith("{") && notes.includes("from")) {
+            notes = scenic.notes || scenic.ticketInfo;
+          }
+          morningGroup.items.push({
+            scenic: {
+              name: scenic.name,
+              intro: scenic.intro || scenic.description,
+              suggestedVisitTime,
+              notes,
+              address: scenic.address,
+              stationLabel: getStationLabel(stationIndex++),
+              sort: (_p = poi.poi) == null ? void 0 : _p.sort
+            }
+          });
+          lastLocation = scenic.name;
         }
-      });
-      const timeOrder = ["\u4E0A\u5348", "\u4E2D\u5348", "\u4E0B\u5348", "\u665A\u4E0A"];
-      groups.sort((a, b) => {
-        return timeOrder.indexOf(a.timeLabel) - timeOrder.indexOf(b.timeLabel);
-      });
+      }
+      if (morningGroup.items.length > 0 || morningGroup.breakfast || morningGroup.lunch || morningGroup.dinner) {
+        groups.push(morningGroup);
+      }
       return groups;
     };
-    const formatTime = (sort, timeLabel) => {
-      if (timeLabel === "\u4E0A\u5348") {
-        return "09:00";
-      } else if (timeLabel === "\u4E2D\u5348") {
-        return "13:00";
-      } else if (timeLabel === "\u4E0B\u5348") {
-        return "15:00";
-      } else if (timeLabel === "\u665A\u4E0A") {
-        return "18:00";
+    const getStationLabel = (index) => {
+      const labels = ["\u7B2C\u4E00\u7AD9", "\u7B2C\u4E8C\u7AD9", "\u7B2C\u4E09\u7AD9", "\u7B2C\u56DB\u7AD9", "\u7B2C\u4E94\u7AD9", "\u7B2C\u516D\u7AD9", "\u7B2C\u4E03\u7AD9", "\u7B2C\u516B\u7AD9", "\u7B2C\u4E5D\u7AD9", "\u7B2C\u5341\u7AD9"];
+      if (index <= labels.length) {
+        return labels[index - 1];
       }
-      if (sort) {
-        let hour = 9;
-        if (sort <= 2) {
-          hour = 9;
-        } else if (sort <= 4) {
-          hour = 13;
-        } else if (sort <= 6) {
-          hour = 15;
-        } else {
-          hour = 18;
-        }
-        return `${String(hour).padStart(2, "0")}:00`;
-      }
-      return "09:00";
+      return `\u7B2C${index}\u7AD9`;
     };
     const getPoiName = (poiItem) => {
       var _a, _b;
@@ -501,7 +633,37 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }, timeGroup.breakfast.price ? {
             i: common_vendor.t(timeGroup.breakfast.price)
           } : {}) : {}, {
-            j: common_vendor.f(timeGroup.items, (item, itemIndex, i1) => {
+            j: timeGroup.lunch
+          }, timeGroup.lunch ? common_vendor.e({
+            k: common_vendor.t(timeGroup.lunch.name),
+            l: timeGroup.lunch.address
+          }, timeGroup.lunch.address ? {
+            m: common_vendor.t(timeGroup.lunch.address)
+          } : {}, {
+            n: timeGroup.lunch.specialty
+          }, timeGroup.lunch.specialty ? {
+            o: common_vendor.t(timeGroup.lunch.specialty)
+          } : {}, {
+            p: timeGroup.lunch.price
+          }, timeGroup.lunch.price ? {
+            q: common_vendor.t(timeGroup.lunch.price)
+          } : {}) : {}, {
+            r: timeGroup.dinner
+          }, timeGroup.dinner ? common_vendor.e({
+            s: common_vendor.t(timeGroup.dinner.name),
+            t: timeGroup.dinner.address
+          }, timeGroup.dinner.address ? {
+            v: common_vendor.t(timeGroup.dinner.address)
+          } : {}, {
+            w: timeGroup.dinner.specialty
+          }, timeGroup.dinner.specialty ? {
+            x: common_vendor.t(timeGroup.dinner.specialty)
+          } : {}, {
+            y: timeGroup.dinner.price
+          }, timeGroup.dinner.price ? {
+            z: common_vendor.t(timeGroup.dinner.price)
+          } : {}) : {}, {
+            A: common_vendor.f(timeGroup.items, (item, itemIndex, i1) => {
               return common_vendor.e({
                 a: item.route
               }, item.route ? common_vendor.e({
@@ -521,7 +683,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               } : {}) : {}, {
                 j: item.scenic
               }, item.scenic ? common_vendor.e({
-                k: common_vendor.t(item.scenic.time || formatTime(item.scenic.sort, timeGroup.timeLabel)),
+                k: common_vendor.t(item.scenic.stationLabel || "\u7B2C\u4E00\u7AD9"),
                 l: common_vendor.t(item.scenic.name),
                 m: item.scenic.intro
               }, item.scenic.intro ? {
@@ -542,7 +704,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
                 v: itemIndex
               });
             }),
-            k: timeIndex
+            B: timeIndex
           });
         }),
         D: common_vendor.unref(currentDayScenics).length > 0

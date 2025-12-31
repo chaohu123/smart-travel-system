@@ -459,11 +459,26 @@ const form = reactive<Food>({
 
 const loadData = async () => {
   try {
-    const params = {
-      ...query,
+    // 构建查询参数，过滤掉空字符串和undefined
+    const params: any = {
       pageNum: pagination.pageNum,
       pageSize: pagination.pageSize
     };
+    
+    // 只添加非空的查询条件
+    if (query.name && query.name.trim()) {
+      params.name = query.name.trim();
+    }
+    if (query.province && query.province.trim()) {
+      params.province = query.province.trim();
+    }
+    if (query.city && query.city.trim()) {
+      params.city = query.city.trim();
+    }
+    if (query.foodType && query.foodType.trim()) {
+      params.foodType = query.foodType.trim();
+    }
+    
     const resp = await fetchFoodList(params);
     if (resp.data.code === 200) {
       list.value = resp.data.rows;
@@ -472,6 +487,7 @@ const loadData = async () => {
       ElMessage.error(resp.data.msg || '加载失败');
     }
   } catch (e) {
+    console.error('查询失败:', e);
     ElMessage.error('请求失败');
   }
 };
@@ -714,48 +730,57 @@ const handleMapPickerConfirm = (location: any) => {
 
   // 改进的城市匹配逻辑（需要等待城市选项更新）
   if (location.city && form.province) {
+    // 保存到局部常量，确保类型安全
+    const cityName = location.city;
+    const provinceName = form.province;
+    
     // 使用 nextTick 确保城市选项已更新
     nextTick(() => {
-      const cityText = normalizeCityName(location.city, form.province);
+      // 再次检查，确保在异步回调中值仍然存在
+      if (!cityName || !provinceName) {
+        return;
+      }
+      
+      const cityText = normalizeCityName(cityName, provinceName);
 
       // 先尝试精确匹配
-      let cityMatch = cityOptions.value.find(c => c === location.city);
+      let cityMatch = cityOptions.value.find(c => c === cityName);
 
       // 如果精确匹配失败，尝试去除后缀后匹配
       if (!cityMatch) {
         cityMatch = cityOptions.value.find(c => {
-          const cText = normalizeCityName(c, form.province);
+          const cText = normalizeCityName(c, provinceName);
           return cText === cityText ||
                  c === cityText ||
-                 location.city === c ||
-                 location.city.includes(c) ||
-                 c.includes(location.city) ||
-                 normalizeCityName(location.city, form.province) === c ||
-                 normalizeCityName(c, form.province) === normalizeCityName(location.city, form.province);
+                 cityName === c ||
+                 cityName.includes(c) ||
+                 c.includes(cityName) ||
+                 normalizeCityName(cityName, provinceName) === c ||
+                 normalizeCityName(c, provinceName) === normalizeCityName(cityName, provinceName);
         });
       }
 
       // 特殊处理：直辖市
       const directCities = ['北京', '上海', '天津', '重庆'];
-      if (!cityMatch && directCities.includes(form.province)) {
+      if (!cityMatch && directCities.includes(provinceName)) {
         // 直辖市：如果城市名称包含省份名称，使用省份名称作为城市
-        const normalizedProvince = normalizeProvinceName(form.province);
-        const normalizedCity = normalizeCityName(location.city, form.province);
-        if (normalizedCity === normalizedProvince || location.city.includes(form.province) || form.province.includes(normalizeCityName(location.city, form.province))) {
-          cityMatch = form.province;
+        const normalizedProvince = normalizeProvinceName(provinceName);
+        const normalizedCity = normalizeCityName(cityName, provinceName);
+        if (normalizedCity === normalizedProvince || cityName.includes(provinceName) || provinceName.includes(normalizeCityName(cityName, provinceName))) {
+          cityMatch = provinceName;
         }
       }
 
       if (cityMatch) {
         form.city = cityMatch;
         cityMatched = true;
-        console.log('匹配到城市:', cityMatch, '原始城市名称:', location.city);
+        console.log('匹配到城市:', cityMatch, '原始城市名称:', cityName);
         ElMessage.success('位置信息已自动填充，省份和城市已自动选择');
       } else {
-        console.warn('未找到匹配的城市:', location.city, '省份:', form.province);
+        console.warn('未找到匹配的城市:', cityName, '省份:', provinceName);
         console.log('可用的城市选项:', cityOptions.value);
         // 如果仍然没有匹配，尝试使用原始城市名称（去除常见后缀后）
-        const fallbackCity = normalizeCityName(location.city, form.province);
+        const fallbackCity = normalizeCityName(cityName, provinceName);
         if (fallbackCity && fallbackCity !== location.city) {
           form.city = fallbackCity;
           ElMessage.warning({
@@ -1058,8 +1083,8 @@ const handleConfirmDelete = () => {
   if (!batchDeleteMode.value) return;
 
   const ids = multipleSelection.value
-    .map(item => item.id)
-    .filter(id => typeof id === 'number') as number[];
+      .map(item => item.id)
+      .filter(id => typeof id === 'number') as number[];
 
   if (ids.length === 0) {
     ElMessage.warning('请选择要删除的美食');
@@ -1070,23 +1095,23 @@ const handleConfirmDelete = () => {
     confirmButtonText: '确定',
     cancelButtonText: '取消'
   })
-    .then(async () => {
-      try {
-        await Promise.all(ids.map(id => deleteFood(id)));
-        ElMessage.success('批量删除成功');
-        multipleSelection.value = [];
-        batchDeleteMode.value = false;
-        pagination.pageNum = 1;
-        await loadData();
-      } catch (e) {
-        console.error('批量删除失败:', e);
-        ElMessage.error('批量删除失败，请重试');
-      }
-    })
-    .catch(() => {
-      // 用户取消
-    });
-
+      .then(async () => {
+        try {
+          await Promise.all(ids.map(id => deleteFood(id)));
+          ElMessage.success('批量删除成功');
+          multipleSelection.value = [];
+          batchDeleteMode.value = false;
+          pagination.pageNum = 1;
+          await loadData();
+        } catch (e) {
+          console.error('批量删除失败:', e);
+          ElMessage.error('批量删除失败，请重试');
+        }
+      })
+      .catch(() => {
+        // 用户取消
+      });
+};
 onMounted(() => {
   loadData();
 });

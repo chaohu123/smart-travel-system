@@ -23,6 +23,10 @@ public class Food {
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private Integer delFlag;
+    
+    // 临时字段，用于查询（不映射到数据库）
+    private String province;
+    private String city;
 
     // Getters and Setters
     public Long getId() {
@@ -151,6 +155,22 @@ public class Food {
 
     public void setDelFlag(Integer delFlag) {
         this.delFlag = delFlag;
+    }
+
+    public String getProvince() {
+        return province;
+    }
+
+    public void setProvince(String province) {
+        this.province = province;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
     }
 }
 

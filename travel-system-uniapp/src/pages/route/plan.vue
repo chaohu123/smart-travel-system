@@ -666,7 +666,7 @@ const monthList = computed(() => {
   return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 })
 
-// 生成日期列表（根据年月动态计算）
+// 生成日期列表（根据年月动态计算，限制不能选择过去的日期）
 const dayList = computed(() => {
   const yearIndex = datePickerValue.value[0]
   const monthIndex = datePickerValue.value[1]
@@ -676,7 +676,24 @@ const dayList = computed(() => {
   // 计算该月的天数
   const daysInMonth = new Date(year, month, 0).getDate()
   const days: number[] = []
-  for (let i = 1; i <= daysInMonth; i++) {
+  
+  // 获取今天日期
+  const today = new Date()
+  const todayYear = today.getFullYear()
+  const todayMonth = today.getMonth() + 1
+  const todayDay = today.getDate()
+  
+  // 计算最小可选日期
+  let minDay = 1
+  if (year === todayYear && month === todayMonth) {
+    // 如果是当前年月，最小可选日期是今天
+    minDay = todayDay
+  } else if (year < todayYear || (year === todayYear && month < todayMonth)) {
+    // 如果是过去的年月，所有日期都不可选（这种情况不应该出现，但作为保护）
+    minDay = daysInMonth + 1
+  }
+  
+  for (let i = minDay; i <= daysInMonth; i++) {
     days.push(i)
   }
   return days
@@ -785,32 +802,72 @@ const openDatePicker = (type: 'start' | 'end') => {
   const currentDate = type === 'start' ? startDate.value : endDate.value
   const dateStr = currentDate || minDate.value
   
+  // 获取今天日期
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayYear = today.getFullYear()
+  const todayMonth = today.getMonth() + 1
+  const todayDay = today.getDate()
+  
   // 解析当前日期，设置picker-view的初始值
   if (dateStr) {
     const date = new Date(dateStr)
+    date.setHours(0, 0, 0, 0)
     const year = date.getFullYear()
     const month = date.getMonth() + 1
     const day = date.getDate()
     
-    // 找到对应的索引
-    const yearIndex = yearList.value.findIndex(y => y === year)
-    const monthIndex = monthList.value.findIndex(m => m === month)
-    const dayIndex = dayList.value.findIndex(d => d === day)
+    // 如果选择的日期是过去的日期，使用今天
+    let finalYear = year
+    let finalMonth = month
+    let finalDay = day
+    if (date < today) {
+      finalYear = todayYear
+      finalMonth = todayMonth
+      finalDay = todayDay
+    }
     
-    datePickerValue.value = [
-      yearIndex >= 0 ? yearIndex : 10, // 默认当前年份
-      monthIndex >= 0 ? monthIndex : new Date().getMonth(),
-      dayIndex >= 0 ? dayIndex : new Date().getDate() - 1
-    ]
-  } else {
-    // 如果没有日期，使用当前日期
-    const now = new Date()
-    const yearIndex = yearList.value.findIndex(y => y === now.getFullYear())
+    // 找到对应的索引
+    const yearIndex = yearList.value.findIndex(y => y === finalYear)
+    const monthIndex = monthList.value.findIndex(m => m === finalMonth)
+    
+    // 先设置年月，以便dayList计算正确
     datePickerValue.value = [
       yearIndex >= 0 ? yearIndex : 10,
-      now.getMonth(),
-      now.getDate() - 1
+      monthIndex >= 0 ? monthIndex : todayMonth - 1,
+      0
     ]
+    
+    // 等待dayList更新后，再设置日期索引
+    setTimeout(() => {
+      const availableDays = dayList.value
+      if (availableDays.length > 0) {
+        // 找到最接近或等于finalDay的可用日期
+        let dayIndex = availableDays.findIndex(d => d >= finalDay)
+        if (dayIndex < 0) {
+          dayIndex = availableDays.length - 1
+        }
+        datePickerValue.value[2] = dayIndex
+      } else {
+        datePickerValue.value[2] = 0
+      }
+    }, 0)
+  } else {
+    // 如果没有日期，使用当前日期
+    const yearIndex = yearList.value.findIndex(y => y === todayYear)
+    datePickerValue.value = [
+      yearIndex >= 0 ? yearIndex : 10,
+      todayMonth - 1,
+      0
+    ]
+    // 等待dayList更新后，再设置日期索引
+    setTimeout(() => {
+      const availableDays = dayList.value
+      if (availableDays.length > 0) {
+        const todayIndex = availableDays.findIndex(d => d >= todayDay)
+        datePickerValue.value[2] = todayIndex >= 0 ? todayIndex : 0
+      }
+    }, 0)
   }
   
   showDatePicker.value = true
@@ -834,12 +891,47 @@ const onPickerViewChange = (e: any) => {
   const year = yearList.value[yearIndex]
   const month = monthList.value[monthIndex]
   
+  // 获取今天日期
+  const today = new Date()
+  const todayYear = today.getFullYear()
+  const todayMonth = today.getMonth() + 1
+  const todayDay = today.getDate()
+  
   // 计算该月的最大天数
   const maxDays = new Date(year, month, 0).getDate()
+  
+  // 计算最小可选日期
+  let minDay = 1
+  if (year === todayYear && month === todayMonth) {
+    minDay = todayDay
+  } else if (year < todayYear || (year === todayYear && month < todayMonth)) {
+    // 如果是过去的年月，调整到当前年月
+    const currentYearIndex = yearList.value.findIndex(y => y === todayYear)
+    const currentMonthIndex = todayMonth - 1
+    datePickerValue.value = [
+      currentYearIndex >= 0 ? currentYearIndex : 10,
+      currentMonthIndex,
+      todayDay - 1
+    ]
+    return
+  }
   
   // 如果当前选择的日期超过了最大天数，调整为最大天数
   if (dayIndex >= maxDays) {
     datePickerValue.value[2] = maxDays - 1
+  }
+  
+  // 如果选择的日期小于最小可选日期，调整为最小可选日期
+  const availableDays = dayList.value
+  if (availableDays.length > 0 && dayIndex < availableDays.length) {
+    const selectedDay = availableDays[dayIndex]
+    if (year === todayYear && month === todayMonth && selectedDay < todayDay) {
+      // 找到今天在可用日期列表中的索引
+      const todayIndex = availableDays.findIndex(d => d >= todayDay)
+      if (todayIndex >= 0) {
+        datePickerValue.value[2] = todayIndex
+      }
+    }
   }
 }
 
@@ -852,14 +944,46 @@ const confirmDatePicker = () => {
   const year = yearList.value[yearIndex]
   const month = monthList.value[monthIndex]
   
+  // 获取今天日期
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayYear = today.getFullYear()
+  const todayMonth = today.getMonth() + 1
+  const todayDay = today.getDate()
+  
   // 重新计算日期列表以确保获取正确的日期
   const maxDays = new Date(year, month, 0).getDate()
-  const actualDayIndex = Math.min(dayIndex, maxDays - 1)
-  const day = actualDayIndex + 1
+  const availableDays = dayList.value
   
-  const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  // 确保选择的日期在可用日期列表中
+  let actualDayIndex = dayIndex
+  if (availableDays.length > 0) {
+    if (dayIndex >= availableDays.length) {
+      actualDayIndex = availableDays.length - 1
+    }
+    const selectedDay = availableDays[actualDayIndex]
+    
+    // 验证不能选择过去的日期
+    if (year < todayYear || (year === todayYear && month < todayMonth) || 
+        (year === todayYear && month === todayMonth && selectedDay < todayDay)) {
+      uni.showToast({
+        title: '不能选择过去的日期',
+        icon: 'none'
+      })
+      return
+    }
+    
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
+    onDatePickerChange({ detail: { value: dateStr } })
+  } else {
+    // 如果没有可用日期，说明是过去的年月
+    uni.showToast({
+      title: '不能选择过去的日期',
+      icon: 'none'
+    })
+    return
+  }
   
-  onDatePickerChange({ detail: { value: dateStr } })
   closeDatePicker()
 }
 
@@ -903,8 +1027,37 @@ const onDestinationInput = (e: any) => {
 
 const onDatePickerChange = (e: any) => {
   const selectedDate = e.detail.value
+  
+  // 验证不能选择过去的日期
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const selected = new Date(selectedDate)
+  selected.setHours(0, 0, 0, 0)
+  
+  if (selected < today) {
+    uni.showToast({
+      title: '不能选择过去的日期',
+      icon: 'none'
+    })
+    return
+  }
+  
   if (datePickerType.value === 'start') {
     if (!endDate.value || selectedDate <= endDate.value) {
+      // 验证日期跨度不超过7天
+      if (endDate.value) {
+        const start = new Date(selectedDate)
+        const end = new Date(endDate.value)
+        const diffTime = Math.abs(end.getTime() - start.getTime())
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        if (diffDays > 6) { // 6天表示跨度是7天（包含首尾）
+          uni.showToast({
+            title: '旅游日期跨度不能超过7天',
+            icon: 'none'
+          })
+          return
+        }
+      }
       startDate.value = selectedDate
       updateDateTips()
       updateDailySelections()
@@ -924,6 +1077,18 @@ const onDatePickerChange = (e: any) => {
       return
     }
     if (selectedDate >= startDate.value) {
+      // 验证日期跨度不超过7天
+      const start = new Date(startDate.value)
+      const end = new Date(selectedDate)
+      const diffTime = Math.abs(end.getTime() - start.getTime())
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      if (diffDays > 6) { // 6天表示跨度是7天（包含首尾）
+        uni.showToast({
+          title: '旅游日期跨度不能超过7天',
+          icon: 'none'
+        })
+        return
+      }
       endDate.value = selectedDate
       updateDateTips()
       updateDailySelections()

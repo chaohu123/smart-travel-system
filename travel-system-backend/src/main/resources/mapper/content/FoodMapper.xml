@@ -53,6 +53,30 @@
         <if test="query.name != null and query.name != ''">
             AND f.name LIKE CONCAT('%', #{query.name}, '%')
         </if>
+        <if test="query.foodType != null and query.foodType != ''">
+            AND f.food_type LIKE CONCAT('%', #{query.foodType}, '%')
+        </if>
+        <if test="query.province != null and query.province != ''">
+            AND (
+                c.province = #{query.province}
+                OR c.province = CONCAT(#{query.province}, '市')
+                OR c.province = CONCAT(#{query.province}, '省')
+                OR c.province = CONCAT(#{query.province}, '自治区')
+                OR c.province = CONCAT(#{query.province}, '特别行政区')
+                OR c.province LIKE CONCAT(#{query.province}, '%')
+                OR #{query.province} LIKE CONCAT(c.province, '%')
+                OR REPLACE(REPLACE(REPLACE(REPLACE(c.province, '市', ''), '省', ''), '自治区', ''), '特别行政区', '') = REPLACE(REPLACE(REPLACE(REPLACE(#{query.province}, '市', ''), '省', ''), '自治区', ''), '特别行政区', '')
+            )
+        </if>
+        <if test="query.city != null and query.city != ''">
+            AND (
+                c.city_name = #{query.city}
+                OR c.city_name = CONCAT(#{query.city}, '市')
+                OR c.city_name LIKE CONCAT('%', #{query.city}, '%')
+                OR #{query.city} LIKE CONCAT('%', c.city_name, '%')
+                OR REPLACE(c.city_name, '市', '') = REPLACE(#{query.city}, '市', '')
+            )
+        </if>
         ORDER BY f.hot_score DESC, f.score DESC
         LIMIT #{offset}, #{pageSize}
     </select>
@@ -70,6 +94,30 @@
         </if>
         <if test="name != null and name != ''">
             AND f.name LIKE CONCAT('%', #{name}, '%')
+        </if>
+        <if test="foodType != null and foodType != ''">
+            AND f.food_type LIKE CONCAT('%', #{foodType}, '%')
+        </if>
+        <if test="province != null and province != ''">
+            AND (
+                c.province = #{province}
+                OR c.province = CONCAT(#{province}, '市')
+                OR c.province = CONCAT(#{province}, '省')
+                OR c.province = CONCAT(#{province}, '自治区')
+                OR c.province = CONCAT(#{province}, '特别行政区')
+                OR c.province LIKE CONCAT(#{province}, '%')
+                OR #{province} LIKE CONCAT(c.province, '%')
+                OR REPLACE(REPLACE(REPLACE(REPLACE(c.province, '市', ''), '省', ''), '自治区', ''), '特别行政区', '') = REPLACE(REPLACE(REPLACE(REPLACE(#{province}, '市', ''), '省', ''), '自治区', ''), '特别行政区', '')
+            )
+        </if>
+        <if test="city != null and city != ''">
+            AND (
+                c.city_name = #{city}
+                OR c.city_name = CONCAT(#{city}, '市')
+                OR c.city_name LIKE CONCAT('%', #{city}, '%')
+                OR #{city} LIKE CONCAT('%', c.city_name, '%')
+                OR REPLACE(c.city_name, '市', '') = REPLACE(#{city}, '市', '')
+            )
         </if>
     </select>
 

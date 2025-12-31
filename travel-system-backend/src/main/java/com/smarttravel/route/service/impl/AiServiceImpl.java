@@ -116,8 +116,15 @@ public class AiServiceImpl implements AiService {
             return result;
         } catch (Exception e) {
             String errorMsg = e.getMessage();
+            // 检查是否是超时错误
+            if (e instanceof java.net.SocketTimeoutException || 
+                (errorMsg != null && (errorMsg.contains("timeout") || errorMsg.contains("timed out") || errorMsg.contains("Read timed out")))) {
+                log.warn("========== AI服务调用超时，使用兜底方案 ==========");
+                log.warn("DeepSeek API 响应超时（可能是网络延迟或API服务繁忙），已自动切换到兜底方案生成行程");
+                log.warn("提示：系统已自动使用规则生成的行程方案，功能不受影响");
+            }
             // 检查是否是服务不可用错误（503）
-            if (errorMsg != null && (errorMsg.contains("503") || errorMsg.contains("service_unavailable"))) {
+            else if (errorMsg != null && (errorMsg.contains("503") || errorMsg.contains("service_unavailable"))) {
                 log.warn("========== AI服务暂时不可用，使用兜底方案 ==========");
                 log.warn("DeepSeek API 服务繁忙，已自动切换到兜底方案生成行程");
             } else {
@@ -222,7 +229,7 @@ public class AiServiceImpl implements AiService {
         conn.setRequestProperty("Authorization", "Bearer " + apiKey);
         conn.setDoOutput(true);
         conn.setConnectTimeout(30000); // 30秒连接超时
-        conn.setReadTimeout(60000);   // 60秒读取超时
+        conn.setReadTimeout(120000);   // 120秒读取超时（AI生成可能需要较长时间）
 
         // 构建请求体
         Map<String, Object> requestBody = new HashMap<>();

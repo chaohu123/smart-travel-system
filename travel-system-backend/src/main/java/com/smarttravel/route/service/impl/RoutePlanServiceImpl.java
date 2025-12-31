@@ -283,6 +283,11 @@ public class RoutePlanServiceImpl implements RoutePlanService {
             int sort = 1;
             int dayScenicCount = 0;
             int dayFoodCount = 0;
+            
+            // 统计已添加的美食时间段
+            int breakfastCount = 0;
+            int lunchCount = 0;
+            int dinnerCount = 0;
 
             // 优先使用用户每天选择的内容
             Map<String, Object> daySelection = null;
@@ -293,6 +298,43 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                         daySelection = selection;
                         break;
                     }
+                }
+            }
+            
+            // 先添加早餐（如果用户没有选择，且美食候选集不为空）
+            if (daySelection != null) {
+                Object foodTimeSlotsObj = daySelection.get("foodTimeSlots");
+                if (foodTimeSlotsObj instanceof List) {
+                    List<?> foodTimeSlotsList = (List<?>) foodTimeSlotsObj;
+                    for (Object slotObj : foodTimeSlotsList) {
+                        if (slotObj instanceof Map) {
+                            Map<?, ?> slotMap = (Map<?, ?>) slotObj;
+                            Object timeSlotObj = slotMap.get("timeSlot");
+                            if (timeSlotObj != null && "breakfast".equals(timeSlotObj.toString())) {
+                                breakfastCount++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 自动添加早餐（如果还没有）
+            if (breakfastCount == 0 && foodIndex < foodCandidates.size()) {
+                Food food = foodCandidates.get(foodIndex++);
+                if (daySelection == null || !isFoodAlreadySelected(food.getId(), daySelection)) {
+                    TravelRoutePoi poi = new TravelRoutePoi();
+                    poi.setRouteDayId(routeDayId);
+                    poi.setPoiType("food");
+                    poi.setPoiId(food.getId());
+                    // 早餐放在最前面（sort=1）
+                    poi.setSort(sort++);
+                    poi.setStayTime(60);
+                    poi.setNote("{\"timeSlot\":\"breakfast\"}");
+                    poi.setCreateTime(LocalDateTime.now());
+                    poi.setDelFlag(0);
+                    routePoiMapper.insert(poi);
+                    dayFoodCount++;
+                    breakfastCount++;
                 }
             }
 
@@ -321,8 +363,28 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                     }
                 }
 
-                // 添加用户选择的美食
+                // 添加用户选择的美食（包含时间段信息）
                 Object foodIdsObj = daySelection.get("foodIds");
+                Object foodTimeSlotsObj = daySelection.get("foodTimeSlots");
+                
+                // 构建美食时间段映射
+                Map<Long, String> foodTimeSlotMap = new HashMap<>();
+                if (foodTimeSlotsObj instanceof List) {
+                    List<?> foodTimeSlotsList = (List<?>) foodTimeSlotsObj;
+                    for (Object slotObj : foodTimeSlotsList) {
+                        if (slotObj instanceof Map) {
+                            Map<?, ?> slotMap = (Map<?, ?>) slotObj;
+                            Object foodIdObj = slotMap.get("foodId");
+                            Object timeSlotObj = slotMap.get("timeSlot");
+                            if (foodIdObj != null && timeSlotObj != null) {
+                                Long foodId = Long.valueOf(foodIdObj.toString());
+                                String timeSlot = timeSlotObj.toString();
+                                foodTimeSlotMap.put(foodId, timeSlot);
+                            }
+                        }
+                    }
+                }
+                
                 if (foodIdsObj instanceof List) {
                     List<?> foodIdsList = (List<?>) foodIdsObj;
                     for (Object idObj : foodIdsList) {
@@ -336,6 +398,13 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                                 poi.setPoiId(food.getId());
                                 poi.setSort(sort++);
                                 poi.setStayTime(60); // 默认1小时
+                                
+                                // 设置时间段信息到note字段（JSON格式）
+                                String timeSlot = foodTimeSlotMap.getOrDefault(foodId, "");
+                                if (!timeSlot.isEmpty()) {
+                                    poi.setNote("{\"timeSlot\":\"" + timeSlot + "\"}");
+                                }
+                                
                                 poi.setCreateTime(LocalDateTime.now());
                                 poi.setDelFlag(0);
                                 routePoiMapper.insert(poi);
@@ -395,34 +464,137 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                 dayScenicCount++;
             }
 
-            // 添加美食（每天至少一个美食，如果用户没有选择）
-            if (dayFoodCount == 0 && foodIndex < foodCandidates.size()) {
-                Food food = foodCandidates.get(foodIndex++);
-                // 检查是否已被用户选择
-                boolean alreadySelected = false;
-                if (daySelection != null) {
-                    Object foodIdsObj = daySelection.get("foodIds");
-                    if (foodIdsObj instanceof List) {
-                        List<?> foodIdsList = (List<?>) foodIdsObj;
-                        for (Object idObj : foodIdsList) {
-                            if (idObj != null && Long.valueOf(idObj.toString()).equals(food.getId())) {
-                                alreadySelected = true;
-                                break;
+            // 检查用户已选择的美食时间段（午餐和晚餐）
+            if (daySelection != null) {
+                Object foodTimeSlotsObj = daySelection.get("foodTimeSlots");
+                if (foodTimeSlotsObj instanceof List) {
+                    List<?> foodTimeSlotsList = (List<?>) foodTimeSlotsObj;
+                    for (Object slotObj : foodTimeSlotsList) {
+                        if (slotObj instanceof Map) {
+                            Map<?, ?> slotMap = (Map<?, ?>) slotObj;
+                            Object timeSlotObj = slotMap.get("timeSlot");
+                            if (timeSlotObj != null) {
+                                String timeSlot = timeSlotObj.toString();
+                                if ("lunch".equals(timeSlot)) lunchCount++;
+                                else if ("dinner".equals(timeSlot)) dinnerCount++;
                             }
                         }
                     }
                 }
-                if (!alreadySelected) {
+            }
+            
+            // 自动添加午餐（如果还没有，且不是全天景点）
+            // 检查第一个景点是否是全天
+            boolean isFirstScenicFullDay = false;
+            int scenicCountBeforeLunch = 0;
+            if (dayScenicCount > 0) {
+                List<TravelRoutePoi> currentPois = routePoiMapper.selectByRouteDayId(routeDayId);
+                currentPois.sort(Comparator.comparing(TravelRoutePoi::getSort));
+                for (TravelRoutePoi p : currentPois) {
+                    if ("scenic".equals(p.getPoiType())) {
+                        scenicCountBeforeLunch++;
+                        if (scenicCountBeforeLunch == 1) {
+                            ScenicSpot spot = scenicSpotMapper.selectById(p.getPoiId());
+                            if (spot != null && spot.getSuggestedVisitTime() != null) {
+                                String visitTime = spot.getSuggestedVisitTime();
+                                if (visitTime.contains("全天") || visitTime.contains("一天")) {
+                                    isFirstScenicFullDay = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 如果第一个景点不是全天，且景点数量>=2，午餐放在大约1/3到1/2的景点之后
+            // 如果只有1个景点，午餐放在该景点之后
+            if (lunchCount == 0 && !isFirstScenicFullDay && foodIndex < foodCandidates.size() && dayScenicCount > 0) {
+                // 计算午餐应该插入的位置：大约在1/3到1/2的景点之后
+                int lunchInsertAfterScenic = Math.max(1, Math.min(dayScenicCount, (int)Math.ceil(dayScenicCount * 0.4)));
+                
+                // 重新获取当前所有POI，找到第lunchInsertAfterScenic个景点之后的sort值
+                List<TravelRoutePoi> currentPois = routePoiMapper.selectByRouteDayId(routeDayId);
+                currentPois.sort(Comparator.comparing(TravelRoutePoi::getSort));
+                int scenicCountForLunch = 0;
+                int lunchSort = sort; // 默认放在最后
+                
+                for (TravelRoutePoi p : currentPois) {
+                    if ("scenic".equals(p.getPoiType())) {
+                        scenicCountForLunch++;
+                        if (scenicCountForLunch == lunchInsertAfterScenic) {
+                            lunchSort = p.getSort() + 1;
+                            break;
+                        }
+                    }
+                }
+                
+                // 如果午餐位置之后还有其他POI，需要调整它们的sort值
+                // 先找到需要调整的POI
+                List<TravelRoutePoi> poisToAdjust = new ArrayList<>();
+                for (TravelRoutePoi p : currentPois) {
+                    if (p.getSort() >= lunchSort) {
+                        poisToAdjust.add(p);
+                    }
+                }
+                
+                // 插入午餐
+                Food food = foodCandidates.get(foodIndex++);
+                if (!isFoodAlreadySelected(food.getId(), daySelection)) {
+                    TravelRoutePoi poi = new TravelRoutePoi();
+                    poi.setRouteDayId(routeDayId);
+                    poi.setPoiType("food");
+                    poi.setPoiId(food.getId());
+                    poi.setSort(lunchSort);
+                    poi.setStayTime(60);
+                    poi.setNote("{\"timeSlot\":\"lunch\"}");
+                    poi.setCreateTime(LocalDateTime.now());
+                    poi.setDelFlag(0);
+                    routePoiMapper.insert(poi);
+                    dayFoodCount++;
+                    lunchCount++;
+                    
+                    // 调整后续POI的sort值
+                    for (TravelRoutePoi p : poisToAdjust) {
+                        p.setSort(p.getSort() + 1);
+                        routePoiMapper.update(p);
+                    }
+                }
+            } else if (lunchCount == 0 && !isFirstScenicFullDay && foodIndex < foodCandidates.size()) {
+                // 如果没有景点，午餐放在早餐之后
+                Food food = foodCandidates.get(foodIndex++);
+                if (!isFoodAlreadySelected(food.getId(), daySelection)) {
                     TravelRoutePoi poi = new TravelRoutePoi();
                     poi.setRouteDayId(routeDayId);
                     poi.setPoiType("food");
                     poi.setPoiId(food.getId());
                     poi.setSort(sort++);
-                    poi.setStayTime(60); // 默认1小时
+                    poi.setStayTime(60);
+                    poi.setNote("{\"timeSlot\":\"lunch\"}");
                     poi.setCreateTime(LocalDateTime.now());
                     poi.setDelFlag(0);
                     routePoiMapper.insert(poi);
                     dayFoodCount++;
+                    lunchCount++;
+                }
+            }
+            
+            // 自动添加晚餐（如果还没有）
+            if (dinnerCount == 0 && foodIndex < foodCandidates.size()) {
+                Food food = foodCandidates.get(foodIndex++);
+                if (!isFoodAlreadySelected(food.getId(), daySelection)) {
+                    TravelRoutePoi poi = new TravelRoutePoi();
+                    poi.setRouteDayId(routeDayId);
+                    poi.setPoiType("food");
+                    poi.setPoiId(food.getId());
+                    // 晚餐放在最后
+                    poi.setSort(sort++);
+                    poi.setStayTime(60);
+                    poi.setNote("{\"timeSlot\":\"dinner\"}");
+                    poi.setCreateTime(LocalDateTime.now());
+                    poi.setDelFlag(0);
+                    routePoiMapper.insert(poi);
+                    dayFoodCount++;
+                    dinnerCount++;
                 }
             }
 
@@ -513,7 +685,24 @@ public class RoutePlanServiceImpl implements RoutePlanService {
             for (int i = 0; i < pois.size(); i++) {
                 TravelRoutePoi poi = pois.get(i);
                 Map<String, Object> poiMap = new HashMap<>();
-                poiMap.put("poi", poi);
+                
+                // 创建包含timeSlot信息的POI对象
+                Map<String, Object> poiInfo = new HashMap<>();
+                poiInfo.put("id", poi.getId());
+                poiInfo.put("routeDayId", poi.getRouteDayId());
+                poiInfo.put("poiType", poi.getPoiType());
+                poiInfo.put("poiId", poi.getPoiId());
+                poiInfo.put("sort", poi.getSort());
+                poiInfo.put("stayTime", poi.getStayTime());
+                poiInfo.put("note", poi.getNote());
+                
+                // 从note字段解析timeSlot信息
+                String timeSlot = extractTimeSlotFromNote(poi.getNote());
+                if (timeSlot != null && !timeSlot.isEmpty()) {
+                    poiInfo.put("timeSlot", timeSlot);
+                }
+                
+                poiMap.put("poi", poiInfo);
 
                 if ("scenic".equals(poi.getPoiType())) {
                     ScenicSpot spot = scenicSpotMapper.selectById(poi.getPoiId());
@@ -564,7 +753,11 @@ public class RoutePlanServiceImpl implements RoutePlanService {
 
             if (routeInfo != null && !routeInfo.isEmpty()) {
                 // 将路线信息保存到当前POI的note字段（JSON格式）
+                // 需要保留原有的timeSlot信息
                 try {
+                    // 先提取原有的timeSlot信息
+                    String existingTimeSlot = extractTimeSlotFromNote(currentPoi.getNote());
+                    
                     StringBuilder noteJson = new StringBuilder();
                     noteJson.append("{");
                     noteJson.append("\"from\":\"").append(routeInfo.get("from")).append("\",");
@@ -572,6 +765,12 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                     noteJson.append("\"suggestedRoute\":\"").append(routeInfo.get("suggestedRoute")).append("\",");
                     noteJson.append("\"transport\":\"").append(routeInfo.get("transport")).append("\",");
                     noteJson.append("\"distance\":\"").append(routeInfo.get("distance")).append("\"");
+                    
+                    // 如果存在timeSlot，添加到JSON中
+                    if (existingTimeSlot != null && !existingTimeSlot.isEmpty()) {
+                        noteJson.append(",\"timeSlot\":\"").append(existingTimeSlot).append("\"");
+                    }
+                    
                     noteJson.append("}");
 
                     currentPoi.setNote(noteJson.toString());
@@ -1044,6 +1243,51 @@ public class RoutePlanServiceImpl implements RoutePlanService {
         }
 
         return preference.toString();
+    }
+
+    /**
+     * 从note字段中提取timeSlot信息
+     */
+    private String extractTimeSlotFromNote(String note) {
+        if (note == null || note.isEmpty()) {
+            return null;
+        }
+        try {
+            // 尝试解析JSON格式的note
+            if (note.startsWith("{") && note.contains("timeSlot")) {
+                // 使用简单的字符串解析
+                int timeSlotIndex = note.indexOf("\"timeSlot\":\"");
+                if (timeSlotIndex >= 0) {
+                    int startIndex = timeSlotIndex + 12; // "timeSlot":"的长度
+                    int endIndex = note.indexOf("\"", startIndex);
+                    if (endIndex > startIndex) {
+                        return note.substring(startIndex, endIndex);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // 解析失败，返回null
+        }
+        return null;
+    }
+
+    /**
+     * 检查美食是否已被用户选择
+     */
+    private boolean isFoodAlreadySelected(Long foodId, Map<String, Object> daySelection) {
+        if (daySelection == null) {
+            return false;
+        }
+        Object foodIdsObj = daySelection.get("foodIds");
+        if (foodIdsObj instanceof List) {
+            List<?> foodIdsList = (List<?>) foodIdsObj;
+            for (Object idObj : foodIdsList) {
+                if (idObj != null && Long.valueOf(idObj.toString()).equals(foodId)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
