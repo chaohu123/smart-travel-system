@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import { watch } from 'vue'
+import { safeSwitchTab } from '@/utils/router'
 
 interface Props {
   visible: boolean
@@ -40,7 +41,7 @@ const emit = defineEmits<{
 
 const handleConfirm = () => {
   emit('confirm')
-  uni.switchTab({ url: '/pages/profile/profile' })
+  safeSwitchTab('/pages/profile/profile')
 }
 
 const handleCancel = () => {

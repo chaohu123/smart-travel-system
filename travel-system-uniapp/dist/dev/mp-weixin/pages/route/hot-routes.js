@@ -4,6 +4,7 @@ var api_content = require("../../api/content.js");
 var store_user = require("../../store/user.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
+require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const store = store_user.useUserStore();

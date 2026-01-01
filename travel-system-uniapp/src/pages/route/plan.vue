@@ -1589,6 +1589,9 @@ const generateRoute = async () => {
     console.log('allScenicSchedules:', allScenicSchedules.value)
     console.log('allFoodSchedules:', allFoodSchedules.value)
 
+    // 不显示黑色遮罩提示，只使用自定义加载动画
+    // uni.showLoading 已移除
+
     const res = await routeApi.generate({
       cityId: cityId,
       days: selectedDays,
@@ -1615,9 +1618,16 @@ const generateRoute = async () => {
         return
       }
 
+      // 显示规划完成提示
+      uni.showToast({
+        title: '路线生成成功！',
+        icon: 'success',
+        duration: 1500
+      })
+
       loading.value = false
 
-      await new Promise(resolve => setTimeout(resolve, 800))
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
       const detailUrl = `/pages/itinerary/itinerary-detail?id=${encodeURIComponent(routeId)}`
       console.log('[generateRoute] 准备跳转到详情页:', detailUrl)
@@ -1649,12 +1659,31 @@ const generateRoute = async () => {
       })
       loading.value = false
     }
-  } catch (error) {
-    uni.showToast({
-      title: '网络错误',
-      icon: 'none',
-    })
+  } catch (error: any) {
+    console.error('[generateRoute] 请求错误:', error)
+    
+    // 检查是否是超时或服务器错误（可能是后端还在处理）
+    if (error.statusCode === 504 || error.statusCode === 500 || error.statusCode === 502) {
+      uni.showToast({
+        title: '服务器处理中，请稍后查看结果',
+        icon: 'none',
+        duration: 3000
+      })
+    } else if (error.errMsg && error.errMsg.includes('timeout')) {
+      uni.showToast({
+        title: '请求超时，路线可能正在生成中，请稍后查看',
+        icon: 'none',
+        duration: 3000
+      })
+    } else {
+      uni.showToast({
+        title: error.message || '网络错误，请稍后重试',
+        icon: 'none',
+        duration: 2000
+      })
+    }
     loading.value = false
+    clearInterval(stepInterval)
   }
 }
 

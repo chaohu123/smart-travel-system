@@ -281,7 +281,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app'
+import { onPullDownRefresh, onReachBottom, onShow, onLoad } from '@dcloudio/uni-app'
 import { recommendApi, scenicSpotApi, type ApiResponse, travelNoteApi, travelNoteInteractionApi } from '@/api/content'
 import { request } from '@/utils/http'
 import { useUserStore } from '@/store/user'
@@ -290,6 +290,7 @@ import SkeletonCards from '@/components/SkeletonCards.vue'
 import GuideOverlay from '@/components/GuideOverlay.vue'
 import LoginPrompt from '@/components/LoginPrompt.vue'
 import { Search } from '@icon-park/vue-next'
+import { safeNavigateTo, safeSwitchTab, resetNavigationState } from '@/utils/router'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -449,7 +450,7 @@ type ListResponse<T> = UniApp.RequestSuccessCallbackResult & { data: ApiResponse
 
 // 搜索事件
 const onSearchClick = () => {
-  uni.navigateTo({ url: '/pages/search/search' })
+  safeNavigateTo('/pages/search/search')
 }
 
 const onSearchConfirm = () => {
@@ -457,9 +458,7 @@ const onSearchConfirm = () => {
     onSearchClick()
     return
   }
-  uni.navigateTo({
-    url: `/pages/search/search?keyword=${encodeURIComponent(searchKeyword.value)}`,
-  })
+  safeNavigateTo(`/pages/search/search?keyword=${encodeURIComponent(searchKeyword.value)}`)
 }
 
 // 智能入口事件
@@ -473,21 +472,21 @@ const onFeatureTouchEnd = () => {
 
 const onFeatureClick = (item: (typeof featureEntries.value)[number]) => {
   if (item.type === 'planner') {
-    uni.switchTab({ url: '/pages/route/plan' })
+    safeSwitchTab('/pages/route/plan')
   } else if (item.type === 'hot-routes') {
-    uni.navigateTo({ url: '/pages/route/hot-routes' })
+    safeNavigateTo('/pages/route/hot-routes')
   } else if (item.type === 'interest') {
-    uni.navigateTo({ url: '/pages/recommend/interest' })
+    safeNavigateTo('/pages/recommend/interest')
   }
 }
 
 // 查看跳转
 const onViewRoute = (route: RouteItem) => {
-  uni.navigateTo({ url: `/pages/itinerary/itinerary-detail?id=${route.id}` })
+  safeNavigateTo(`/pages/itinerary/itinerary-detail?id=${route.id}`)
 }
 
 const onViewNote = (note: NoteItem) => {
-  uni.navigateTo({ url: `/pages/travel-note/detail?id=${note.id}` })
+  safeNavigateTo(`/pages/travel-note/detail?id=${note.id}`)
 }
 
 // 显示登录提示
@@ -501,7 +500,7 @@ const showLoginPromptDialog = () => {
     success: (res) => {
       if (res.confirm) {
         // 用户选择去登录
-        uni.switchTab({ url: '/pages/profile/profile' })
+        safeSwitchTab('/pages/profile/profile')
       }
       // 用户选择取消，什么都不做，留在当前页面
     }
@@ -580,7 +579,7 @@ const handleComment = (note: NoteItem) => {
     showLoginPromptDialog()
     return
   }
-  uni.navigateTo({ url: `/pages/travel-note/detail?id=${note.id}&tab=comment` })
+  safeNavigateTo(`/pages/travel-note/detail?id=${note.id}&tab=comment`)
 }
 
 const onViewScenic = async (item: ScenicItem) => {
@@ -590,11 +589,11 @@ const onViewScenic = async (item: ScenicItem) => {
   } catch (error) {
     // 静默失败，不影响页面跳转
   }
-  uni.navigateTo({ url: `/pages/scenic/detail?id=${item.id}` })
+  safeNavigateTo(`/pages/scenic/detail?id=${item.id}`)
 }
 
 const onViewFood = (item: FoodItem) => {
-  uni.navigateTo({ url: `/pages/food/detail?id=${item.id}` })
+  safeNavigateTo(`/pages/food/detail?id=${item.id}`)
 }
 
 // 拉取首页推荐数据
@@ -691,6 +690,11 @@ const handleNoteCommentCountUpdate = (event: { noteId: number; commentCount: num
     note.commentCount = event.commentCount
   }
 }
+
+onLoad(() => {
+  // 重置导航状态，避免路由错误
+  resetNavigationState()
+})
 
 onMounted(() => {
   fetchHomeData()

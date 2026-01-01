@@ -1,4 +1,5 @@
 import { getCache, removeCache } from './storage'
+import { API_BASE_URL } from './config'
 
 export interface RequestOptions extends UniApp.RequestOptions {
   needAuth?: boolean
@@ -6,7 +7,7 @@ export interface RequestOptions extends UniApp.RequestOptions {
   needRetry?: boolean
 }
 
-const BASE_URL = 'http://localhost:8080/api/v1'
+const BASE_URL = API_BASE_URL
 
 const getToken = () => getCache<string>('token')
 
@@ -73,10 +74,14 @@ export const request = <T = any>(options: RequestOptions) => {
 
   const run = () =>
     new Promise<UniApp.RequestSuccessCallbackResult & { data: any }>((resolve, reject) => {
+      // 设置默认超时时间为60秒，如果options中指定了timeout则使用指定的值
+      const timeout = (rest as any).timeout || 60000
+      
       uni.request({
         url: url.startsWith('http') ? url : `${BASE_URL}${url}`,
         header: headers,
         data: cleanedData,
+        timeout: timeout,
         ...rest,
         success: (res) => {
           if (res.statusCode === 401 || res.statusCode === 403) {

@@ -3,7 +3,9 @@ var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
 var utils_http = require("../../utils/http.js");
 var store_user = require("../../store/user.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/storage.js");
+require("../../utils/config.js");
 if (!Math) {
   (GuideOverlay + LoginPrompt + common_vendor.unref(common_vendor.Search) + SkeletonCards + EmptyState)();
 }
@@ -95,16 +97,14 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       fetchHomeData();
     };
     const onSearchClick = () => {
-      common_vendor.index.navigateTo({ url: "/pages/search/search" });
+      utils_router.safeNavigateTo("/pages/search/search");
     };
     const onSearchConfirm = () => {
       if (!searchKeyword.value) {
         onSearchClick();
         return;
       }
-      common_vendor.index.navigateTo({
-        url: `/pages/search/search?keyword=${encodeURIComponent(searchKeyword.value)}`
-      });
+      utils_router.safeNavigateTo(`/pages/search/search?keyword=${encodeURIComponent(searchKeyword.value)}`);
     };
     const onFeatureTouchStart = (id) => {
       activeFeatureId.value = id;
@@ -114,18 +114,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const onFeatureClick = (item) => {
       if (item.type === "planner") {
-        common_vendor.index.switchTab({ url: "/pages/route/plan" });
+        utils_router.safeSwitchTab("/pages/route/plan");
       } else if (item.type === "hot-routes") {
-        common_vendor.index.navigateTo({ url: "/pages/route/hot-routes" });
+        utils_router.safeNavigateTo("/pages/route/hot-routes");
       } else if (item.type === "interest") {
-        common_vendor.index.navigateTo({ url: "/pages/recommend/interest" });
+        utils_router.safeNavigateTo("/pages/recommend/interest");
       }
     };
     const onViewRoute = (route) => {
-      common_vendor.index.navigateTo({ url: `/pages/itinerary/itinerary-detail?id=${route.id}` });
+      utils_router.safeNavigateTo(`/pages/itinerary/itinerary-detail?id=${route.id}`);
     };
     const onViewNote = (note) => {
-      common_vendor.index.navigateTo({ url: `/pages/travel-note/detail?id=${note.id}` });
+      utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${note.id}`);
     };
     const showLoginPromptDialog = () => {
       common_vendor.index.showModal({
@@ -135,7 +135,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         cancelText: "\u53D6\u6D88",
         success: (res) => {
           if (res.confirm) {
-            common_vendor.index.switchTab({ url: "/pages/profile/profile" });
+            utils_router.safeSwitchTab("/pages/profile/profile");
           }
         }
       });
@@ -192,17 +192,17 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         showLoginPromptDialog();
         return;
       }
-      common_vendor.index.navigateTo({ url: `/pages/travel-note/detail?id=${note.id}&tab=comment` });
+      utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${note.id}&tab=comment`);
     };
     const onViewScenic = async (item) => {
       try {
         await api_content.scenicSpotApi.incrementHotScore(item.id);
       } catch (error) {
       }
-      common_vendor.index.navigateTo({ url: `/pages/scenic/detail?id=${item.id}` });
+      utils_router.safeNavigateTo(`/pages/scenic/detail?id=${item.id}`);
     };
     const onViewFood = (item) => {
-      common_vendor.index.navigateTo({ url: `/pages/food/detail?id=${item.id}` });
+      utils_router.safeNavigateTo(`/pages/food/detail?id=${item.id}`);
     };
     const fetchHomeData = async () => {
       var _a, _b;
@@ -286,6 +286,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         note.commentCount = event.commentCount;
       }
     };
+    common_vendor.onLoad(() => {
+      utils_router.resetNavigationState();
+    });
     common_vendor.onMounted(() => {
       fetchHomeData();
       loadNotes(true);

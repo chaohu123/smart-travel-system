@@ -47,6 +47,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '评论管理', category: '内容管理', showInMenu: true, icon: 'ChatDotRound' }
   },
   {
+    path: '/content/checkin-manage',
+    name: 'CheckinManage',
+    component: () => import('@/views/content/CheckinManage.vue'),
+    meta: { title: '打卡管理', category: '内容管理', showInMenu: true, icon: 'Location' }
+  },
+  {
     path: '/route/route-manage',
     name: 'RouteManage',
     component: () => import('@/views/route/RouteManage.vue'),

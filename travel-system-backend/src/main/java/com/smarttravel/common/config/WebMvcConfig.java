@@ -39,7 +39,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
         String uploadsPath = projectRoot + File.separator + "uploads";
 
         // 映射 /uploads/** 到文件系统的 uploads 目录
+        // 设置缓存时间为0，确保图片更新后能立即生效
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + uploadsPath + File.separator);
+                .addResourceLocations("file:" + uploadsPath + File.separator)
+                .setCachePeriod(0); // 禁用缓存，确保图片更新后立即生效
     }
 }

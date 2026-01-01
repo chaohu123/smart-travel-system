@@ -615,7 +615,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                 route.setSummary(aiText.get("summary"));
                 routeMapper.update(route);
 
-                // 更新每日简介（包含早中晚计划）
+                // 更新每日简介（包含早中晚计划），并根据intro调整POI顺序
                 List<TravelRouteDay> daysList = routeDayMapper.selectByRouteId(routeId);
                 for (int i = 0; i < daysList.size(); i++) {
                     TravelRouteDay day = daysList.get(i);
@@ -625,6 +625,11 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                     String morning = aiText.get("day" + dayNum + "_morning");
                     String afternoon = aiText.get("day" + dayNum + "_afternoon");
                     String evening = aiText.get("day" + dayNum + "_evening");
+                    
+                    System.out.println("========== 处理第" + dayNum + "天的intro ==========");
+                    System.out.println("Morning: " + (morning != null ? morning.substring(0, Math.min(50, morning.length())) + "..." : "null"));
+                    System.out.println("Afternoon: " + (afternoon != null ? afternoon.substring(0, Math.min(50, afternoon.length())) + "..." : "null"));
+                    System.out.println("Evening: " + (evening != null ? evening.substring(0, Math.min(50, evening.length())) + "..." : "null"));
 
                     // 如果有早中晚计划，构建JSON格式存储
                     if (morning != null || afternoon != null || evening != null) {
@@ -635,7 +640,12 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                         introJson.append("\"evening\":\"").append(evening != null ? escapeJsonString(evening) : "").append("\"");
                         introJson.append("}");
                         day.setIntro(introJson.toString());
+                        System.out.println("已保存intro JSON格式，长度: " + introJson.length());
+                        
+                        // 根据intro中提到的景点名称，重新调整POI顺序
+                        adjustPoiOrderByIntro(day.getId(), morning, afternoon, evening);
                     } else {
+                        System.out.println("警告: 未找到早中晚计划，使用兜底方案");
                         // 兼容旧格式
                         String dayText = aiText.get("day" + dayNum);
                         if (dayText != null && !dayText.isEmpty()) {
@@ -677,6 +687,10 @@ public class RoutePlanServiceImpl implements RoutePlanService {
             dayMap.put("day", day);
 
             List<TravelRoutePoi> pois = routePoiMapper.selectByRouteDayId(day.getId());
+            // 过滤掉已删除的POI
+            pois = pois.stream()
+                .filter(p -> p.getDelFlag() == null || p.getDelFlag() == 0)
+                .collect(Collectors.toList());
             // 按sort排序
             pois.sort(Comparator.comparing(TravelRoutePoi::getSort));
 
@@ -738,6 +752,15 @@ public class RoutePlanServiceImpl implements RoutePlanService {
     private void calculateAndSaveRouteInfo(Long routeDayId) {
         List<TravelRoutePoi> pois = routePoiMapper.selectByRouteDayId(routeDayId);
         if (pois == null || pois.size() < 2) {
+            return;
+        }
+
+        // 过滤掉已删除的POI
+        pois = pois.stream()
+            .filter(p -> p.getDelFlag() == null || p.getDelFlag() == 0)
+            .collect(Collectors.toList());
+        
+        if (pois.size() < 2) {
             return;
         }
 
@@ -1306,6 +1329,291 @@ public class RoutePlanServiceImpl implements RoutePlanService {
             .replace("\t", "\\t")   // 转义制表符
             .replace("\b", "\\b")   // 转义退格符
             .replace("\f", "\\f");  // 转义换页符
+    }
+
+    /**
+     * 根据intro中提到的景点名称，重新调整POI顺序
+     * 将intro中提到的景点排在前面，未提到的排在后面或移除
+     */
+    private void adjustPoiOrderByIntro(Long routeDayId, String morning, String afternoon, String evening) {
+        if (routeDayId == null) {
+            System.out.println("adjustPoiOrderByIntro: routeDayId为null，跳过");
+            return;
+        }
+        
+        try {
+            System.out.println("========== 开始根据intro调整POI顺序 ==========");
+            System.out.println("RouteDayId: " + routeDayId);
+            
+            // 获取当天的所有POI
+            List<TravelRoutePoi> pois = routePoiMapper.selectByRouteDayId(routeDayId);
+            if (pois == null || pois.isEmpty()) {
+                System.out.println("未找到POI数据，跳过");
+                return;
+            }
+            
+            System.out.println("原始POI数量: " + pois.size());
+            
+            // 合并所有时间段的intro文本
+            // 注意：morning/afternoon/evening可能包含转义字符，需要处理
+            StringBuilder introText = new StringBuilder();
+            if (morning != null) {
+                // 移除转义字符以便匹配，同时移除Markdown格式标记
+                String morningText = morning.replace("\\n", " ").replace("\\r", " ").replace("\\t", " ")
+                    .replace("**", "").replace("*", "").replace("#", "").replace("###", "");
+                introText.append(morningText).append(" ");
+            }
+            if (afternoon != null) {
+                String afternoonText = afternoon.replace("\\n", " ").replace("\\r", " ").replace("\\t", " ")
+                    .replace("**", "").replace("*", "").replace("#", "").replace("###", "");
+                introText.append(afternoonText).append(" ");
+            }
+            if (evening != null) {
+                String eveningText = evening.replace("\\n", " ").replace("\\r", " ").replace("\\t", " ")
+                    .replace("**", "").replace("*", "").replace("#", "").replace("###", "");
+                introText.append(eveningText).append(" ");
+            }
+            String fullIntro = introText.toString();
+            
+            if (fullIntro.trim().isEmpty()) {
+                System.out.println("intro文本为空，跳过");
+                return;
+            }
+            
+            System.out.println("Intro文本长度: " + fullIntro.length());
+            System.out.println("Intro预览: " + (fullIntro.length() > 200 ? fullIntro.substring(0, 200) + "..." : fullIntro));
+            
+            // 获取该城市的所有景点信息
+            List<TravelRoutePoi> scenicPois = pois.stream()
+                .filter(p -> "scenic".equals(p.getPoiType()) && (p.getDelFlag() == null || p.getDelFlag() == 0))
+                .collect(Collectors.toList());
+            
+            if (scenicPois.isEmpty()) {
+                System.out.println("未找到景点POI，跳过");
+                return;
+            }
+            
+            System.out.println("景点POI数量: " + scenicPois.size());
+            
+            // 获取第一个景点的城市ID
+            ScenicSpot firstScenic = scenicSpotMapper.selectById(scenicPois.get(0).getPoiId());
+            if (firstScenic == null || firstScenic.getCityId() == null) {
+                System.out.println("无法获取城市ID，跳过");
+                return;
+            }
+            
+            Long cityId = firstScenic.getCityId();
+            
+            // 获取该城市的所有景点
+            ScenicSpot query = new ScenicSpot();
+            query.setCityId(cityId);
+            List<ScenicSpot> cityScenics = scenicSpotMapper.selectList(query);
+            Map<Long, String> scenicNameMap = new HashMap<>();
+            for (ScenicSpot scenic : cityScenics) {
+                scenicNameMap.put(scenic.getId(), scenic.getName());
+            }
+            
+            System.out.println("城市景点总数: " + cityScenics.size());
+            
+            // 检查每个景点是否在intro中提到（支持完整匹配和关键词匹配）
+            List<TravelRoutePoi> mentionedScenics = new ArrayList<>();
+            List<TravelRoutePoi> notMentionedScenics = new ArrayList<>();
+            
+            for (TravelRoutePoi poi : scenicPois) {
+                String scenicName = scenicNameMap.get(poi.getPoiId());
+                if (scenicName == null) {
+                    System.out.println("警告: 无法找到POI ID " + poi.getPoiId() + " 对应的景点名称");
+                    notMentionedScenics.add(poi);
+                    continue;
+                }
+                
+                System.out.println("检查景点: " + scenicName + " (POI ID: " + poi.getPoiId() + ")");
+                
+                // 检查是否在intro中提到（支持完整匹配和关键词匹配）
+                boolean isMentioned = false;
+                
+                // 1. 完整名称匹配
+                if (fullIntro.contains(scenicName)) {
+                    isMentioned = true;
+                    System.out.println("  ✓ 完整匹配: " + scenicName);
+                } else {
+                    // 2. 关键词匹配：提取景点名称的关键词
+                    // 例如："上海迪士尼度假区" -> "迪士尼"
+                    // "上海外滩" -> "外滩"
+                    // "东方明珠电视塔" -> "东方明珠"
+                    String[] keywords = extractKeywords(scenicName);
+                    System.out.println("  尝试关键词匹配，提取的关键词: " + Arrays.toString(keywords));
+                    for (String keyword : keywords) {
+                        if (keyword != null && keyword.length() >= 2 && fullIntro.contains(keyword)) {
+                            isMentioned = true;
+                            System.out.println("  ✓ 关键词匹配: " + scenicName + " (关键词: " + keyword + ")");
+                            // 显示匹配的上下文
+                            int index = fullIntro.indexOf(keyword);
+                            int start = Math.max(0, index - 20);
+                            int end = Math.min(fullIntro.length(), index + keyword.length() + 20);
+                            System.out.println("    匹配上下文: ..." + fullIntro.substring(start, end) + "...");
+                            break;
+                        }
+                    }
+                }
+                
+                if (isMentioned) {
+                    mentionedScenics.add(poi);
+                } else {
+                    notMentionedScenics.add(poi);
+                    System.out.println("  ✗ 未匹配: " + scenicName);
+                }
+            }
+            
+            System.out.println("匹配结果: 提到的景点 " + mentionedScenics.size() + " 个，未提到的景点 " + notMentionedScenics.size() + " 个");
+            
+            // 如果intro中提到的景点数量 > 0，且存在未提到的景点，则移除未提到的景点
+            // 确保前端显示的景点与intro描述一致
+            if (!mentionedScenics.isEmpty() && !notMentionedScenics.isEmpty()) {
+                System.out.println("准备移除intro中未提到的景点:");
+                for (TravelRoutePoi poi : notMentionedScenics) {
+                    String scenicName = scenicNameMap.get(poi.getPoiId());
+                    System.out.println("  - 移除: " + scenicName + " (POI ID: " + poi.getPoiId() + ", RoutePoi ID: " + poi.getId() + ")");
+                    // 标记为删除
+                    poi.setDelFlag(1);
+                    int updateResult = routePoiMapper.update(poi);
+                    System.out.println("    更新结果: " + (updateResult > 0 ? "成功" : "失败"));
+                }
+                
+                // 重新分配剩余POI的sort值
+                List<TravelRoutePoi> remainingPois = routePoiMapper.selectByRouteDayId(routeDayId);
+                remainingPois = remainingPois.stream()
+                    .filter(p -> p.getDelFlag() == null || p.getDelFlag() == 0)
+                    .sorted(Comparator.comparing(TravelRoutePoi::getSort))
+                    .collect(Collectors.toList());
+                
+                System.out.println("剩余POI数量（过滤后）: " + remainingPois.size());
+                
+                int newSort = 1;
+                for (TravelRoutePoi poi : remainingPois) {
+                    if (poi.getSort() != newSort) {
+                        poi.setSort(newSort);
+                        routePoiMapper.update(poi);
+                    }
+                    newSort++;
+                }
+                
+                // 重新计算并保存路线信息
+                calculateAndSaveRouteInfo(routeDayId);
+                
+                System.out.println("已移除 " + notMentionedScenics.size() + " 个intro中未提到的景点，保留 " + mentionedScenics.size() + " 个提到的景点");
+            } else if (mentionedScenics.isEmpty() && !fullIntro.trim().isEmpty()) {
+                System.out.println("警告: intro文本不为空，但未匹配到任何景点。这可能表示:");
+                System.out.println("  1. intro中提到的景点名称与数据库中的名称不匹配");
+                System.out.println("  2. 或者intro中没有明确提到具体景点名称");
+                System.out.println("  Intro预览: " + (fullIntro.length() > 200 ? fullIntro.substring(0, 200) + "..." : fullIntro));
+                System.out.println("  将保留所有景点，但建议检查intro内容和景点名称");
+            } else if (fullIntro.trim().isEmpty()) {
+                System.out.println("警告: intro文本为空，保留所有景点");
+            } else {
+                System.out.println("所有景点都在intro中提到，无需调整");
+            }
+            
+            System.out.println("==========================================");
+        } catch (Exception e) {
+            System.err.println("调整POI顺序时出错: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * 从景点名称中提取关键词用于匹配
+     * 例如："上海迪士尼度假区" -> ["迪士尼", "上海迪士尼"]
+     * "上海外滩" -> ["外滩"]
+     * "东方明珠电视塔" -> ["东方明珠", "明珠"]
+     */
+    private String[] extractKeywords(String scenicName) {
+        List<String> keywords = new ArrayList<>();
+        
+        // 移除常见的前缀和后缀
+        String name = scenicName;
+        name = name.replace("上海", "");
+        name = name.replace("北京", "");
+        name = name.replace("度假区", "");
+        name = name.replace("景区", "");
+        name = name.replace("公园", "");
+        name = name.replace("电视塔", "");
+        name = name.replace("塔", "");
+        name = name.replace("()", "");
+        name = name.replace("（", "").replace("）", "");
+        name = name.trim();
+        
+        // 如果处理后的名称长度>=2，作为关键词
+        if (name.length() >= 2) {
+            keywords.add(name);
+        }
+        
+        // 如果原始名称包含"外滩"，添加"外滩"
+        if (scenicName.contains("外滩")) {
+            keywords.add("外滩");
+        }
+        
+        // 如果原始名称包含"迪士尼"，添加"迪士尼"
+        if (scenicName.contains("迪士尼")) {
+            keywords.add("迪士尼");
+        }
+        
+        // 如果原始名称包含"东方明珠"，添加"东方明珠"
+        if (scenicName.contains("东方明珠")) {
+            keywords.add("东方明珠");
+        }
+        
+        // 如果原始名称包含"博物馆"，添加"博物馆"
+        if (scenicName.contains("博物馆")) {
+            keywords.add("博物馆");
+        }
+        
+        // 如果原始名称包含"新天地"，添加"新天地"
+        if (scenicName.contains("新天地")) {
+            keywords.add("新天地");
+        }
+        
+        // 如果原始名称包含"豫园"，添加"豫园"
+        if (scenicName.contains("豫园")) {
+            keywords.add("豫园");
+        }
+        
+        // 如果原始名称包含"什刹海"，添加"什刹海"
+        if (scenicName.contains("什刹海")) {
+            keywords.add("什刹海");
+        }
+        
+        // 如果原始名称包含"颐和园"，添加"颐和园"
+        if (scenicName.contains("颐和园")) {
+            keywords.add("颐和园");
+        }
+        
+        // 如果原始名称包含"苏州街"，添加"苏州街"
+        if (scenicName.contains("苏州街")) {
+            keywords.add("苏州街");
+        }
+        
+        // 如果原始名称包含"昆明湖"，添加"昆明湖"
+        if (scenicName.contains("昆明湖")) {
+            keywords.add("昆明湖");
+        }
+        
+        // 如果原始名称包含"南湖岛"，添加"南湖岛"
+        if (scenicName.contains("南湖岛")) {
+            keywords.add("南湖岛");
+        }
+        
+        // 如果原始名称包含"十七孔桥"，添加"十七孔桥"
+        if (scenicName.contains("十七孔桥")) {
+            keywords.add("十七孔桥");
+        }
+        
+        // 如果原始名称包含"后海"，添加"后海"
+        if (scenicName.contains("后海")) {
+            keywords.add("后海");
+        }
+        
+        return keywords.toArray(new String[0]);
     }
 }
 

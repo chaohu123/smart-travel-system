@@ -5,6 +5,7 @@ var api_content = require("../../api/content.js");
 var store_user = require("../../store/user.js");
 var utils_storage = require("../../utils/storage.js");
 require("../../utils/http.js");
+require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const steps = [
@@ -841,8 +842,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             loading.value = false;
             return;
           }
+          common_vendor.index.showToast({
+            title: "\u8DEF\u7EBF\u751F\u6210\u6210\u529F\uFF01",
+            icon: "success",
+            duration: 1500
+          });
           loading.value = false;
-          await new Promise((resolve) => setTimeout(resolve, 800));
+          await new Promise((resolve) => setTimeout(resolve, 1500));
           const detailUrl = `/pages/itinerary/itinerary-detail?id=${encodeURIComponent(routeId)}`;
           console.log("[generateRoute] \u51C6\u5907\u8DF3\u8F6C\u5230\u8BE6\u60C5\u9875:", detailUrl);
           common_vendor.index.navigateTo({
@@ -873,11 +879,28 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           loading.value = false;
         }
       } catch (error) {
-        common_vendor.index.showToast({
-          title: "\u7F51\u7EDC\u9519\u8BEF",
-          icon: "none"
-        });
+        console.error("[generateRoute] \u8BF7\u6C42\u9519\u8BEF:", error);
+        if (error.statusCode === 504 || error.statusCode === 500 || error.statusCode === 502) {
+          common_vendor.index.showToast({
+            title: "\u670D\u52A1\u5668\u5904\u7406\u4E2D\uFF0C\u8BF7\u7A0D\u540E\u67E5\u770B\u7ED3\u679C",
+            icon: "none",
+            duration: 3e3
+          });
+        } else if (error.errMsg && error.errMsg.includes("timeout")) {
+          common_vendor.index.showToast({
+            title: "\u8BF7\u6C42\u8D85\u65F6\uFF0C\u8DEF\u7EBF\u53EF\u80FD\u6B63\u5728\u751F\u6210\u4E2D\uFF0C\u8BF7\u7A0D\u540E\u67E5\u770B",
+            icon: "none",
+            duration: 3e3
+          });
+        } else {
+          common_vendor.index.showToast({
+            title: error.message || "\u7F51\u7EDC\u9519\u8BEF\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5",
+            icon: "none",
+            duration: 2e3
+          });
+        }
         loading.value = false;
+        clearInterval(stepInterval);
       }
     };
     const loadCities = async () => {

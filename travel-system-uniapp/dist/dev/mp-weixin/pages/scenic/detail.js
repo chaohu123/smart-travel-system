@@ -4,6 +4,7 @@ var api_content = require("../../api/content.js");
 var utils_storage = require("../../utils/storage.js");
 var store_user = require("../../store/user.js");
 require("../../utils/http.js");
+require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const scenicId = common_vendor.ref(null);

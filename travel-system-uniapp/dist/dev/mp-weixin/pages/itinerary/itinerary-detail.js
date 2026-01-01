@@ -4,6 +4,7 @@ var api_route = require("../../api/route.js");
 var store_user = require("../../store/user.js");
 var utils_storage = require("../../utils/storage.js");
 require("../../utils/http.js");
+require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const routeId = common_vendor.ref(null);
@@ -22,33 +23,42 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return routeData.value.days[selectedDayIndex.value] || routeData.value.days[0];
     });
     const currentDayScenics = common_vendor.computed(() => {
-      var _a, _b;
+      var _a;
       if (!((_a = currentDayData.value) == null ? void 0 : _a.pois))
         return [];
       const sortedPois = [...currentDayData.value.pois].sort((a, b) => {
-        var _a2, _b2;
+        var _a2, _b;
         const sortA = ((_a2 = a.poi) == null ? void 0 : _a2.sort) || 0;
-        const sortB = ((_b2 = b.poi) == null ? void 0 : _b2.sort) || 0;
+        const sortB = ((_b = b.poi) == null ? void 0 : _b.sort) || 0;
         return sortA - sortB;
       });
       const scenicPois = sortedPois.filter((poi) => {
         var _a2;
         return ((_a2 = poi.poi) == null ? void 0 : _a2.poiType) === "scenic" && poi.detail;
       });
-      const firstScenic = scenicPois[0];
-      if (((_b = firstScenic == null ? void 0 : firstScenic.detail) == null ? void 0 : _b.suggestedVisitTime) && (firstScenic.detail.suggestedVisitTime.includes("\u5168\u5929") || firstScenic.detail.suggestedVisitTime.includes("\u4E00\u5929"))) {
-        return [firstScenic.detail];
-      }
       return scenicPois.map((poi) => poi.detail);
     });
     const currentDayFoods = common_vendor.computed(() => {
       var _a;
       if (!((_a = currentDayData.value) == null ? void 0 : _a.pois))
         return [];
-      return currentDayData.value.pois.filter((poi) => {
+      const sortedPois = [...currentDayData.value.pois].sort((a, b) => {
+        var _a2, _b;
+        const sortA = ((_a2 = a.poi) == null ? void 0 : _a2.sort) || 0;
+        const sortB = ((_b = b.poi) == null ? void 0 : _b.sort) || 0;
+        return sortA - sortB;
+      });
+      const foodMap = /* @__PURE__ */ new Map();
+      sortedPois.forEach((poi) => {
         var _a2;
-        return ((_a2 = poi.poi) == null ? void 0 : _a2.poiType) === "food" && poi.detail;
-      }).map((poi) => poi.detail);
+        if (((_a2 = poi.poi) == null ? void 0 : _a2.poiType) === "food" && poi.detail) {
+          const foodId = poi.detail.id;
+          if (!foodMap.has(foodId)) {
+            foodMap.set(foodId, poi.detail);
+          }
+        }
+      });
+      return Array.from(foodMap.values());
     });
     const routeTags = common_vendor.computed(() => {
       var _a, _b, _c, _d;
@@ -71,16 +81,64 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const mapMarkers = common_vendor.ref([]);
     const mapPolyline = common_vendor.ref([]);
     const loadRouteDetail = async () => {
+      var _a, _b, _c, _d, _e;
       if (!routeId.value)
         return;
       loading.value = true;
       try {
         const res = await api_route.routeApi.getDetail(routeId.value);
+        console.log("========== \u8DEF\u7EBF\u8BE6\u60C5API\u8FD4\u56DE\u6570\u636E ==========");
+        console.log("\u5B8C\u6574\u54CD\u5E94:", JSON.stringify(res, null, 2));
         if (res.statusCode === 200 && res.data.code === 200) {
           routeData.value = res.data.data;
+          console.log("\u8DEF\u7EBF\u6570\u636E:", routeData.value);
+          console.log("\u8DEF\u7EBF\u540D\u79F0:", (_b = (_a = routeData.value) == null ? void 0 : _a.route) == null ? void 0 : _b.routeName);
+          console.log("\u5929\u6570:", (_d = (_c = routeData.value) == null ? void 0 : _c.days) == null ? void 0 : _d.length);
+          if ((_e = routeData.value) == null ? void 0 : _e.days) {
+            routeData.value.days.forEach((dayItem, dayIndex) => {
+              var _a2, _b2;
+              const dayNo = ((_a2 = dayItem.day) == null ? void 0 : _a2.dayNo) || dayIndex + 1;
+              console.log(`
+========== Day ${dayNo} \u6570\u636E ==========`);
+              console.log("Day\u5BF9\u8C61:", dayItem.day);
+              console.log("POI\u6570\u91CF:", ((_b2 = dayItem.pois) == null ? void 0 : _b2.length) || 0);
+              if (dayItem.pois && dayItem.pois.length > 0) {
+                const sortedPois = [...dayItem.pois].sort((a, b) => {
+                  var _a3, _b3;
+                  const sortA = ((_a3 = a.poi) == null ? void 0 : _a3.sort) || 0;
+                  const sortB = ((_b3 = b.poi) == null ? void 0 : _b3.sort) || 0;
+                  return sortA - sortB;
+                });
+                sortedPois.forEach((poi, poiIndex) => {
+                  var _a3, _b3, _c2, _d2;
+                  const poiType = ((_a3 = poi.poi) == null ? void 0 : _a3.poiType) || "unknown";
+                  const poiId = (_b3 = poi.poi) == null ? void 0 : _b3.poiId;
+                  const sort = ((_c2 = poi.poi) == null ? void 0 : _c2.sort) || 0;
+                  const detail = poi.detail;
+                  const name = (detail == null ? void 0 : detail.name) || "\u672A\u77E5";
+                  const timeSlot = ((_d2 = poi.poi) == null ? void 0 : _d2.timeSlot) || "";
+                  console.log(`  POI[${poiIndex}] (sort=${sort}):`);
+                  console.log(`    \u7C7B\u578B: ${poiType}`);
+                  console.log(`    POI ID: ${poiId}`);
+                  console.log(`    \u540D\u79F0: ${name}`);
+                  console.log(`    \u65F6\u95F4\u6BB5: ${timeSlot || "\u65E0"}`);
+                  if (detail == null ? void 0 : detail.address) {
+                    console.log(`    \u5730\u5740: ${detail.address}`);
+                  }
+                  if (poiType === "scenic" && (detail == null ? void 0 : detail.suggestedVisitTime)) {
+                    console.log(`    \u5EFA\u8BAE\u6E38\u73A9\u65F6\u95F4: ${detail.suggestedVisitTime}`);
+                  }
+                });
+              } else {
+                console.log("  \u8BE5\u5929\u6CA1\u6709POI\u6570\u636E");
+              }
+            });
+          }
+          console.log("========================================\n");
           loadFavoriteStatus();
-          initMapData();
+          updateMapData();
         } else {
+          console.error("API\u8FD4\u56DE\u9519\u8BEF:", res.data);
           common_vendor.index.showToast({ title: res.data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
         }
       } catch (e) {
@@ -130,76 +188,102 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         common_vendor.index.showToast({ title: "\u64CD\u4F5C\u5931\u8D25", icon: "none" });
       }
     };
-    const initMapData = () => {
-      var _a;
-      if (!((_a = routeData.value) == null ? void 0 : _a.days))
+    const updateMapData = () => {
+      var _a, _b;
+      mapMarkers.value = [];
+      mapPolyline.value = [];
+      if (!((_a = routeData.value) == null ? void 0 : _a.days) || routeData.value.days.length === 0)
         return;
+      const dayItem = routeData.value.days[selectedDayIndex.value];
+      if (!dayItem || !dayItem.pois || dayItem.pois.length === 0) {
+        console.log("\u5F53\u524D\u5929\u6CA1\u6709POI\u6570\u636E");
+        return;
+      }
       const markers = [];
       const polylines = [];
-      let hasValidLocation = false;
-      routeData.value.days.forEach((dayItem, dayIndex) => {
-        if (!dayItem.pois)
-          return;
-        const sortedPois = [...dayItem.pois].sort((a, b) => {
-          var _a2, _b;
-          const sortA = ((_a2 = a.poi) == null ? void 0 : _a2.sort) || 0;
-          const sortB = ((_b = b.poi) == null ? void 0 : _b.sort) || 0;
-          return sortA - sortB;
-        });
-        const dayCoordinates = [];
-        let dayMarkers = [];
-        sortedPois.forEach((poiItem, poiIndex) => {
-          var _a2;
-          const detail = poiItem.detail;
-          if (detail && (detail.latitude || detail.lat) && (detail.longitude || detail.lng || detail.lon)) {
-            const lat = detail.latitude || detail.lat;
-            const lng = detail.longitude || detail.lng || detail.lon;
-            const marker = {
-              id: `day${dayIndex}_poi${poiIndex}`,
-              latitude: lat,
-              longitude: lng,
-              title: getPoiName(poiItem),
-              width: 30,
-              height: 30,
-              iconPath: ((_a2 = poiItem.poi) == null ? void 0 : _a2.poiType) === "food" ? "/static/food-marker.png" : "/static/scenic-marker.png",
-              callout: {
-                content: `${getPoiName(poiItem)}`,
-                color: "#333",
-                fontSize: 12,
-                borderRadius: 4,
-                bgColor: "#fff",
-                padding: 4,
-                display: "BYCLICK"
-              }
-            };
-            dayMarkers.push(marker);
-            dayCoordinates.push({
-              latitude: lat,
-              longitude: lng
-            });
-            if (!hasValidLocation) {
-              mapCenter.value = { latitude: lat, longitude: lng };
-              hasValidLocation = true;
-            }
-          }
-        });
-        if (dayCoordinates.length > 1) {
-          polylines.push({
-            points: dayCoordinates,
-            color: "#3BA272",
-            width: 4,
-            arrowLine: true,
-            borderColor: "#2d8f5f",
-            borderWidth: 1
-          });
-        }
-        markers.push(...dayMarkers);
+      const sortedPois = [...dayItem.pois].sort((a, b) => {
+        var _a2, _b2;
+        const sortA = ((_a2 = a.poi) == null ? void 0 : _a2.sort) || 0;
+        const sortB = ((_b2 = b.poi) == null ? void 0 : _b2.sort) || 0;
+        return sortA - sortB;
       });
+      console.log(`\u66F4\u65B0\u5730\u56FE\u6570\u636E - Day ${selectedDayIndex.value + 1}, POI\u6570\u91CF: ${sortedPois.length}`);
+      const dayCoordinates = [];
+      const dayNo = ((_b = dayItem.day) == null ? void 0 : _b.dayNo) || selectedDayIndex.value + 1;
+      let poiOrder = 1;
+      sortedPois.forEach((poiItem, poiIndex) => {
+        var _a2, _b2;
+        const detail = poiItem.detail;
+        if (!detail) {
+          console.warn(`POI ${poiIndex} \u6CA1\u6709detail\u6570\u636E`);
+          return;
+        }
+        if (detail && (detail.latitude || detail.lat) && (detail.longitude || detail.lng || detail.lon)) {
+          const lat = detail.latitude || detail.lat;
+          const lng = detail.longitude || detail.lng || detail.lon;
+          const isScenic = ((_a2 = poiItem.poi) == null ? void 0 : _a2.poiType) === "scenic";
+          const orderLabel = isScenic ? `D${dayNo}-${poiOrder}` : "";
+          const poiName = getPoiName(poiItem);
+          const markerTitle = orderLabel ? `${orderLabel} ${poiName}` : poiName;
+          const marker = {
+            id: `day${selectedDayIndex.value}_poi${poiIndex}`,
+            latitude: lat,
+            longitude: lng,
+            title: markerTitle,
+            width: 40,
+            height: 40,
+            iconPath: ((_b2 = poiItem.poi) == null ? void 0 : _b2.poiType) === "food" ? "/static/food-marker.png" : "/static/scenic-marker.png",
+            callout: {
+              content: markerTitle,
+              color: "#333",
+              fontSize: 14,
+              borderRadius: 4,
+              bgColor: "#fff",
+              padding: 8,
+              display: "BYCLICK",
+              textAlign: "center"
+            }
+          };
+          markers.push(marker);
+          dayCoordinates.push({
+            latitude: lat,
+            longitude: lng
+          });
+          if (isScenic) {
+            poiOrder++;
+          }
+        } else {
+          console.warn(`POI ${poiIndex} (${getPoiName(poiItem)}) \u6CA1\u6709\u6709\u6548\u7684\u5750\u6807\u4FE1\u606F`);
+        }
+      });
+      console.log(`\u5730\u56FE\u6807\u8BB0\u6570\u91CF: ${markers.length}, \u5750\u6807\u70B9\u6570\u91CF: ${dayCoordinates.length}`);
+      if (dayCoordinates.length > 1) {
+        polylines.push({
+          points: dayCoordinates,
+          color: "#3BA272",
+          width: 4,
+          arrowLine: true,
+          borderColor: "#2d8f5f",
+          borderWidth: 1
+        });
+      }
+      if (dayCoordinates.length > 0) {
+        let sumLat = 0;
+        let sumLng = 0;
+        dayCoordinates.forEach((coord) => {
+          sumLat += coord.latitude;
+          sumLng += coord.longitude;
+        });
+        mapCenter.value = {
+          latitude: sumLat / dayCoordinates.length,
+          longitude: sumLng / dayCoordinates.length
+        };
+      }
       mapMarkers.value = markers;
       mapPolyline.value = polylines;
     };
     const formatDayContent = (dayData) => {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t;
       if (!dayData || !dayData.pois || dayData.pois.length === 0)
         return [];
       const sortedPois = [...dayData.pois].sort((a, b) => {
@@ -208,22 +292,37 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const sortB = ((_b2 = b.poi) == null ? void 0 : _b2.sort) || 0;
         return sortA - sortB;
       });
+      const dayNo = ((_a = dayData.day) == null ? void 0 : _a.dayNo) || selectedDayIndex.value + 1;
+      console.log(`
+========== formatDayContent - Day ${dayNo} ==========`);
+      console.log("\u6392\u5E8F\u540E\u7684POI\u5217\u8868:");
+      sortedPois.forEach((poi, index) => {
+        var _a2, _b2, _c2, _d2;
+        const poiType = ((_a2 = poi.poi) == null ? void 0 : _a2.poiType) || "unknown";
+        const sort = ((_b2 = poi.poi) == null ? void 0 : _b2.sort) || 0;
+        const name = ((_c2 = poi.detail) == null ? void 0 : _c2.name) || "\u672A\u77E5";
+        const timeSlot = ((_d2 = poi.poi) == null ? void 0 : _d2.timeSlot) || "";
+        console.log(`  [${index}] sort=${sort}, type=${poiType}, name=${name}, timeSlot=${timeSlot}`);
+      });
       const scenicPois = sortedPois.filter((p) => {
         var _a2;
         return ((_a2 = p.poi) == null ? void 0 : _a2.poiType) === "scenic";
       });
-      sortedPois.filter((p) => {
+      const foodPois = sortedPois.filter((p) => {
         var _a2;
         return ((_a2 = p.poi) == null ? void 0 : _a2.poiType) === "food";
       });
+      console.log(`\u666F\u70B9\u6570\u91CF: ${scenicPois.length}, \u7F8E\u98DF\u6570\u91CF: ${foodPois.length}`);
       const firstScenic = scenicPois[0];
-      const isFullDay = ((_a = firstScenic == null ? void 0 : firstScenic.detail) == null ? void 0 : _a.suggestedVisitTime) && (firstScenic.detail.suggestedVisitTime.includes("\u5168\u5929") || firstScenic.detail.suggestedVisitTime.includes("\u4E00\u5929"));
-      const groups = [];
-      const morningGroup = {
-        timeLabel: "\u4E0A\u5348",
-        items: []
-      };
-      if (isFullDay) {
+      const isFullDay = ((_b = firstScenic == null ? void 0 : firstScenic.detail) == null ? void 0 : _b.suggestedVisitTime) && (firstScenic.detail.suggestedVisitTime.includes("\u5168\u5929") || firstScenic.detail.suggestedVisitTime.includes("\u4E00\u5929"));
+      if (firstScenic) {
+        console.log(`\u7B2C\u4E00\u4E2A\u666F\u70B9: ${(_c = firstScenic.detail) == null ? void 0 : _c.name}, \u6E38\u73A9\u65F6\u95F4: ${(_d = firstScenic.detail) == null ? void 0 : _d.suggestedVisitTime}, \u662F\u5426\u5168\u5929: ${isFullDay}`);
+      }
+      if (isFullDay && scenicPois.length === 1) {
+        const morningGroup2 = {
+          timeLabel: "\u4E0A\u5348",
+          items: []
+        };
         const breakfastPoi = sortedPois.find((p) => {
           var _a2, _b2;
           const timeSlot = ((_a2 = p.poi) == null ? void 0 : _a2.timeSlot) || "";
@@ -233,7 +332,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           return ((_a2 = p.poi) == null ? void 0 : _a2.poiType) === "food";
         });
         if (breakfastPoi && breakfastPoi.detail) {
-          morningGroup.breakfast = {
+          morningGroup2.breakfast = {
             name: breakfastPoi.detail.name || "\u65E9\u9910",
             address: breakfastPoi.detail.address,
             specialty: breakfastPoi.detail.specialty || breakfastPoi.detail.intro,
@@ -242,12 +341,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         }
         if (firstScenic) {
           const scenic = firstScenic.detail;
-          let lastLocation2 = morningGroup.breakfast ? morningGroup.breakfast.name : "";
+          let lastLocation2 = morningGroup2.breakfast ? morningGroup2.breakfast.name : "";
           if (lastLocation2) {
             let routeInfo = null;
             if (firstScenic.route) {
               routeInfo = firstScenic.route;
-            } else if ((_b = firstScenic.poi) == null ? void 0 : _b.note) {
+            } else if ((_e = firstScenic.poi) == null ? void 0 : _e.note) {
               try {
                 const noteJson = JSON.parse(firstScenic.poi.note);
                 if (noteJson.from && noteJson.to) {
@@ -271,10 +370,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
                 distance: "\u7EA61\u516C\u91CC"
               };
             }
-            morningGroup.items.push({ route: routeInfo });
+            morningGroup2.items.push({ route: routeInfo });
           }
           let suggestedVisitTime = scenic.suggestedVisitTime;
-          if (!suggestedVisitTime && ((_c = firstScenic.poi) == null ? void 0 : _c.stayTime)) {
+          if (!suggestedVisitTime && ((_f = firstScenic.poi) == null ? void 0 : _f.stayTime)) {
             const stayMinutes = firstScenic.poi.stayTime;
             if (stayMinutes >= 60) {
               const hours = Math.floor(stayMinutes / 60);
@@ -284,11 +383,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               suggestedVisitTime = `\u7EA6${stayMinutes}\u5206\u949F`;
             }
           }
-          let notes = ((_d = firstScenic.poi) == null ? void 0 : _d.note) || scenic.notes || scenic.ticketInfo;
+          let notes = ((_g = firstScenic.poi) == null ? void 0 : _g.note) || scenic.notes || scenic.ticketInfo;
           if (notes && typeof notes === "string" && notes.startsWith("{") && notes.includes("from")) {
             notes = scenic.notes || scenic.ticketInfo;
           }
-          morningGroup.items.push({
+          morningGroup2.items.push({
             scenic: {
               name: scenic.name,
               intro: scenic.intro || scenic.description,
@@ -296,22 +395,45 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               notes,
               address: scenic.address,
               stationLabel: getStationLabel(1),
-              sort: (_e = firstScenic.poi) == null ? void 0 : _e.sort
+              sort: (_h = firstScenic.poi) == null ? void 0 : _h.sort
             }
           });
         }
-        if (morningGroup.items.length > 0 || morningGroup.breakfast) {
-          groups.push(morningGroup);
-        }
-        return groups;
+        return [morningGroup2];
       }
+      const groups = [];
+      const morningGroup = {
+        timeLabel: "\u4E0A\u5348",
+        items: []
+      };
+      const noonGroup = {
+        timeLabel: "\u4E2D\u5348",
+        items: []
+      };
+      const afternoonGroup = {
+        timeLabel: "\u4E0B\u5348",
+        items: []
+      };
+      const eveningGroup = {
+        timeLabel: "\u665A\u4E0A",
+        items: []
+      };
       let lastLocation = "";
       let stationIndex = 1;
       let consumedFoodIds = [];
+      let scenicCount = 0;
+      let lunchInserted = false;
+      const lunchPoi = sortedPois.find((p) => {
+        var _a2, _b2;
+        const timeSlot = ((_a2 = p.poi) == null ? void 0 : _a2.timeSlot) || "";
+        return ((_b2 = p.poi) == null ? void 0 : _b2.poiType) === "food" && timeSlot === "lunch";
+      });
+      const totalScenics = scenicPois.length;
+      const lunchInsertAfterScenic = totalScenics > 0 ? Math.max(1, Math.min(totalScenics, Math.ceil(totalScenics * 0.4))) : 0;
       for (const poi of sortedPois) {
-        const poiType = (_f = poi.poi) == null ? void 0 : _f.poiType;
-        const timeSlot = ((_g = poi.poi) == null ? void 0 : _g.timeSlot) || "";
-        if (poiType === "food" && timeSlot === "breakfast" && !consumedFoodIds.includes((_h = poi.detail) == null ? void 0 : _h.id)) {
+        const poiType = (_i = poi.poi) == null ? void 0 : _i.poiType;
+        const timeSlot = ((_j = poi.poi) == null ? void 0 : _j.timeSlot) || "";
+        if (poiType === "food" && timeSlot === "breakfast" && !consumedFoodIds.includes((_k = poi.detail) == null ? void 0 : _k.id)) {
           if (poi.detail) {
             morningGroup.breakfast = {
               name: poi.detail.name || "\u65E9\u9910",
@@ -322,90 +444,64 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             lastLocation = poi.detail.name;
             consumedFoodIds.push(poi.detail.id);
           }
-        } else if (poiType === "food" && timeSlot === "lunch" && !consumedFoodIds.includes((_i = poi.detail) == null ? void 0 : _i.id)) {
-          if (poi.detail) {
-            if (lastLocation) {
-              let routeInfo = null;
-              if (poi.route) {
-                routeInfo = poi.route;
-              } else if ((_j = poi.poi) == null ? void 0 : _j.note) {
-                try {
-                  const noteJson = JSON.parse(poi.poi.note);
-                  if (noteJson.from && noteJson.to) {
-                    routeInfo = {
-                      from: noteJson.from,
-                      to: noteJson.to,
-                      suggestedRoute: noteJson.suggestedRoute || "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
-                      transport: noteJson.transport || "\u6B65\u884C/\u516C\u4EA4",
-                      distance: noteJson.distance || "\u7EA61\u516C\u91CC"
-                    };
-                  }
-                } catch (e) {
-                }
-              }
-              if (!routeInfo) {
-                routeInfo = {
-                  from: lastLocation,
-                  to: poi.detail.name,
-                  suggestedRoute: "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
-                  transport: "\u6B65\u884C/\u516C\u4EA4",
-                  distance: "\u7EA61\u516C\u91CC"
-                };
-              }
-              morningGroup.items.push({ route: routeInfo });
-            }
-            morningGroup.lunch = {
-              name: poi.detail.name || "\u5348\u9910",
-              address: poi.detail.address,
-              specialty: poi.detail.specialty || poi.detail.intro,
-              price: poi.detail.avgPrice || poi.detail.price
-            };
-            lastLocation = poi.detail.name;
-            consumedFoodIds.push(poi.detail.id);
-          }
-        } else if (poiType === "food" && timeSlot === "dinner" && !consumedFoodIds.includes((_k = poi.detail) == null ? void 0 : _k.id)) {
-          if (poi.detail) {
-            if (lastLocation) {
-              let routeInfo = null;
-              if (poi.route) {
-                routeInfo = poi.route;
-              } else if ((_l = poi.poi) == null ? void 0 : _l.note) {
-                try {
-                  const noteJson = JSON.parse(poi.poi.note);
-                  if (noteJson.from && noteJson.to) {
-                    routeInfo = {
-                      from: noteJson.from,
-                      to: noteJson.to,
-                      suggestedRoute: noteJson.suggestedRoute || "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
-                      transport: noteJson.transport || "\u6B65\u884C/\u516C\u4EA4",
-                      distance: noteJson.distance || "\u7EA61\u516C\u91CC"
-                    };
-                  }
-                } catch (e) {
-                }
-              }
-              if (!routeInfo) {
-                routeInfo = {
-                  from: lastLocation,
-                  to: poi.detail.name,
-                  suggestedRoute: "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
-                  transport: "\u6B65\u884C/\u516C\u4EA4",
-                  distance: "\u7EA61\u516C\u91CC"
-                };
-              }
-              morningGroup.items.push({ route: routeInfo });
-            }
-            morningGroup.dinner = {
-              name: poi.detail.name || "\u665A\u9910",
-              address: poi.detail.address,
-              specialty: poi.detail.specialty || poi.detail.intro,
-              price: poi.detail.avgPrice || poi.detail.price
-            };
-            lastLocation = poi.detail.name;
-            consumedFoodIds.push(poi.detail.id);
-          }
         } else if (poiType === "scenic" && poi.detail) {
           const scenic = poi.detail;
+          scenicCount++;
+          if (!lunchInserted && lunchPoi && scenicCount >= lunchInsertAfterScenic) {
+            if (lastLocation && lunchPoi.detail) {
+              let routeInfo = null;
+              if (lunchPoi.route) {
+                routeInfo = lunchPoi.route;
+              } else if ((_l = lunchPoi.poi) == null ? void 0 : _l.note) {
+                try {
+                  const noteJson = JSON.parse(lunchPoi.poi.note);
+                  if (noteJson.from && noteJson.to) {
+                    routeInfo = {
+                      from: noteJson.from,
+                      to: noteJson.to,
+                      suggestedRoute: noteJson.suggestedRoute || "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                      transport: noteJson.transport || "\u6B65\u884C/\u516C\u4EA4",
+                      distance: noteJson.distance || "\u7EA61\u516C\u91CC"
+                    };
+                  }
+                } catch (e) {
+                }
+              }
+              if (!routeInfo) {
+                routeInfo = {
+                  from: lastLocation,
+                  to: lunchPoi.detail.name,
+                  suggestedRoute: "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                  transport: "\u6B65\u884C/\u516C\u4EA4",
+                  distance: "\u7EA61\u516C\u91CC"
+                };
+              }
+              noonGroup.items.push({ route: routeInfo });
+            }
+            noonGroup.lunch = {
+              name: lunchPoi.detail.name || "\u5348\u9910",
+              address: lunchPoi.detail.address,
+              specialty: lunchPoi.detail.specialty || lunchPoi.detail.intro,
+              price: lunchPoi.detail.avgPrice || lunchPoi.detail.price
+            };
+            lastLocation = lunchPoi.detail.name;
+            consumedFoodIds.push(lunchPoi.detail.id);
+            lunchInserted = true;
+          }
+          let targetGroup = morningGroup;
+          if (lunchInserted) {
+            if (scenicCount > lunchInsertAfterScenic) {
+              targetGroup = afternoonGroup;
+            } else {
+              targetGroup = morningGroup;
+            }
+          } else {
+            if (scenicCount > lunchInsertAfterScenic) {
+              targetGroup = afternoonGroup;
+            } else {
+              targetGroup = morningGroup;
+            }
+          }
           if (lastLocation) {
             let routeInfo = null;
             if (poi.route) {
@@ -434,7 +530,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
                 distance: "\u7EA61\u516C\u91CC"
               };
             }
-            morningGroup.items.push({ route: routeInfo });
+            targetGroup.items.push({ route: routeInfo });
           }
           let suggestedVisitTime = scenic.suggestedVisitTime;
           if (!suggestedVisitTime && ((_n = poi.poi) == null ? void 0 : _n.stayTime)) {
@@ -451,7 +547,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           if (notes && typeof notes === "string" && notes.startsWith("{") && notes.includes("from")) {
             notes = scenic.notes || scenic.ticketInfo;
           }
-          morningGroup.items.push({
+          targetGroup.items.push({
             scenic: {
               name: scenic.name,
               intro: scenic.intro || scenic.description,
@@ -463,11 +559,115 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             }
           });
           lastLocation = scenic.name;
+        } else if (poiType === "food" && timeSlot === "lunch" && !consumedFoodIds.includes((_q = poi.detail) == null ? void 0 : _q.id)) {
+          if (poi.detail && !lunchInserted) {
+            if (lastLocation) {
+              let routeInfo = null;
+              if (poi.route) {
+                routeInfo = poi.route;
+              } else if ((_r = poi.poi) == null ? void 0 : _r.note) {
+                try {
+                  const noteJson = JSON.parse(poi.poi.note);
+                  if (noteJson.from && noteJson.to) {
+                    routeInfo = {
+                      from: noteJson.from,
+                      to: noteJson.to,
+                      suggestedRoute: noteJson.suggestedRoute || "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                      transport: noteJson.transport || "\u6B65\u884C/\u516C\u4EA4",
+                      distance: noteJson.distance || "\u7EA61\u516C\u91CC"
+                    };
+                  }
+                } catch (e) {
+                }
+              }
+              if (!routeInfo) {
+                routeInfo = {
+                  from: lastLocation,
+                  to: poi.detail.name,
+                  suggestedRoute: "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                  transport: "\u6B65\u884C/\u516C\u4EA4",
+                  distance: "\u7EA61\u516C\u91CC"
+                };
+              }
+              noonGroup.items.push({ route: routeInfo });
+            }
+            noonGroup.lunch = {
+              name: poi.detail.name || "\u5348\u9910",
+              address: poi.detail.address,
+              specialty: poi.detail.specialty || poi.detail.intro,
+              price: poi.detail.avgPrice || poi.detail.price
+            };
+            lastLocation = poi.detail.name;
+            consumedFoodIds.push(poi.detail.id);
+            lunchInserted = true;
+          }
+        } else if (poiType === "food" && timeSlot === "dinner" && !consumedFoodIds.includes((_s = poi.detail) == null ? void 0 : _s.id)) {
+          if (poi.detail) {
+            if (lastLocation) {
+              let routeInfo = null;
+              if (poi.route) {
+                routeInfo = poi.route;
+              } else if ((_t = poi.poi) == null ? void 0 : _t.note) {
+                try {
+                  const noteJson = JSON.parse(poi.poi.note);
+                  if (noteJson.from && noteJson.to) {
+                    routeInfo = {
+                      from: noteJson.from,
+                      to: noteJson.to,
+                      suggestedRoute: noteJson.suggestedRoute || "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                      transport: noteJson.transport || "\u6B65\u884C/\u516C\u4EA4",
+                      distance: noteJson.distance || "\u7EA61\u516C\u91CC"
+                    };
+                  }
+                } catch (e) {
+                }
+              }
+              if (!routeInfo) {
+                routeInfo = {
+                  from: lastLocation,
+                  to: poi.detail.name,
+                  suggestedRoute: "\u5EFA\u8BAE\u4F7F\u7528\u5BFC\u822A",
+                  transport: "\u6B65\u884C/\u516C\u4EA4",
+                  distance: "\u7EA61\u516C\u91CC"
+                };
+              }
+              eveningGroup.items.push({ route: routeInfo });
+            }
+            eveningGroup.dinner = {
+              name: poi.detail.name || "\u665A\u9910",
+              address: poi.detail.address,
+              specialty: poi.detail.specialty || poi.detail.intro,
+              price: poi.detail.avgPrice || poi.detail.price
+            };
+            lastLocation = poi.detail.name;
+            consumedFoodIds.push(poi.detail.id);
+          }
         }
       }
-      if (morningGroup.items.length > 0 || morningGroup.breakfast || morningGroup.lunch || morningGroup.dinner) {
+      if (morningGroup.items.length > 0 || morningGroup.breakfast) {
         groups.push(morningGroup);
       }
+      if (noonGroup.items.length > 0 || noonGroup.lunch) {
+        groups.push(noonGroup);
+      }
+      if (afternoonGroup.items.length > 0) {
+        groups.push(afternoonGroup);
+      }
+      if (eveningGroup.items.length > 0 || eveningGroup.dinner) {
+        groups.push(eveningGroup);
+      }
+      console.log(`\u683C\u5F0F\u5316\u5B8C\u6210\uFF0C\u751F\u6210 ${groups.length} \u4E2A\u65F6\u95F4\u6BB5\u7EC4`);
+      groups.forEach((group, index) => {
+        console.log(`  \u65F6\u95F4\u6BB5\u7EC4[${index}]: ${group.timeLabel}`);
+        if (group.breakfast)
+          console.log(`    \u65E9\u9910: ${group.breakfast.name}`);
+        if (group.lunch)
+          console.log(`    \u5348\u9910: ${group.lunch.name}`);
+        if (group.dinner)
+          console.log(`    \u665A\u9910: ${group.dinner.name}`);
+        console.log(`    \u666F\u70B9\u6570\u91CF: ${group.items.filter((item) => item.scenic).length}`);
+      });
+      console.log("========================================\n");
       return groups;
     };
     const getStationLabel = (index) => {
@@ -498,8 +698,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       const weekday = weekdays[targetDate.getDay()];
       return `${month}\u6708${date}\u65E5(${weekday})`;
     };
+    const handleDayChange = (dayIndex) => {
+      selectedDayIndex.value = dayIndex;
+      updateMapData();
+    };
     const viewFullMap = () => {
       activeTab.value = "map";
+      updateMapData();
     };
     const startNavigation = () => {
       var _a;
@@ -562,6 +767,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         loadFavoriteStatus();
       }
     });
+    common_vendor.watch(selectedDayIndex, () => {
+      if (routeData.value) {
+        updateMapData();
+      }
+    });
     return (_ctx, _cache) => {
       var _a, _b, _c, _d, _e;
       return common_vendor.e({
@@ -608,7 +818,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             a: common_vendor.t(((_a2 = dayItem.day) == null ? void 0 : _a2.dayNo) || dayIndex + 1),
             b: ((_b2 = dayItem.day) == null ? void 0 : _b2.id) || dayIndex,
             c: selectedDayIndex.value === dayIndex ? 1 : "",
-            d: common_vendor.o(($event) => selectedDayIndex.value = dayIndex)
+            d: common_vendor.o(($event) => handleDayChange(dayIndex))
           };
         }),
         z: common_vendor.unref(currentDayData)

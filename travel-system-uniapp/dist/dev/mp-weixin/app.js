@@ -15,6 +15,7 @@ if (!Math) {
   "./pages/scenic/detail.js";
   "./pages/food/detail.js";
   "./pages/search/search.js";
+  "./pages/activity/detail.js";
 }
 const _sfc_main = {};
 function _sfc_render(_ctx, _cache) {

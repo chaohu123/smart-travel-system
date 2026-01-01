@@ -105,6 +105,14 @@
         "navigationBarBackgroundColor": "#3BA272",
         "navigationBarTextStyle": "white"
       }
+    },
+    {
+      "path": "pages/activity/detail",
+      "style": {
+        "navigationBarTitleText": "活动详情",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
     }
   ],
   "tabBar": {

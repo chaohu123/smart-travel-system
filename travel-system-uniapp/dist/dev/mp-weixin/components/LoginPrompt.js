@@ -1,5 +1,6 @@
 "use strict";
 var common_vendor = require("../common/vendor.js");
+var utils_router = require("../utils/router.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   props: {
     visible: { type: Boolean, required: true },
@@ -12,7 +13,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     }, { immediate: true });
     const handleConfirm = () => {
       emit("confirm");
-      common_vendor.index.switchTab({ url: "/pages/profile/profile" });
+      utils_router.safeSwitchTab("/pages/profile/profile");
     };
     const handleCancel = () => {
       emit("cancel");

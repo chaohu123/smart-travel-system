@@ -12,7 +12,8 @@
     "pages/profile/profile",
     "pages/scenic/detail",
     "pages/food/detail",
-    "pages/search/search"
+    "pages/search/search",
+    "pages/activity/detail"
   ],
   "window": {
     "navigationStyle": "default",
@@ -59,9 +60,11 @@
   },
   "permission": {
     "scope.userLocation": {
-      "desc": "你的位置信息将用于小程序位置接口的效果展示"
+      "desc": "你的位置信息将用于小程序位置接口的效果展示和地图功能"
     }
   },
-  "requiredPrivateInfos": [],
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
   "usingComponents": {}
 }

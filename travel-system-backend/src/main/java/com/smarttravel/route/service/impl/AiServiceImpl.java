@@ -359,6 +359,11 @@ public class AiServiceImpl implements AiService {
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i];
             String trimmedLine = line.trim();
+            
+            // 移除 Markdown 标题标记 ###（每行开头）
+            if (trimmedLine.startsWith("###")) {
+                trimmedLine = trimmedLine.substring(3).trim();
+            }
 
             // 检查是否是新的标记行
             if (trimmedLine.startsWith("SUMMARY:")) {
@@ -379,7 +384,7 @@ public class AiServiceImpl implements AiService {
                     }
                 }
                 log.debug("开始解析 summary，首行内容: {}", content.length() > 30 ? content.substring(0, 30) + "..." : content);
-            } else if (trimmedLine.matches("^DAY[1-5]_(MORNING|AFTERNOON|EVENING):.*")) {
+            } else if (trimmedLine.matches("^DAY[1-5]_(MORNING|AFTERNOON|EVENING)(:.*)?$")) {
                 // 保存之前的内容
                 if (currentKey != null && currentContent.length() > 0) {
                     String savedContent = currentContent.toString().trim();
@@ -392,8 +397,13 @@ public class AiServiceImpl implements AiService {
                                  trimmedLine.contains("AFTERNOON") ? "AFTERNOON" : "EVENING";
                 currentKey = "day" + dayNum + "_" + timeSlot.toLowerCase();
                 currentContent = new StringBuilder();
-                String prefix = "DAY" + dayNum + "_" + timeSlot + ":";
-                String content = trimmedLine.substring(prefix.length()).trim();
+                // 处理带冒号和不带冒号的情况
+                String prefix = "DAY" + dayNum + "_" + timeSlot;
+                String content = "";
+                if (trimmedLine.contains(":")) {
+                    content = trimmedLine.substring(prefix.length() + 1).trim(); // +1 for colon
+                }
+                // 如果第一行有内容，添加到currentContent；否则内容在后续行
                 if (!content.isEmpty()) {
                     currentContent.append(content);
                     if (i < lines.length - 1) {

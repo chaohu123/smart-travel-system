@@ -7,7 +7,8 @@ const routeApi = {
       method: "POST",
       data,
       needAuth: true,
-      showLoading: false
+      showLoading: false,
+      timeout: 12e4
     });
   },
   getDetail: (id) => {

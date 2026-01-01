@@ -93,8 +93,7 @@
     ],
     "optimization": {
       "subPackages": true
-    },
-    "requiredPrivateInfos": []
+    }
   },
   "mp-alipay": {
     "usingComponents": true

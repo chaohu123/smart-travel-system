@@ -4,6 +4,7 @@ var api_content = require("../../api/content.js");
 var store_user = require("../../store/user.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
+require("../../utils/config.js");
 if (!Array) {
   const _component_CloseSmall = common_vendor.resolveComponent("CloseSmall");
   _component_CloseSmall();

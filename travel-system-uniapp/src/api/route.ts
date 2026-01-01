@@ -37,6 +37,7 @@ export const routeApi = {
       data,
       needAuth: true,
       showLoading: false, // 禁用系统默认加载提示，使用自定义动画
+      timeout: 120000, // 增加超时时间到120秒（2分钟），因为AI生成需要较长时间
     })
   },
 

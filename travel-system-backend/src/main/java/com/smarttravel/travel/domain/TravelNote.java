@@ -64,6 +64,12 @@ public class TravelNote {
     /** 逻辑删除标记：0 正常 1 删除 */
     private Integer delFlag;
 
+    /** 查询参数：作者昵称（非持久化字段，仅用于查询） */
+    private String author;
+
+    /** 查询参数：城市名称（非持久化字段，仅用于查询） */
+    private String city;
+
     public Long getId() {
         return id;
     }
@@ -214,6 +220,22 @@ public class TravelNote {
 
     public void setDelFlag(Integer delFlag) {
         this.delFlag = delFlag;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
     }
 }
 

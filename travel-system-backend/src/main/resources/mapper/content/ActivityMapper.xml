@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smarttravel.content.mapper.ActivityMapper">
+
+    <resultMap id="ActivityResult" type="com.smarttravel.content.domain.Activity">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="highlight" property="highlight"/>
+        <result column="description" property="description"/>
+        <result column="rules" property="rules"/>
+        <result column="image_url" property="imageUrl"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="status" property="status"/>
+        <result column="link_url" property="linkUrl"/>
+        <result column="related_route_ids" property="relatedRouteIds"/>
+        <result column="related_scenic_ids" property="relatedScenicIds"/>
+        <result column="related_food_ids" property="relatedFoodIds"/>
+        <result column="related_note_ids" property="relatedNoteIds"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="del_flag" property="delFlag"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.smarttravel.content.domain.Activity" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO activity
+        (name, highlight, description, rules, image_url, start_time, end_time, status, link_url,
+         related_route_ids, related_scenic_ids, related_food_ids, related_note_ids,
+         create_time, update_time, del_flag)
+        VALUES
+        (#{name}, #{highlight}, #{description}, #{rules}, #{imageUrl}, #{startTime}, #{endTime}, #{status}, #{linkUrl},
+         #{relatedRouteIds}, #{relatedScenicIds}, #{relatedFoodIds}, #{relatedNoteIds},
+         NOW(), NOW(), 0)
+    </insert>
+
+    <update id="update" parameterType="com.smarttravel.content.domain.Activity">
+        UPDATE activity
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="highlight != null">highlight = #{highlight},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="rules != null">rules = #{rules},</if>
+            <if test="imageUrl != null">image_url = #{imageUrl},</if>
+            <if test="startTime != null">start_time = #{startTime},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="linkUrl != null">link_url = #{linkUrl},</if>
+            <if test="relatedRouteIds != null">related_route_ids = #{relatedRouteIds},</if>
+            <if test="relatedScenicIds != null">related_scenic_ids = #{relatedScenicIds},</if>
+            <if test="relatedFoodIds != null">related_food_ids = #{relatedFoodIds},</if>
+            <if test="relatedNoteIds != null">related_note_ids = #{relatedNoteIds},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByIdPhysically">
+        DELETE FROM activity WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="ActivityResult">
+        SELECT id, name, highlight, description, rules, image_url, start_time, end_time, status, link_url,
+               related_route_ids, related_scenic_ids, related_food_ids, related_note_ids,
+               create_time, update_time, create_by, update_by, del_flag
+        FROM activity
+        WHERE id = #{id} AND del_flag = 0
+        LIMIT 1
+    </select>
+
+    <select id="selectByIdWithoutDelFlag" resultMap="ActivityResult">
+        SELECT id, name, highlight, description, rules, image_url, start_time, end_time, status, link_url,
+               related_route_ids, related_scenic_ids, related_food_ids, related_note_ids,
+               create_time, update_time, create_by, update_by, del_flag
+        FROM activity
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <select id="selectListWithPage" resultMap="ActivityResult">
+        SELECT id, name, highlight, description, rules, image_url, start_time, end_time, status, link_url,
+               related_route_ids, related_scenic_ids, related_food_ids, related_note_ids,
+               create_time, update_time, create_by, update_by, del_flag
+        FROM activity
+        <where>
+            <if test="query.delFlag != null">AND del_flag = #{query.delFlag}</if>
+            <if test="query.name != null and query.name != ''">AND name LIKE CONCAT('%', #{query.name}, '%')</if>
+            <if test="query.status != null and query.status != ''">AND status = #{query.status}</if>
+        </where>
+        ORDER BY create_time DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countList" resultType="int">
+        SELECT COUNT(1)
+        FROM activity
+        <where>
+            <if test="query.delFlag != null">AND del_flag = #{query.delFlag}</if>
+            <if test="query.name != null and query.name != ''">AND name LIKE CONCAT('%', #{query.name}, '%')</if>
+            <if test="query.status != null and query.status != ''">AND status = #{query.status}</if>
+        </where>
+    </select>
+
+</mapper>
+

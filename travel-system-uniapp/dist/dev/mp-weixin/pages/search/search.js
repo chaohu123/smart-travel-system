@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
 var utils_storage = require("../../utils/storage.js");
 require("../../utils/http.js");
+require("../../utils/config.js");
 if (!Array) {
   const _component_Search = common_vendor.resolveComponent("Search");
   const _component_CloseSmall = common_vendor.resolveComponent("CloseSmall");

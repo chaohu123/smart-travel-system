@@ -24,9 +24,14 @@
 
     <update id="update" parameterType="com.smarttravel.route.domain.TravelRoutePoi">
         UPDATE travel_route_poi
-        SET note = #{note},
+        <set>
+            <if test="note != null">note = #{note},</if>
+            <if test="sort != null">sort = #{sort},</if>
+            <if test="stayTime != null">stay_time = #{stayTime},</if>
+            <if test="delFlag != null">del_flag = #{delFlag},</if>
             update_time = NOW()
-        WHERE id = #{id} AND del_flag = 0
+        </set>
+        WHERE id = #{id}
     </update>
 
     <select id="selectByRouteDayId" parameterType="long" resultMap="TravelRoutePoiResult">

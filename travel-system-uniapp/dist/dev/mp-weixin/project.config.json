@@ -6,6 +6,7 @@
   },
   "setting": {
     "urlCheck": false,
+    "checkSiteMap": false,
     "es6": true,
     "enhance": true,
     "postcss": true,
@@ -18,7 +19,6 @@
     "scopeDataCheck": false,
     "uglifyFileName": false,
     "checkInvalidKey": true,
-    "checkSiteMap": true,
     "uploadWithSourceMap": true,
     "compileHotReLoad": true,
     "lazyloadPlaceholderEnable": false,

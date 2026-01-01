@@ -368,8 +368,70 @@ ALTER TABLE `scenic_spot`
 
 
 
+-- 打卡点配置表
+CREATE TABLE IF NOT EXISTS `checkin_point` (
+    `id`          bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `name`        varchar(128) NOT NULL COMMENT '打卡点名称',
+    `target_type` varchar(32) NOT NULL COMMENT '目标类型：scenic/food',
+    `target_id`   bigint(20) NOT NULL COMMENT '目标ID（景点ID或美食ID）',
+    `target_name` varchar(128) DEFAULT NULL COMMENT '目标名称（冗余字段，方便查询）',
+    `image_url`   varchar(255) DEFAULT NULL COMMENT '封面图片',
+    `location`    varchar(255) DEFAULT NULL COMMENT '地点',
+    `checkin_count` int(11) DEFAULT 0 COMMENT '打卡次数（统计字段）',
+    `is_active`   tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否启用：1启用 0禁用',
+    `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+    `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `create_by`   bigint(20) DEFAULT NULL,
+    `update_by`   bigint(20) DEFAULT NULL,
+    `del_flag`    tinyint(1) NOT NULL DEFAULT 0 COMMENT '删除标记：0正常 1删除',
+    PRIMARY KEY (`id`),
+    KEY `idx_target` (`target_type`, `target_id`),
+    KEY `idx_active` (`is_active`, `del_flag`),
+    KEY `idx_name` (`name`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='打卡点配置表';
 
 
+
+-- 活动表
+CREATE TABLE IF NOT EXISTS `activity` (
+                                          `id`                bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+                                          `name`              varchar(200) NOT NULL COMMENT '活动名称',
+                                          `highlight`         varchar(500) DEFAULT NULL COMMENT '活动亮点',
+                                          `description`       text COMMENT '活动介绍',
+                                          `rules`             text COMMENT '活动规则',
+                                          `image_url`         varchar(500) DEFAULT NULL COMMENT '封面图片',
+                                          `start_time`        datetime DEFAULT NULL COMMENT '开始时间',
+                                          `end_time`          datetime DEFAULT NULL COMMENT '结束时间',
+                                          `status`            varchar(32) NOT NULL DEFAULT 'online' COMMENT '状态：online上线 offline下线 upcoming即将开始 ended已结束',
+                                          `link_url`          varchar(500) DEFAULT NULL COMMENT '跳转链接（可选）',
+                                          `related_route_ids` text COMMENT '关联路线ID列表（JSON数组）',
+                                          `related_scenic_ids` text COMMENT '关联景点ID列表（JSON数组）',
+                                          `related_food_ids`  text COMMENT '关联美食ID列表（JSON数组）',
+                                          `related_note_ids`  text COMMENT '关联游记ID列表（JSON数组）',
+                                          `create_time`       datetime DEFAULT CURRENT_TIMESTAMP,
+                                          `update_time`       datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                          `create_by`         bigint(20) DEFAULT NULL,
+                                          `update_by`         bigint(20) DEFAULT NULL,
+                                          `del_flag`          tinyint(1) NOT NULL DEFAULT 0 COMMENT '删除标记：0正常 1删除',
+                                          PRIMARY KEY (`id`),
+                                          KEY `idx_activity_status` (`status`, `del_flag`),
+                                          KEY `idx_activity_time` (`start_time`, `end_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动表';
+
+-- 活动报名表
+CREATE TABLE IF NOT EXISTS `activity_registration` (
+  `id`                bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `activity_id`       bigint(20) NOT NULL COMMENT '活动ID',
+  `user_id`           bigint(20) NOT NULL COMMENT '用户ID',
+  `registration_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '报名时间',
+  `create_time`       datetime DEFAULT CURRENT_TIMESTAMP,
+  `update_time`       datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `del_flag`          tinyint(1) NOT NULL DEFAULT 0 COMMENT '删除标记：0正常 1删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_activity_user` (`activity_id`, `user_id`, `del_flag`),
+  KEY `idx_activity_id` (`activity_id`),
+  KEY `idx_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动报名表';
 
 
 

@@ -439,6 +439,39 @@
   border-radius: 16rpx;
   border-left: 4rpx solid #ff9800;
 }
+.lunch-section.data-v-1656b44a {
+  background-color: #fff3e0;
+  border-left-color: #ff9800;
+}
+.dinner-section.data-v-1656b44a {
+  background-color: #f3e5f5;
+  border-left-color: #9c27b0;
+}
+.icon-breakfast.data-v-1656b44a {
+  background-color: #fff8e1;
+  border: 2rpx solid #ff9800;
+  width: 80rpx;
+  height: 80rpx;
+}
+.icon-lunch.data-v-1656b44a {
+  background-color: #fff3e0;
+  border: 2rpx solid #ff9800;
+  width: 80rpx;
+  height: 80rpx;
+}
+.icon-dinner.data-v-1656b44a {
+  background-color: #f3e5f5;
+  border: 2rpx solid #9c27b0;
+  width: 80rpx;
+  height: 80rpx;
+}
+.food-time-label.data-v-1656b44a {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.2;
+  text-align: center;
+}
 .breakfast-item.data-v-1656b44a {
   display: flex;
   align-items: flex-start;

@@ -16,6 +16,22 @@ export interface TravelNote {
   isFeatured?: number;
   createTime?: string;
   updateTime?: string;
+  // 作者相关字段
+  authorName?: string;
+  author?: string;
+  authorNickname?: string;
+  user?: {
+    id?: number;
+    nickname?: string;
+    userName?: string;
+    name?: string;
+  };
+  authorInfo?: {
+    id?: number;
+    nickname?: string;
+    userName?: string;
+    name?: string;
+  };
 }
 
 export interface TravelNoteListResponse {
@@ -59,6 +75,11 @@ export function auditTravelNote(data: { id: number; action: 'pass' | 'reject'; r
 
 export function featureTravelNote(data: { id: number; isFeatured: number }) {
   return http.post('/admin/travel/note/feature', data);
+}
+
+// 批量删除游记
+export function batchDeleteTravelNotes(ids: number[]) {
+  return http.post('/admin/travel/note/batch-delete', { ids });
 }
 
 

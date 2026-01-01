@@ -100,7 +100,7 @@ import {
   Setting,
   DocumentChecked
 } from '@element-plus/icons-vue';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -196,16 +196,56 @@ const closeTag = (tag: { path: string }) => {
   }
 };
 
+// 获取路由标题的辅助函数
+const getRouteTitle = (path: string): string => {
+  // 先尝试从当前路由获取
+  if (route.path === path && route.meta?.title) {
+    return route.meta.title as string;
+  }
+  // 从路由配置中查找
+  const matchedRoute = router.getRoutes().find(r => r.path === path);
+  if (matchedRoute?.meta?.title) {
+    return matchedRoute.meta.title as string;
+  }
+  // 处理重定向路由
+  if (path === '/' || path === '') {
+    return '数据总览';
+  }
+  return '未命名';
+};
+
 watch(
   () => route.path,
-  () => {
-    addTag(route.path, (route.meta.title as string) || '未命名');
+  (newPath) => {
+    // 跳过根路径，因为会重定向
+    if (newPath === '/' || newPath === '') {
+      return;
+    }
+    const title = getRouteTitle(newPath);
+    addTag(newPath, title);
   },
   { immediate: true }
 );
 
 onMounted(() => {
-  addTag(route.path, (route.meta.title as string) || '未命名');
+  // 确保路由已加载
+  nextTick(() => {
+    const currentPath = route.path;
+    // 跳过根路径
+    if (currentPath === '/' || currentPath === '') {
+      // 等待重定向完成
+      setTimeout(() => {
+        const finalPath = route.path;
+        if (finalPath !== '/' && finalPath !== '') {
+          const title = getRouteTitle(finalPath);
+          addTag(finalPath, title);
+        }
+      }, 100);
+    } else {
+      const title = getRouteTitle(currentPath);
+      addTag(currentPath, title);
+    }
+  });
 });
 </script>
 

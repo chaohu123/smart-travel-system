@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smarttravel.content.mapper.CheckinPointMapper">
+
+    <resultMap id="CheckinPointResult" type="com.smarttravel.content.domain.CheckinPoint">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="target_type" property="targetType"/>
+        <result column="target_id" property="targetId"/>
+        <result column="target_name" property="targetName"/>
+        <result column="image_url" property="imageUrl"/>
+        <result column="location" property="location"/>
+        <result column="checkin_count" property="checkinCount"/>
+        <result column="is_active" property="isActive"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="del_flag" property="delFlag"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.smarttravel.content.domain.CheckinPoint" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO checkin_point
+        (name, target_type, target_id, target_name, image_url, location, checkin_count, is_active,
+         create_time, update_time, del_flag)
+        VALUES
+        (#{name}, #{targetType}, #{targetId}, #{targetName}, #{imageUrl}, #{location}, 0, #{isActive},
+         NOW(), NOW(), 0)
+    </insert>
+
+    <update id="update" parameterType="com.smarttravel.content.domain.CheckinPoint">
+        UPDATE checkin_point
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="targetType != null">target_type = #{targetType},</if>
+            <if test="targetId != null">target_id = #{targetId},</if>
+            <if test="targetName != null">target_name = #{targetName},</if>
+            <if test="imageUrl != null">image_url = #{imageUrl},</if>
+            <if test="location != null">location = #{location},</if>
+            <if test="checkinCount != null">checkin_count = #{checkinCount},</if>
+            <if test="isActive != null">is_active = #{isActive},</if>
+            <if test="updateBy != null">update_by = #{updateBy},</if>
+            update_time = NOW()
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByIdPhysically">
+        DELETE FROM checkin_point WHERE id = #{id}
+    </delete>
+
+    <select id="selectById" resultMap="CheckinPointResult">
+        SELECT id, name, target_type, target_id, target_name, image_url, location, checkin_count, is_active,
+               create_time, update_time, create_by, update_by, del_flag
+        FROM checkin_point
+        WHERE id = #{id} AND del_flag = 0
+        LIMIT 1
+    </select>
+
+    <select id="selectByIdWithoutDelFlag" resultMap="CheckinPointResult">
+        SELECT id, name, target_type, target_id, target_name, image_url, location, checkin_count, is_active,
+               create_time, update_time, create_by, update_by, del_flag
+        FROM checkin_point
+        WHERE id = #{id}
+        LIMIT 1
+    </select>
+
+    <select id="selectListWithPage" resultMap="CheckinPointResult">
+        SELECT id, name, target_type, target_id, target_name, image_url, location, checkin_count, is_active,
+               create_time, update_time, create_by, update_by, del_flag
+        FROM checkin_point
+        <where>
+            <if test="query.delFlag != null">AND del_flag = #{query.delFlag}</if>
+            <if test="query.name != null and query.name != ''">AND name LIKE CONCAT('%', #{query.name}, '%')</if>
+            <if test="query.targetType != null and query.targetType != ''">AND target_type = #{query.targetType}</if>
+            <if test="query.isActive != null">AND is_active = #{query.isActive}</if>
+        </where>
+        ORDER BY create_time DESC
+        LIMIT #{pageSize} OFFSET #{offset}
+    </select>
+
+    <select id="countList" resultType="int">
+        SELECT COUNT(1)
+        FROM checkin_point
+        <where>
+            <if test="query.delFlag != null">AND del_flag = #{query.delFlag}</if>
+            <if test="query.name != null and query.name != ''">AND name LIKE CONCAT('%', #{query.name}, '%')</if>
+            <if test="query.targetType != null and query.targetType != ''">AND target_type = #{query.targetType}</if>
+            <if test="query.isActive != null">AND is_active = #{query.isActive}</if>
+        </where>
+    </select>
+
+    <select id="selectByTarget" resultMap="CheckinPointResult">
+        SELECT id, name, target_type, target_id, target_name, image_url, location, checkin_count, is_active,
+               create_time, update_time, create_by, update_by, del_flag
+        FROM checkin_point
+        WHERE target_type = #{targetType} AND target_id = #{targetId} AND del_flag = 0
+        LIMIT 1
+    </select>
+
+    <select id="countCheckinByTarget" resultType="int">
+        SELECT COUNT(1)
+        FROM checkin_record
+        WHERE target_type = #{targetType} AND target_id = #{targetId} AND del_flag = 0
+    </select>
+
+</mapper>
+

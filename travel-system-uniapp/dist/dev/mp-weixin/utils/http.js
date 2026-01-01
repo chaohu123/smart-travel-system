@@ -1,7 +1,8 @@
 "use strict";
 var common_vendor = require("../common/vendor.js");
 var utils_storage = require("./storage.js");
-const BASE_URL = "http://localhost:8080/api/v1";
+var utils_config = require("./config.js");
+const BASE_URL = utils_config.API_BASE_URL;
 const getToken = () => utils_storage.getCache("token");
 const handleAuthFail = () => {
   utils_storage.removeCache("token");
@@ -53,10 +54,12 @@ const request = (options) => {
   }
   const cleanedData = data ? cleanParams(data) : void 0;
   const run = () => new Promise((resolve, reject) => {
+    const timeout = rest.timeout || 6e4;
     common_vendor.index.request({
       url: url.startsWith("http") ? url : `${BASE_URL}${url}`,
       header: headers,
       data: cleanedData,
+      timeout,
       ...rest,
       success: (res) => {
         if (res.statusCode === 401 || res.statusCode === 403) {
