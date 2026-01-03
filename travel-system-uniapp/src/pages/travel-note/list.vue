@@ -502,7 +502,7 @@ const viewDetail = (id: number) => {
 // 查看作者主页
 const viewAuthorProfile = (userId: number) => {
   if (userId) {
-    safeNavigateTo(`/pages/profile/other?userId=${userId}`)
+    uni.navigateTo({ url: `/pages/profile/user-home?userId=${userId}` })
   }
 }
 

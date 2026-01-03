@@ -19,6 +19,11 @@ if (!Math) {
   "./pages/profile/preference.js";
   "./pages/profile/history.js";
   "./pages/profile/user-home.js";
+  "./pages/profile/messages.js";
+  "./pages/profile/chat.js";
+  "./pages/profile/followers.js";
+  "./pages/profile/following.js";
+  "./pages/profile/edit-profile.js";
   "./pages/footprint/footprint.js";
   "./pages/scenic/detail.js";
   "./pages/food/detail.js";

@@ -58,9 +58,21 @@ export const request = <T = any>(options: RequestOptions) => {
   const headers: Record<string, any> = { ...header }
   if (token) {
     headers.Authorization = `Bearer ${token}`
+    // 调试信息：显示token和请求头
+    if (needAuth) {
+      console.log('🔐 [HTTP请求] 需要认证的请求:', {
+        url: url,
+        token: token,
+        tokenLength: token.length,
+        tokenPreview: token.substring(0, 30) + '...',
+        authorizationHeader: headers.Authorization,
+        authorizationPreview: headers.Authorization.substring(0, 40) + '...'
+      })
+    }
   }
 
   if (needAuth && !token) {
+    console.error('❌ [HTTP请求] 需要认证但token为空:', url)
     handleAuthFail()
     return Promise.reject(new Error('no-token'))
   }
@@ -79,16 +91,6 @@ export const request = <T = any>(options: RequestOptions) => {
       
       const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`
       
-      // 调试日志
-      console.log('[HTTP Request]', {
-        url: fullUrl,
-        method: (rest as any).method || 'GET',
-        data: cleanedData,
-        headers: Object.keys(headers),
-        needAuth,
-        hasToken: !!token
-      })
-      
       uni.request({
         url: fullUrl,
         header: headers,
@@ -96,12 +98,6 @@ export const request = <T = any>(options: RequestOptions) => {
         timeout: timeout,
         ...rest,
         success: (res) => {
-          console.log('[HTTP Response]', {
-            url: fullUrl,
-            statusCode: res.statusCode,
-            data: res.data
-          })
-          
           if (res.statusCode === 401 || res.statusCode === 403) {
             handleAuthFail()
             reject(res)
@@ -110,10 +106,6 @@ export const request = <T = any>(options: RequestOptions) => {
           resolve(res as any)
         },
         fail: (err) => {
-          console.error('[HTTP Error]', {
-            url: fullUrl,
-            error: err
-          })
           reject(err)
         },
         complete: () => {

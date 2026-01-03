@@ -68,3 +68,10 @@ export function deleteCheckinPoint(id: number) {
 
 
 
+
+
+
+
+
+
+

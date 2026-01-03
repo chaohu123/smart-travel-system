@@ -160,6 +160,9 @@ public class AdminUserController {
         if (body.containsKey("avatar")) {
             user.setAvatar((String) body.get("avatar"));
         }
+        if (body.containsKey("email")) {
+            user.setEmail((String) body.get("email"));
+        }
         userMapper.updateProfile(user);
         result.put("code", 200);
         result.put("msg", "success");

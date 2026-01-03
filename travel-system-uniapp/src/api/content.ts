@@ -181,9 +181,8 @@ export const travelNoteApi = {
   // 删除游记
   delete: (id: number, userId: number) => {
     return request({
-      url: `/travel/note/${id}`,
+      url: `/travel/note/${id}?userId=${userId}`,
       method: 'DELETE',
-      data: { userId },
       needAuth: true,
     })
   },
@@ -288,6 +287,16 @@ export const travelNoteInteractionApi = {
       url: '/travel/note/my/comments',
       method: 'GET',
       data: { userId, pageNum, pageSize },
+      needAuth: true,
+    })
+  },
+
+  // 评论点赞/取消点赞
+  toggleCommentLike: (userId: number, commentId: number) => {
+    return request({
+      url: '/travel/note/interaction/comment/like',
+      method: 'POST',
+      data: { userId, commentId },
       needAuth: true,
     })
   },

@@ -186,7 +186,7 @@
                 <view class="note-content-header">
                   <!-- 左侧：头像、标题和作者昵称 -->
                   <view class="note-left-section">
-                    <view class="note-avatar-wrapper">
+                    <view class="note-avatar-wrapper" @tap.stop="viewAuthorProfile(note)">
                       <image
                         class="note-author-avatar"
                         :src="note.authorAvatar"
@@ -513,6 +513,17 @@ const onViewRoute = (route: RouteItem) => {
       icon: 'none'
     })
   })
+}
+
+// 查看作者主页
+const viewAuthorProfile = (note: NoteItem) => {
+  // 从note中获取userId，可能是userId、authorId或user_id
+  const userId = (note as any).userId || (note as any).authorId || (note as any).user_id
+  if (userId) {
+    uni.navigateTo({ url: `/pages/profile/user-home?userId=${userId}` })
+  } else {
+    uni.showToast({ title: '无法获取用户信息', icon: 'none' })
+  }
 }
 
 const onViewNote = (note: NoteItem) => {

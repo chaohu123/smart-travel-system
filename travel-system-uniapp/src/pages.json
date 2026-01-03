@@ -140,6 +140,46 @@
       }
     },
     {
+      "path": "pages/profile/messages",
+      "style": {
+        "navigationBarTitleText": "我的消息",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/chat",
+      "style": {
+        "navigationBarTitleText": "聊天",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/followers",
+      "style": {
+        "navigationBarTitleText": "粉丝列表",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/following",
+      "style": {
+        "navigationBarTitleText": "关注列表",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/edit-profile",
+      "style": {
+        "navigationBarTitleText": "编辑资料",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
       "path": "pages/footprint/footprint",
       "style": {
         "navigationBarTitleText": "我的足迹",

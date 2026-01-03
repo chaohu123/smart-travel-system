@@ -7,12 +7,18 @@ import com.smarttravel.content.mapper.CommentMapper;
 import com.smarttravel.travel.mapper.TravelNoteMapper;
 import com.smarttravel.user.domain.User;
 import com.smarttravel.user.domain.Level;
+import com.smarttravel.user.domain.UserFollow;
+import com.smarttravel.user.domain.UserCheckin;
 import com.smarttravel.user.mapper.UserMapper;
 import com.smarttravel.user.mapper.UserTagMapper;
 import com.smarttravel.user.mapper.LevelMapper;
+import com.smarttravel.user.mapper.UserFollowMapper;
+import com.smarttravel.user.mapper.UserCheckinMapper;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import java.sql.Date;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +49,12 @@ public class UserApiController {
 
     @Resource
     private LevelMapper levelMapper;
+
+    @Resource
+    private UserFollowMapper userFollowMapper;
+
+    @Resource
+    private UserCheckinMapper userCheckinMapper;
 
     /**
      * 简易登录（账号/手机号/测试用户）
@@ -147,11 +159,18 @@ public class UserApiController {
         if ((tk == null || tk.isEmpty()) && authHeader != null && !authHeader.isEmpty()) {
             tk = authHeader.replace("Bearer ", "").trim();
         }
-        if (tk != null && tk.startsWith("token-")) {
+        if (tk != null) {
+            // 支持两种token格式：
+            // 1. token-{userId}-{timestamp}
+            // 2. test-token-{userId} 或 test-token-{userId}-{timestamp}
             String[] parts = tk.split("-");
-            if (parts.length >= 2) {
+            if (tk.startsWith("token-") && parts.length >= 2) {
                 try {
                     return Long.parseLong(parts[1]);
+                } catch (NumberFormatException ignore) { }
+            } else if (tk.startsWith("test-token-") && parts.length >= 3) {
+                try {
+                    return Long.parseLong(parts[2]);
                 } catch (NumberFormatException ignore) { }
             }
         }
@@ -166,6 +185,7 @@ public class UserApiController {
         info.put("avatar", user.getAvatar());
         info.put("city", user.getCity());
         info.put("signature", user.getSignature());
+        info.put("email", user.getEmail());
         List<String> interestNames = userTagMapper.selectTagNamesByUserId(userId);
         List<Long> interestIds = userTagMapper.selectTagIdsByUserId(userId);
         info.put("interests", interestNames);
@@ -271,18 +291,202 @@ public class UserApiController {
 
     private Map<String, Object> buildStats(Long userId) {
         Map<String, Object> stats = new HashMap<>();
-        int noteCount = travelNoteMapper.countByUserId(userId);
+        // 使用与 listMyNotes 相同的查询逻辑，确保统计数量与列表显示一致
+        // 查询条件：userId 和 del_flag = 0（不传 status，统计所有状态的游记）
+        com.smarttravel.travel.domain.TravelNote query = new com.smarttravel.travel.domain.TravelNote();
+        query.setUserId(userId);
+        // 不设置 status，统计所有状态的游记（与"我的游记"页面"全部"标签的逻辑一致）
+        List<com.smarttravel.travel.domain.TravelNote> allNotes = travelNoteMapper.selectList(query);
+        int noteCount = allNotes.size();
+        
         int favoriteCount = userBehaviorMapper.countByUserAndBehavior(userId, BehaviorType.FAVORITE.getCode(), "note");
         int likeCount = userBehaviorMapper.countByUserAndBehavior(userId, BehaviorType.LIKE.getCode(), "note");
         int checkinCount = checkinRecordMapper.countByUserId(userId);
         int commentCount = commentMapper.countByUserId(userId);
+        
+        // 粉丝数和关注数
+        int followerCount = userFollowMapper.countFollowers(userId);
+        int followingCount = userFollowMapper.countFollowing(userId);
         
         stats.put("noteCount", noteCount);
         stats.put("favoriteCount", favoriteCount);
         stats.put("likeCount", likeCount);
         stats.put("commentCount", commentCount);
         stats.put("checkinCount", checkinCount);
+        stats.put("followerCount", followerCount);
+        stats.put("followingCount", followingCount);
+        stats.put("totalLikes", likeCount); // 获赞数使用点赞数
+        stats.put("followers", followerCount);
+        stats.put("following", followingCount);
         return stats;
+    }
+
+    /**
+     * 获取粉丝列表
+     */
+    @GetMapping("/user/followers")
+    public Map<String, Object> followers(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                         @RequestParam(value = "userId", required = false) Long userId,
+                                         @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+                                         @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
+        Map<String, Object> response = new HashMap<>();
+        Long uid = resolveUserId(authHeader, null, userId);
+        if (uid == null) {
+            response.put("code", 401);
+            response.put("msg", "未登录");
+            return response;
+        }
+
+        Integer offset = (pageNum - 1) * pageSize;
+        Long currentUserId = resolveUserId(authHeader, null, null); // 当前登录用户，用于判断是否已关注
+
+        List<Map<String, Object>> list = userFollowMapper.selectFollowers(uid, currentUserId, offset, pageSize);
+        int total = userFollowMapper.countFollowers(uid);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("list", list);
+        data.put("total", total);
+        data.put("pageNum", pageNum);
+        data.put("pageSize", pageSize);
+
+        response.put("code", 200);
+        response.put("msg", "success");
+        response.put("data", data);
+        return response;
+    }
+
+    /**
+     * 获取关注列表
+     */
+    @GetMapping("/user/following")
+    public Map<String, Object> following(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                         @RequestParam(value = "userId", required = false) Long userId,
+                                         @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
+                                         @RequestParam(value = "pageSize", defaultValue = "20") Integer pageSize) {
+        Map<String, Object> response = new HashMap<>();
+        Long uid = resolveUserId(authHeader, null, userId);
+        if (uid == null) {
+            response.put("code", 401);
+            response.put("msg", "未登录");
+            return response;
+        }
+
+        Integer offset = (pageNum - 1) * pageSize;
+        List<Map<String, Object>> list = userFollowMapper.selectFollowing(uid, offset, pageSize);
+        int total = userFollowMapper.countFollowing(uid);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("list", list);
+        data.put("total", total);
+        data.put("pageNum", pageNum);
+        data.put("pageSize", pageSize);
+
+        response.put("code", 200);
+        response.put("msg", "success");
+        response.put("data", data);
+        return response;
+    }
+
+    /**
+     * 关注/取消关注用户
+     */
+    @PostMapping("/user/follow")
+    public Map<String, Object> follow(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                       @RequestBody Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+        Long userId = resolveUserId(authHeader, null, null);
+        if (userId == null) {
+            response.put("code", 401);
+            response.put("msg", "未登录");
+            return response;
+        }
+
+        Long targetUserId = body.get("targetUserId") == null ? null : Long.parseLong(body.get("targetUserId").toString());
+        if (targetUserId == null) {
+            response.put("code", 400);
+            response.put("msg", "目标用户ID不能为空");
+            return response;
+        }
+
+        if (userId.equals(targetUserId)) {
+            response.put("code", 400);
+            response.put("msg", "不能关注自己");
+            return response;
+        }
+
+        // 检查是否已关注
+        UserFollow existing = userFollowMapper.selectByUserAndFollowed(userId, targetUserId);
+        if (existing != null) {
+            // 取消关注
+            userFollowMapper.delete(userId, targetUserId);
+            response.put("code", 200);
+            response.put("msg", "取消关注成功");
+        } else {
+            // 关注
+            UserFollow userFollow = new UserFollow();
+            userFollow.setUserId(userId);
+            userFollow.setFollowedUserId(targetUserId);
+            userFollowMapper.insert(userFollow);
+            response.put("code", 200);
+            response.put("msg", "关注成功");
+        }
+
+        return response;
+    }
+
+    /**
+     * 签到
+     */
+    @PostMapping("/user/checkin")
+    public Map<String, Object> checkin(@RequestHeader(value = "Authorization", required = false) String authHeader,
+                                       @RequestBody Map<String, Object> body) {
+        Map<String, Object> response = new HashMap<>();
+        Long userId = resolveUserId(authHeader, null, null);
+        if (userId == null) {
+            // 如果token解析失败，尝试从body中获取userId
+            if (body.get("userId") != null) {
+                userId = Long.parseLong(body.get("userId").toString());
+            } else {
+                response.put("code", 401);
+                response.put("msg", "未登录");
+                return response;
+            }
+        }
+
+        // 检查今天是否已签到
+        java.util.Date today = new java.util.Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        try {
+            Date checkinDate = Date.valueOf(sdf.format(today));
+            UserCheckin existing = userCheckinMapper.selectByUserAndDate(userId, checkinDate);
+            if (existing != null) {
+                response.put("code", 400);
+                response.put("msg", "今天已经签到过了");
+                return response;
+            }
+
+            // 创建签到记录
+            UserCheckin userCheckin = new UserCheckin();
+            userCheckin.setUserId(userId);
+            userCheckin.setCheckinDate(checkinDate);
+            userCheckin.setExperienceGained(10);
+            userCheckinMapper.insert(userCheckin);
+
+            // 更新用户经验值（这里需要更新user表的experience字段，如果存在的话）
+            // 或者通过计算经验值来更新
+            // 暂时只返回成功，经验值更新可以通过定时任务或异步处理
+
+            response.put("code", 200);
+            response.put("msg", "签到成功");
+            Map<String, Object> data = new HashMap<>();
+            data.put("experienceGained", 10);
+            response.put("data", data);
+        } catch (Exception e) {
+            response.put("code", 500);
+            response.put("msg", "签到失败：" + e.getMessage());
+        }
+
+        return response;
     }
 }
 

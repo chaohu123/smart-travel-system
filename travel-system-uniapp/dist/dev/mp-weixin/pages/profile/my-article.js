@@ -31,33 +31,63 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       { key: "private", label: "\u79C1\u4EBA" }
     ];
     const selectedStatus = common_vendor.ref("all");
+    const scrollTop = common_vendor.ref(0);
+    const searchKeyword = common_vendor.ref("");
     const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIyNSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIyNSIgZmlsbD0iI0U1RTVFNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5RUE3QjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2FkaW5nLi4uPC90ZXh0Pjwvc3ZnPg==";
     const defaultAvatar = "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
-    const loadNotes = async () => {
+    const loadNotes = async (reset = false) => {
       var _a;
-      if (loading.value || noMore.value)
-        return;
       if (!((_a = user.value) == null ? void 0 : _a.id)) {
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
+        return;
+      }
+      if (reset) {
+        pageNum.value = 1;
+        noMore.value = false;
+        noteList.value = [];
+        networkError.value = false;
+        if (loading.value) {
+          loading.value = false;
+        }
+      }
+      if (!reset && loading.value || !reset && noMore.value) {
         return;
       }
       loading.value = true;
       networkError.value = false;
       try {
-        const status = selectedStatus.value === "all" ? void 0 : selectedStatus.value;
+        let status = void 0;
+        if (selectedStatus.value === "all") {
+          status = void 0;
+        } else {
+          status = selectedStatus.value;
+        }
         const res = await api_content.travelNoteApi.listMyNotes(user.value.id, pageNum.value, pageSize.value, status);
         const response = res.data;
         if (res.statusCode === 200 && response.code === 200) {
           const data = response.data;
           if (data.list && data.list.length > 0) {
-            const newNotes = data.list.map((item) => ({
+            let newNotes = data.list.map((item) => ({
               ...item,
               isLiked: item.isLiked || false,
               isFavorite: item.isFavorite || false,
               commentCount: item.commentCount !== void 0 ? item.commentCount : item.comment_count || 0,
               favoriteCount: item.favoriteCount !== void 0 ? item.favoriteCount : item.favorite_count || 0
             }));
-            noteList.value.push(...newNotes);
+            if (searchKeyword.value && searchKeyword.value.trim()) {
+              const keyword = searchKeyword.value.trim().toLowerCase();
+              newNotes = newNotes.filter((note) => {
+                const title = (note.title || "").toLowerCase();
+                const content = (note.content || "").toLowerCase();
+                const cityName = (note.cityName || "").toLowerCase();
+                return title.includes(keyword) || content.includes(keyword) || cityName.includes(keyword);
+              });
+            }
+            if (reset) {
+              noteList.value = newNotes;
+            } else {
+              noteList.value.push(...newNotes);
+            }
             newNotes.forEach((note) => {
               if (note.coverImage && !imageLoadedMap.value[note.id]) {
                 imageLoadedMap.value[note.id] = false;
@@ -70,7 +100,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             }
           } else {
             noMore.value = true;
+            if (reset) {
+              noteList.value = [];
+            }
           }
+        } else {
+          networkError.value = true;
         }
       } catch (error) {
         networkError.value = true;
@@ -82,6 +117,27 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         loading.value = false;
       }
     };
+    const handleSearch = () => {
+      pageNum.value = 1;
+      noteList.value = [];
+      noMore.value = false;
+      networkError.value = false;
+      loadNotes(true);
+    };
+    const onSearchInput = () => {
+      clearTimeout(searchTimer.value);
+      searchTimer.value = setTimeout(() => {
+        handleSearch();
+      }, 500);
+    };
+    const clearSearch = () => {
+      searchKeyword.value = "";
+      if (searchTimer.value) {
+        clearTimeout(searchTimer.value);
+      }
+      handleSearch();
+    };
+    const searchTimer = common_vendor.ref(void 0);
     const loadMore = () => {
       if (!loading.value && !noMore.value) {
         loadNotes();
@@ -135,17 +191,21 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       });
     };
     const switchStatus = (status) => {
-      if (selectedStatus.value === status)
+      if (selectedStatus.value === status && noteList.value.length > 0) {
         return;
+      }
       selectedStatus.value = status;
       pageNum.value = 1;
+      noMore.value = false;
+      networkError.value = false;
+      scrollTop.value = 0;
+      common_vendor.nextTick(() => {
+        scrollTop.value = 0;
+      });
       clearImageLoadTimers();
       noteList.value = [];
-      noMore.value = false;
       cleanupImageLoadedMap();
-      common_vendor.nextTick(() => {
-        loadNotes();
-      });
+      loadNotes(true);
     };
     const handleNoteClick = (note) => {
       if (note.status === "reject") {
@@ -376,11 +436,21 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     });
     common_vendor.onUnmounted(() => {
       clearImageLoadTimers();
+      if (searchTimer.value) {
+        clearTimeout(searchTimer.value);
+      }
       imageLoadedMap.value = {};
     });
     return (_ctx, _cache) => {
       return common_vendor.e({
-        a: common_vendor.f(statusFilters, (status, k0, i0) => {
+        a: common_vendor.o(handleSearch),
+        b: common_vendor.o([($event) => searchKeyword.value = $event.detail.value, onSearchInput]),
+        c: searchKeyword.value,
+        d: searchKeyword.value
+      }, searchKeyword.value ? {
+        e: common_vendor.o(clearSearch)
+      } : {}, {
+        f: common_vendor.f(statusFilters, (status, k0, i0) => {
           return {
             a: common_vendor.t(status.label),
             b: status.key,
@@ -388,13 +458,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             d: common_vendor.o(($event) => switchStatus(status.key))
           };
         }),
-        b: loading.value && noteList.value.length === 0
+        g: loading.value && noteList.value.length === 0
       }, loading.value && noteList.value.length === 0 ? {
-        c: common_vendor.p({
+        h: common_vendor.p({
           count: 6
         })
       } : {
-        d: common_vendor.f(noteList.value, (note, k0, i0) => {
+        i: common_vendor.f(noteList.value, (note, k0, i0) => {
           return common_vendor.e({
             a: note.coverImage
           }, note.coverImage ? {
@@ -445,16 +515,17 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         })
       }, {
-        e: loading.value && noteList.value.length > 0
+        j: loading.value && noteList.value.length > 0
       }, loading.value && noteList.value.length > 0 ? {} : noMore.value && noteList.value.length > 0 ? {} : !loading.value && noteList.value.length === 0 && !networkError.value ? {
-        h: common_vendor.o(publishNote)
+        m: common_vendor.o(publishNote)
       } : networkError.value ? {
-        j: common_vendor.o(retryLoad)
+        o: common_vendor.o(retryLoad)
       } : {}, {
-        f: noMore.value && noteList.value.length > 0,
-        g: !loading.value && noteList.value.length === 0 && !networkError.value,
-        i: networkError.value,
-        k: common_vendor.o(loadMore)
+        k: noMore.value && noteList.value.length > 0,
+        l: !loading.value && noteList.value.length === 0 && !networkError.value,
+        n: networkError.value,
+        p: scrollTop.value,
+        q: common_vendor.o(loadMore)
       });
     };
   }

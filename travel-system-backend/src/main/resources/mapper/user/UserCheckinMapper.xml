@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smarttravel.user.mapper.UserCheckinMapper">
+
+    <resultMap id="BaseResultMap" type="com.smarttravel.user.domain.UserCheckin">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="checkin_date" property="checkinDate"/>
+        <result column="experience_gained" property="experienceGained"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.smarttravel.user.domain.UserCheckin">
+        INSERT INTO user_checkin (user_id, checkin_date, experience_gained, create_time, update_time)
+        VALUES (#{userId}, #{checkinDate}, #{experienceGained}, NOW(), NOW())
+    </insert>
+
+    <select id="selectByUserAndDate" resultMap="BaseResultMap">
+        SELECT * FROM user_checkin
+        WHERE user_id = #{userId} AND checkin_date = #{checkinDate}
+        LIMIT 1
+    </select>
+
+</mapper>
+

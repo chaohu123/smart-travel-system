@@ -25,7 +25,7 @@
             </view>
           </view>
           <view class="location-row">
-            <text class="location-icon">📍</text>
+            <text class="iconfont icon-weizhi location-icon"></text>
             <text class="location-text">{{ detail.cityName || '未知城市' }}</text>
           </view>
 
@@ -54,7 +54,7 @@
         <view class="info-card">
           <view class="info-item" v-if="detail.address">
             <view class="info-label">
-              <text class="info-icon">📍</text>
+              <text class="iconfont icon-weizhi info-icon"></text>
               <text class="info-title">地址</text>
             </view>
             <text class="info-content">{{ detail.address }}</text>
@@ -62,7 +62,7 @@
 
           <view class="info-item" v-if="detail.foodType">
             <view class="info-label">
-              <text class="info-icon">🍽️</text>
+              <text class="iconfont icon-meishi info-icon"></text>
               <text class="info-title">美食类型</text>
             </view>
             <text class="info-content">{{ detail.foodType }}</text>
@@ -72,7 +72,7 @@
         <!-- 简介卡片 -->
         <view class="intro-card" v-if="detail.intro">
           <view class="card-title">
-            <text class="title-icon">📖</text>
+            <text class="iconfont icon-jingdianjieshao title-icon"></text>
             <text class="title-text">美食简介</text>
           </view>
           <text class="intro-text">{{ detail.intro }}</text>
@@ -81,7 +81,7 @@
         <!-- 附近景点 -->
         <view class="nearby-scenic-card" v-if="nearbyScenics.length > 0">
           <view class="card-title">
-            <text class="title-icon">🏞️</text>
+            <text class="iconfont icon-jingdian title-icon"></text>
             <text class="title-text">附近景点</text>
           </view>
           <view class="scenic-list">
@@ -98,7 +98,7 @@
                 mode="aspectFill"
               />
               <view v-else class="scenic-image-placeholder">
-                <text class="scenic-icon">🏞️</text>
+                <text class="iconfont icon-jingdian scenic-icon"></text>
               </view>
               <text class="scenic-name">{{ scenic.name }}</text>
               <text class="scenic-score" v-if="scenic.score">评分 {{ scenic.score }}</text>
@@ -352,7 +352,7 @@ onShow(() => {
 }
 
 .content {
-  padding: 0 24rpx 200rpx;
+  padding: 0 24rpx 240rpx;
 }
 
 /* 头部信息区域 */
@@ -404,6 +404,7 @@ onShow(() => {
 
 .location-icon {
   font-size: 24rpx;
+  color: #666666;
 }
 
 .location-text {
@@ -481,6 +482,7 @@ onShow(() => {
 
 .info-icon {
   font-size: 28rpx;
+  color: #3ba272;
 }
 
 .info-title {
@@ -515,6 +517,7 @@ onShow(() => {
 
 .title-icon {
   font-size: 28rpx;
+  color: #3ba272;
 }
 
 .title-text {
@@ -596,6 +599,7 @@ onShow(() => {
 
 .scenic-icon {
   font-size: 60rpx;
+  color: #ffffff;
 }
 
 .scenic-name {

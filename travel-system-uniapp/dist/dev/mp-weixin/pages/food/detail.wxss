@@ -29,7 +29,7 @@
   flex: 1;
 }
 .content.data-v-68d96164 {
-  padding: 0 24rpx 200rpx;
+  padding: 0 24rpx 240rpx;
 }
 
 /* 头部信息区域 */
@@ -75,6 +75,7 @@
 }
 .location-icon.data-v-68d96164 {
   font-size: 24rpx;
+  color: #666666;
 }
 .location-text.data-v-68d96164 {
   font-size: 26rpx;
@@ -139,6 +140,7 @@
 }
 .info-icon.data-v-68d96164 {
   font-size: 28rpx;
+  color: #3ba272;
 }
 .info-title.data-v-68d96164 {
   font-size: 28rpx;
@@ -169,6 +171,7 @@
 }
 .title-icon.data-v-68d96164 {
   font-size: 28rpx;
+  color: #3ba272;
 }
 .title-text.data-v-68d96164 {
   font-size: 30rpx;
@@ -241,6 +244,7 @@
 }
 .scenic-icon.data-v-68d96164 {
   font-size: 60rpx;
+  color: #ffffff;
 }
 .scenic-name.data-v-68d96164 {
   font-size: 26rpx;

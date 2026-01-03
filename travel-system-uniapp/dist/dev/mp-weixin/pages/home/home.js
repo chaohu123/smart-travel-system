@@ -154,6 +154,14 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
       });
     };
+    const viewAuthorProfile = (note) => {
+      const userId = note.userId || note.authorId || note.user_id;
+      if (userId) {
+        common_vendor.index.navigateTo({ url: `/pages/profile/user-home?userId=${userId}` });
+      } else {
+        common_vendor.index.showToast({ title: "\u65E0\u6CD5\u83B7\u53D6\u7528\u6237\u4FE1\u606F", icon: "none" });
+      }
+    };
     const onViewNote = (note) => {
       console.log("\u70B9\u51FB\u6E38\u8BB0\u5361\u7247:", note.id);
       if (!note || !note.id) {
@@ -472,18 +480,19 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             a: note.coverImage,
             b: note.authorAvatar,
             c: common_vendor.t(note.authorName || "\u533F\u540D\u7528\u6237"),
-            d: common_vendor.t(note.title),
-            e: common_vendor.n({
+            d: common_vendor.o(($event) => viewAuthorProfile(note)),
+            e: common_vendor.t(note.title),
+            f: common_vendor.n({
               "icon-liked": note.isLiked
             }),
-            f: note.isLiked && shouldAnimateMap.value[note.id] ? 1 : "",
-            g: common_vendor.t(note.likeCount || 0),
-            h: note.isLiked ? 1 : "",
-            i: common_vendor.o(($event) => toggleLike(note)),
-            j: common_vendor.t(note.commentCount || 0),
-            k: common_vendor.o(($event) => handleComment(note)),
-            l: note.id,
-            m: common_vendor.o(($event) => onViewNote(note))
+            g: note.isLiked && shouldAnimateMap.value[note.id] ? 1 : "",
+            h: common_vendor.t(note.likeCount || 0),
+            i: note.isLiked ? 1 : "",
+            j: common_vendor.o(($event) => toggleLike(note)),
+            k: common_vendor.t(note.commentCount || 0),
+            l: common_vendor.o(($event) => handleComment(note)),
+            m: note.id,
+            n: common_vendor.o(($event) => onViewNote(note))
           };
         }),
         x: !noteList.value.length

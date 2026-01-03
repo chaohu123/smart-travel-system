@@ -10,6 +10,7 @@ public class User {
     private Integer gender;
     private String city;
     private String signature;
+    private String email;
     private Integer status;
     private Integer noteCount;
     private Integer favoriteCount;
@@ -32,6 +33,8 @@ public class User {
     public void setCity(String city) { this.city = city; }
     public String getSignature() { return signature; }
     public void setSignature(String signature) { this.signature = signature; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
     public Integer getNoteCount() { return noteCount; }

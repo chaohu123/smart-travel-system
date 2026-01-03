@@ -25,7 +25,7 @@
             </view>
           </view>
           <view class="location-row">
-            <text class="location-icon">📍</text>
+            <text class="iconfont icon-weizhi location-icon"></text>
             <text class="location-text">{{ detail.province || '' }}{{ detail.province && detail.city ? '/' : '' }}{{ detail.city || '' }}</text>
           </view>
 
@@ -54,7 +54,7 @@
         <view class="info-card">
           <view class="info-item" v-if="detail.address">
             <view class="info-label">
-              <text class="info-icon">📍</text>
+              <text class="iconfont icon-weizhi info-icon"></text>
               <text class="info-title">地址</text>
             </view>
             <text class="info-content">{{ detail.address }}</text>
@@ -62,7 +62,7 @@
 
           <view class="info-item" v-if="detail.openTime">
             <view class="info-label">
-              <text class="info-icon">🕐</text>
+              <text class="iconfont icon-kaifangshijian info-icon"></text>
               <text class="info-title">开放时间</text>
             </view>
             <text class="info-content">{{ detail.openTime }}</text>
@@ -70,7 +70,7 @@
 
           <view class="info-item" v-if="detail.suggestedVisitTime">
             <view class="info-label">
-              <text class="info-icon">⏱️</text>
+              <text class="iconfont icon-tongxunshichang info-icon"></text>
               <text class="info-title">建议游览时长</text>
             </view>
             <text class="info-content">{{ detail.suggestedVisitTime }}</text>
@@ -78,7 +78,7 @@
 
           <view class="info-item" v-if="detail.ticketInfo">
             <view class="info-label">
-              <text class="info-icon">🎫</text>
+              <text class="iconfont icon-menpiao info-icon"></text>
               <text class="info-title">门票信息</text>
             </view>
             <text class="info-content">{{ detail.ticketInfo }}</text>
@@ -86,7 +86,7 @@
 
           <view class="info-item" v-if="(!detail.price || Number(detail.price) === 0) && detail.freeNotice">
             <view class="info-label">
-              <text class="info-icon">ℹ️</text>
+              <text class="iconfont icon-qita info-icon"></text>
               <text class="info-title">温馨提示</text>
             </view>
             <text class="info-content free-notice-content">{{ detail.freeNotice }}</text>
@@ -96,7 +96,7 @@
         <!-- 简介卡片 -->
         <view class="intro-card" v-if="detail.intro">
           <view class="card-title">
-            <text class="title-icon">📖</text>
+            <text class="iconfont icon-jingdianjieshao title-icon"></text>
             <text class="title-text">景点简介</text>
           </view>
           <text class="intro-text">{{ detail.intro }}</text>
@@ -105,7 +105,7 @@
         <!-- 标签 -->
         <view class="tags-card" v-if="detail.tags && detail.tags.length > 0">
           <view class="card-title">
-            <text class="title-icon">🏷️</text>
+            <text class="iconfont icon-qita title-icon"></text>
             <text class="title-text">标签</text>
           </view>
           <view class="tags-list">
@@ -120,7 +120,7 @@
         <!-- 附近美食 -->
         <view class="nearby-food-card" v-if="nearbyFoods.length > 0">
           <view class="card-title">
-            <text class="title-icon">🍜</text>
+            <text class="iconfont icon-fujinmeishi title-icon"></text>
             <text class="title-text">附近美食</text>
           </view>
           <view class="food-list">
@@ -137,7 +137,7 @@
                 mode="aspectFill"
               />
               <view v-else class="food-image-placeholder">
-                <text class="food-icon">🍜</text>
+                <text class="iconfont icon-meishi food-icon"></text>
               </view>
               <text class="food-name">{{ food.name }}</text>
               <text class="food-score" v-if="food.score">评分 {{ food.score }}</text>
@@ -391,7 +391,7 @@ onShow(() => {
 }
 
 .content {
-  padding: 0 24rpx 160rpx;
+  padding: 0 24rpx 240rpx;
 }
 
 /* 头部信息区域 */
@@ -442,6 +442,7 @@ onShow(() => {
 
 .location-icon {
   font-size: 24rpx;
+  color: #666666;
 }
 
 .location-text {
@@ -523,6 +524,7 @@ onShow(() => {
 
 .info-icon {
   font-size: 28rpx;
+  color: #3ba272;
 }
 
 .info-title {
@@ -567,6 +569,7 @@ onShow(() => {
 
 .title-icon {
   font-size: 28rpx;
+  color: #3ba272;
 }
 
 .title-text {
@@ -665,6 +668,7 @@ onShow(() => {
 
 .food-icon {
   font-size: 60rpx;
+  color: #ffffff;
 }
 
 .food-name {

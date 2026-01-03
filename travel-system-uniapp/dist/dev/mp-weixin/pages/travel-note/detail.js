@@ -27,6 +27,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const submitting = common_vendor.ref(false);
     const showLoginPrompt = common_vendor.ref(false);
     const textareaFocus = common_vendor.ref(false);
+    const replyingTo = common_vendor.ref(null);
     const commentCount = common_vendor.computed(() => {
       var _a, _b;
       if (((_b = (_a = noteDetail.value) == null ? void 0 : _a.note) == null ? void 0 : _b.commentCount) !== void 0 && noteDetail.value.note.commentCount !== null) {
@@ -160,19 +161,23 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
       }
     };
-    const openCommentEditor = () => {
+    const openCommentEditor = (replyComment) => {
       if (!user.value) {
         showLoginPromptDialog();
         return;
       }
       textareaFocus.value = false;
       commentContent.value = "";
+      replyingTo.value = replyComment || null;
       commentEditorVisible.value = true;
       common_vendor.nextTick(() => {
         setTimeout(() => {
           textareaFocus.value = true;
         }, 300);
       });
+    };
+    const openReplyEditor = (comment) => {
+      openCommentEditor(comment);
     };
     const handleTextareaTap = (e) => {
       if (e) {
@@ -189,9 +194,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       textareaFocus.value = false;
       commentEditorVisible.value = false;
       commentContent.value = "";
+      replyingTo.value = null;
     };
     const submitComment = async () => {
-      var _a, _b;
+      var _a, _b, _c;
       if (!noteId.value)
         return;
       if (!commentContent.value.trim()) {
@@ -209,16 +215,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           userId: user.value.id,
           contentType: "note",
           contentId: noteId.value,
-          content: commentContent.value.trim()
+          content: commentContent.value.trim(),
+          parentId: ((_a = replyingTo.value) == null ? void 0 : _a.id) || void 0
         });
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
-          common_vendor.index.showToast({ title: "\u8BC4\u8BBA\u6210\u529F", icon: "success" });
+          common_vendor.index.showToast({ title: replyingTo.value ? "\u56DE\u590D\u6210\u529F" : "\u8BC4\u8BBA\u6210\u529F", icon: "success" });
           commentContent.value = "";
           commentEditorVisible.value = false;
+          replyingTo.value = null;
           await loadComments();
-          if ((_a = noteDetail.value) == null ? void 0 : _a.note) {
-            if (((_b = data.data) == null ? void 0 : _b.commentCount) !== void 0) {
+          if ((_b = noteDetail.value) == null ? void 0 : _b.note) {
+            if (((_c = data.data) == null ? void 0 : _c.commentCount) !== void 0) {
               noteDetail.value.note.commentCount = data.data.commentCount;
             } else {
               noteDetail.value.note.commentCount = (noteDetail.value.note.commentCount || 0) + 1;
@@ -234,6 +242,46 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
       } finally {
         submitting.value = false;
+      }
+    };
+    const toggleCommentLike = async (comment) => {
+      if (!noteId.value)
+        return;
+      if (!user.value) {
+        showLoginPromptDialog();
+        return;
+      }
+      try {
+        const wasLiked = comment.isLiked;
+        comment.isLiked = !comment.isLiked;
+        comment.likeCount = comment.isLiked ? (comment.likeCount || 0) + 1 : Math.max((comment.likeCount || 0) - 1, 0);
+        if (api_content.travelNoteInteractionApi.toggleCommentLike) {
+          const res = await api_content.travelNoteInteractionApi.toggleCommentLike(user.value.id, comment.id);
+          const data = res.data;
+          if (res.statusCode === 200 && data.code === 200) {
+            comment.isLiked = data.data.isLiked;
+            if (data.data.likeCount !== void 0) {
+              comment.likeCount = data.data.likeCount;
+            }
+          } else {
+            comment.isLiked = wasLiked;
+            comment.likeCount = wasLiked ? (comment.likeCount || 0) + 1 : Math.max((comment.likeCount || 0) - 1, 0);
+            common_vendor.index.showToast({
+              title: data.msg || "\u64CD\u4F5C\u5931\u8D25",
+              icon: "none"
+            });
+          }
+        } else {
+          common_vendor.index.showToast({
+            title: comment.isLiked ? "\u70B9\u8D5E\u6210\u529F" : "\u53D6\u6D88\u70B9\u8D5E",
+            icon: "success"
+          });
+        }
+      } catch (error) {
+        common_vendor.index.showToast({
+          title: comment.isLiked ? "\u70B9\u8D5E\u6210\u529F" : "\u53D6\u6D88\u70B9\u8D5E",
+          icon: "success"
+        });
       }
     };
     const formatTime = (time) => {
@@ -282,11 +330,20 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
-          comments.value = (data.data || []).map((comment) => ({
+          const allComments = (data.data || []).map((comment) => ({
             ...comment,
             nickname: comment.nickname || comment.userName || comment.nick_name,
-            avatar: comment.avatar || comment.userAvatar || comment.user_avatar
+            avatar: comment.avatar || comment.userAvatar || comment.user_avatar,
+            isLiked: comment.isLiked || false,
+            likeCount: comment.likeCount || 0,
+            replies: comment.replies || []
           }));
+          const mainComments = allComments.filter((c) => !c.parentId || c.parentId === 0);
+          const replies = allComments.filter((c) => c.parentId && c.parentId !== 0);
+          mainComments.forEach((comment) => {
+            comment.replies = replies.filter((r) => r.parentId === comment.id);
+          });
+          comments.value = mainComments;
         }
       } catch (error) {
       }
@@ -337,48 +394,68 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       } : {}, {
         p: common_vendor.t(common_vendor.unref(commentCount)),
         q: common_vendor.f(comments.value, (comment, k0, i0) => {
-          return {
+          return common_vendor.e({
             a: comment.avatar || comment.userAvatar || common_vendor.unref(authorAvatar),
             b: common_vendor.t(comment.nickname || "\u533F\u540D\u7528\u6237"),
             c: common_vendor.t(comment.content),
-            d: common_vendor.t(formatTime(comment.createTime)),
-            e: comment.id
-          };
-        })
-      }) : {}, {
-        r: isLiked.value ? 1 : "",
-        s: common_vendor.t(((_f = (_e = noteDetail.value) == null ? void 0 : _e.note) == null ? void 0 : _f.likeCount) || 0),
+            d: comment.replies && comment.replies.length > 0
+          }, comment.replies && comment.replies.length > 0 ? {
+            e: common_vendor.f(comment.replies, (reply, k1, i1) => {
+              return {
+                a: common_vendor.t(reply.nickname || "\u533F\u540D\u7528\u6237"),
+                b: common_vendor.t(reply.content),
+                c: reply.id
+              };
+            })
+          } : {}, {
+            f: common_vendor.t(formatTime(comment.createTime)),
+            g: comment.isLiked ? 1 : "",
+            h: common_vendor.t(comment.likeCount || 0),
+            i: comment.isLiked ? 1 : "",
+            j: common_vendor.o(($event) => toggleCommentLike(comment)),
+            k: common_vendor.o(($event) => openReplyEditor(comment)),
+            l: comment.id
+          });
+        }),
+        r: comments.value.length > 0
+      }, comments.value.length > 0 ? {} : {}, {
+        s: comments.value.length === 0
+      }, comments.value.length === 0 ? {} : {}) : {}, {
         t: isLiked.value ? 1 : "",
-        v: common_vendor.o(toggleLike),
-        w: isFavorite.value ? 1 : "",
-        x: isFavorite.value ? 1 : "",
-        y: common_vendor.o(toggleFavorite),
-        z: common_vendor.t(common_vendor.unref(commentCount)),
-        A: common_vendor.o(openCommentEditor),
-        B: commentEditorVisible.value
+        v: common_vendor.t(((_f = (_e = noteDetail.value) == null ? void 0 : _e.note) == null ? void 0 : _f.likeCount) || 0),
+        w: isLiked.value ? 1 : "",
+        x: common_vendor.o(toggleLike),
+        y: isFavorite.value ? 1 : "",
+        z: isFavorite.value ? 1 : "",
+        A: common_vendor.o(toggleFavorite),
+        B: common_vendor.t(common_vendor.unref(commentCount)),
+        C: common_vendor.o(openCommentEditor),
+        D: commentEditorVisible.value
       }, commentEditorVisible.value ? {
-        C: common_vendor.o(closeCommentEditor),
-        D: common_vendor.p({
+        E: common_vendor.t(replyingTo.value ? `\u56DE\u590D ${replyingTo.value.nickname || "\u533F\u540D\u7528\u6237"}` : "\u53D1\u8868\u8BC4\u8BBA"),
+        F: common_vendor.o(closeCommentEditor),
+        G: common_vendor.p({
           theme: "outline",
           size: "26",
           fill: "#8a94a3"
         }),
-        E: textareaFocus.value,
-        F: common_vendor.o(handleTextareaTap),
-        G: common_vendor.o(handleTextareaTap),
-        H: commentContent.value,
-        I: common_vendor.o(($event) => commentContent.value = $event.detail.value),
-        J: common_vendor.o(() => {
+        H: replyingTo.value ? `\u56DE\u590D ${replyingTo.value.nickname || "\u533F\u540D\u7528\u6237"}\uFF1A` : "\u5206\u4EAB\u4F60\u7684\u60F3\u6CD5...",
+        I: textareaFocus.value,
+        J: common_vendor.o(handleTextareaTap),
+        K: common_vendor.o(handleTextareaTap),
+        L: commentContent.value,
+        M: common_vendor.o(($event) => commentContent.value = $event.detail.value),
+        N: common_vendor.o(() => {
         }),
-        K: common_vendor.t(commentContent.value.length),
-        L: common_vendor.t(submitting.value ? "\u63D0\u4EA4\u4E2D..." : "\u53D1\u8868"),
-        M: !commentContent.value.trim() || submitting.value,
-        N: common_vendor.o(submitComment),
-        O: common_vendor.o(() => {
+        O: common_vendor.t(commentContent.value.length),
+        P: common_vendor.t(submitting.value ? "\u63D0\u4EA4\u4E2D..." : "\u53D1\u8868"),
+        Q: !commentContent.value.trim() || submitting.value,
+        R: common_vendor.o(submitComment),
+        S: common_vendor.o(() => {
         }),
-        P: common_vendor.o(closeCommentEditor)
+        T: common_vendor.o(closeCommentEditor)
       } : {}, {
-        Q: commentEditorVisible.value ? 1 : ""
+        U: commentEditorVisible.value ? 1 : ""
       });
     };
   }

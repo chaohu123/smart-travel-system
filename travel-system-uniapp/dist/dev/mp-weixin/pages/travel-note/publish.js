@@ -2,9 +2,10 @@
 var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
 var store_user = require("../../store/user.js");
+var utils_image = require("../../utils/image.js");
+var utils_config = require("../../utils/config.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
-require("../../utils/config.js");
 if (!Array) {
   const _component_CloseSmall = common_vendor.resolveComponent("CloseSmall");
   _component_CloseSmall();
@@ -26,6 +27,23 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const tagIds = common_vendor.ref([]);
     const submitting = common_vendor.ref(false);
     const loading = common_vendor.ref(false);
+    const extractRelativePath = (url) => {
+      if (!url)
+        return url;
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        return url.split("?")[0];
+      }
+      try {
+        const urlObj = new URL(url);
+        return urlObj.pathname + urlObj.search;
+      } catch {
+        if (url.includes(utils_config.STATIC_BASE_URL)) {
+          const path = url.substring(url.indexOf(utils_config.STATIC_BASE_URL) + utils_config.STATIC_BASE_URL.length);
+          return path.split("?")[0];
+        }
+        return url;
+      }
+    };
     const loadCities = async () => {
       const res = await api_content.cityApi.list();
       const data = res.data;
@@ -89,7 +107,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             if (uploadRes.statusCode === 200 && data.code === 200) {
               const imageUrl = typeof data.data === "string" ? data.data : (_a = data.data) == null ? void 0 : _a.url;
               if (imageUrl) {
-                imageUrls.value.push(imageUrl);
+                imageUrls.value.push(utils_image.getImageUrl(imageUrl, false));
               } else {
                 common_vendor.index.showToast({ title: "\u4E0A\u4F20\u5931\u8D25\uFF1A\u672A\u83B7\u53D6\u5230\u56FE\u7247URL", icon: "none" });
                 break;
@@ -132,19 +150,84 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const res = await api_content.travelNoteApi.getDetail(id, user.value.id);
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
-          const note = data.data;
-          title.value = note.title || "";
-          content.value = note.content || "";
-          imageUrls.value = note.imageUrls || note.images || [];
-          if (note.cityId) {
-            const city = cityList.value.find((c) => c.id === note.cityId);
+          const detail = data.data;
+          const note = detail.note || detail;
+          console.log("=== \u52A0\u8F7D\u6E38\u8BB0\u8BE6\u60C5 ===");
+          console.log("\u5B8C\u6574\u6570\u636E:", detail);
+          console.log("\u6E38\u8BB0\u57FA\u672C\u4FE1\u606F:", note);
+          console.log("\u56FE\u7247\u5217\u8868:", detail.images);
+          console.log("\u666F\u70B9\u5217\u8868:", detail.scenics);
+          console.log("\u6807\u7B7E\u5217\u8868:", detail.tags);
+          title.value = note.title || note.title || "";
+          content.value = note.content || note.content || "";
+          console.log("\u586B\u5145\u540E\u7684\u6807\u9898:", title.value, "\u957F\u5EA6:", title.value.length);
+          console.log("\u586B\u5145\u540E\u7684\u6B63\u6587:", content.value.substring(0, 50) + "...", "\u957F\u5EA6:", content.value.length);
+          if (detail.images && Array.isArray(detail.images)) {
+            const sortedImages = [...detail.images].sort((a, b) => (a.sort || 0) - (b.sort || 0));
+            imageUrls.value = sortedImages.map((img) => {
+              const url = img.url || img;
+              return url ? utils_image.getImageUrl(url, false) : null;
+            }).filter((url) => url && typeof url === "string");
+          } else if (note.imageUrls) {
+            imageUrls.value = Array.isArray(note.imageUrls) ? note.imageUrls.map((url) => utils_image.getImageUrl(url, false)).filter(Boolean) : [];
+          } else if (note.images) {
+            const images = Array.isArray(note.images) ? note.images : [];
+            imageUrls.value = images.map((img) => {
+              const url = typeof img === "string" ? img : img.url || "";
+              return url ? utils_image.getImageUrl(url, false) : null;
+            }).filter(Boolean);
+          } else {
+            imageUrls.value = [];
+          }
+          const cityId = note.cityId || note.city_id;
+          if (cityId) {
+            if (cityList.value.length === 0) {
+              await loadCities();
+            }
+            const city = cityList.value.find((c) => c.id === cityId || c.id === Number(cityId));
             if (city) {
               selectedCity.value = city;
+              console.log("\u8BBE\u7F6E\u57CE\u5E02:", city);
               await loadScenic(city.id);
+            } else {
+              const cityName = note.cityName || note.city_name;
+              if (cityName) {
+                selectedCity.value = { id: Number(cityId), name: cityName };
+                console.log("\u4F7F\u7528\u4E34\u65F6\u57CE\u5E02\u5BF9\u8C61:", selectedCity.value);
+                await loadScenic(Number(cityId));
+              } else {
+                console.warn("\u672A\u627E\u5230\u57CE\u5E02\u4FE1\u606F\uFF0CcityId:", cityId);
+              }
             }
+          } else {
+            console.warn("\u6E38\u8BB0\u6CA1\u6709\u57CE\u5E02ID");
           }
-          scenicIds.value = note.scenicIds || [];
-          tagIds.value = note.tagIds || [];
+          if (detail.scenics && Array.isArray(detail.scenics)) {
+            scenicIds.value = detail.scenics.map((scenic) => {
+              const id2 = scenic.id || scenic.scenicId || scenic.scenic_id;
+              return id2 != null ? Number(id2) : null;
+            }).filter((id2) => id2 != null);
+            console.log("\u586B\u5145\u666F\u70B9ID:", scenicIds.value);
+          } else if (note.scenicIds || note.scenic_ids) {
+            const ids = note.scenicIds || note.scenic_ids;
+            scenicIds.value = Array.isArray(ids) ? ids.map((id2) => Number(id2)) : [];
+            console.log("\u4ECEnote\u4E2D\u586B\u5145\u666F\u70B9ID:", scenicIds.value);
+          } else {
+            scenicIds.value = [];
+            console.log("\u6CA1\u6709\u666F\u70B9ID");
+          }
+          if (detail.tags && Array.isArray(detail.tags)) {
+            tagIds.value = detail.tags.map((id2) => Number(id2)).filter((id2) => id2 != null && !isNaN(id2));
+            console.log("\u586B\u5145\u6807\u7B7EID:", tagIds.value);
+          } else if (note.tagIds || note.tag_ids) {
+            const ids = note.tagIds || note.tag_ids;
+            tagIds.value = Array.isArray(ids) ? ids.map((id2) => Number(id2)) : [];
+            console.log("\u4ECEnote\u4E2D\u586B\u5145\u6807\u7B7EID:", tagIds.value);
+          } else {
+            tagIds.value = [];
+            console.log("\u6CA1\u6709\u6807\u7B7EID");
+          }
+          console.log("\u6570\u636E\u586B\u5145\u5B8C\u6210 - \u6807\u9898:", title.value, "\u6B63\u6587\u957F\u5EA6:", content.value.length, "\u56FE\u7247\u6570:", imageUrls.value.length);
         } else {
           common_vendor.index.showToast({ title: data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
           setTimeout(() => {
@@ -152,6 +235,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }, 1500);
         }
       } catch (error) {
+        console.error("\u52A0\u8F7D\u6E38\u8BB0\u8BE6\u60C5\u5931\u8D25:", error);
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
         setTimeout(() => {
           common_vendor.index.navigateBack();
@@ -174,24 +258,26 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       try {
         let res;
         if (isEditMode.value && noteId.value) {
+          const relativeImageUrls = imageUrls.value.map(extractRelativePath);
           res = await api_content.travelNoteApi.update(noteId.value, {
             userId: user.value.id,
             title: title.value.trim(),
             content: content.value.trim(),
             cityId: selectedCity.value.id,
             cityName: selectedCity.value.name,
-            imageUrls: imageUrls.value,
+            imageUrls: relativeImageUrls,
             scenicIds: scenicIds.value,
             tagIds: tagIds.value
           });
         } else {
+          const relativeImageUrls = imageUrls.value.map(extractRelativePath);
           res = await api_content.travelNoteApi.publish({
             userId: user.value.id,
             title: title.value.trim(),
             content: content.value.trim(),
             cityId: selectedCity.value.id,
             cityName: selectedCity.value.name,
-            imageUrls: imageUrls.value,
+            imageUrls: relativeImageUrls,
             scenicIds: scenicIds.value,
             tagIds: tagIds.value
           });
@@ -199,14 +285,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
           if (isEditMode.value) {
-            common_vendor.index.showToast({ title: "\u66F4\u65B0\u6210\u529F", icon: "success" });
+            common_vendor.index.showToast({ title: "\u5DF2\u63D0\u4EA4\uFF0C\u7B49\u5F85\u5BA1\u6838", icon: "success" });
             setTimeout(() => {
-              if (noteId.value) {
-                common_vendor.index.redirectTo({ url: `/pages/travel-note/detail?id=${noteId.value}` });
-              } else {
-                common_vendor.index.navigateBack();
-              }
-            }, 300);
+              common_vendor.index.redirectTo({ url: "/pages/profile/my-article?status=pending" });
+            }, 1500);
           } else {
             common_vendor.index.showToast({ title: "\u5DF2\u63D0\u4EA4\uFF0C\u7B49\u5F85\u5BA1\u6838", icon: "success" });
             setTimeout(() => {
@@ -222,33 +304,34 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         submitting.value = false;
       }
     };
+    common_vendor.onLoad((options) => {
+      console.log("onLoad \u83B7\u53D6\u5230\u7684\u53C2\u6570:", options);
+      if (options && options.id) {
+        noteId.value = parseInt(options.id);
+        console.log("\u68C0\u6D4B\u5230\u7F16\u8F91\u6A21\u5F0F\uFF0C\u6E38\u8BB0ID:", noteId.value);
+      } else {
+        console.log("\u975E\u7F16\u8F91\u6A21\u5F0F\uFF0C\u6CA1\u6709ID\u53C2\u6570");
+      }
+    });
     common_vendor.onMounted(() => {
-      common_vendor.nextTick(() => {
-        try {
-          let pages = [];
-          if (typeof common_vendor.index !== "undefined" && common_vendor.index.getCurrentPages) {
-            const getPagesFn = common_vendor.index.getCurrentPages;
-            if (typeof getPagesFn === "function") {
-              pages = getPagesFn();
-            }
-          }
-          if (pages && pages.length > 0) {
-            const currentPage = pages[pages.length - 1];
-            const options = currentPage.options || {};
-            if (options.id) {
-              noteId.value = parseInt(options.id);
-            }
-          }
-        } catch (error) {
-          console.warn("\u83B7\u53D6\u9875\u9762\u53C2\u6570\u5931\u8D25:", error);
+      Promise.all([
+        loadCities(),
+        loadTags(),
+        loadScenic()
+      ]).then(() => {
+        console.log("\u57FA\u7840\u6570\u636E\u52A0\u8F7D\u5B8C\u6210 - \u57CE\u5E02\u6570:", cityList.value.length, "\u6807\u7B7E\u6570:", tagOptions.value.length, "\u666F\u70B9\u6570:", scenicOptions.value.length);
+        if (noteId.value) {
+          console.log("\u5F00\u59CB\u52A0\u8F7D\u6E38\u8BB0\u8BE6\u60C5\uFF0CID:", noteId.value);
+          loadNoteDetail(noteId.value);
+        } else {
+          console.log("\u975E\u7F16\u8F91\u6A21\u5F0F\uFF0C\u4E0D\u52A0\u8F7D\u8BE6\u60C5");
         }
-        loadCities().then(() => {
-          loadTags();
-          loadScenic();
-          if (noteId.value) {
-            loadNoteDetail(noteId.value);
-          }
-        });
+      }).catch((error) => {
+        console.error("\u52A0\u8F7D\u57FA\u7840\u6570\u636E\u5931\u8D25:", error);
+        if (noteId.value) {
+          console.log("\u57FA\u7840\u6570\u636E\u52A0\u8F7D\u5931\u8D25\uFF0C\u4F46\u4ECD\u5C1D\u8BD5\u52A0\u8F7D\u6E38\u8BB0\u8BE6\u60C5\uFF0CID:", noteId.value);
+          loadNoteDetail(noteId.value);
+        }
       });
     });
     return (_ctx, _cache) => {

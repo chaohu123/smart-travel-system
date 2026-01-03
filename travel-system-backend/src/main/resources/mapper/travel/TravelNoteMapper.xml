@@ -86,18 +86,18 @@
     <update id="update" parameterType="com.smarttravel.travel.domain.TravelNote">
         UPDATE travel_note
         SET
-            user_id = #{userId},
-            title = #{title},
-            content = #{content},
-            city_id = #{cityId},
-            city_name = #{cityName},
-            status = #{status},
-            audit_remark = #{auditRemark},
-            view_count = #{viewCount},
-            like_count = #{likeCount},
-            favorite_count = #{favoriteCount},
-            comment_count = #{commentCount},
-            is_featured = #{isFeatured},
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="title != null">title = #{title},</if>
+            <if test="content != null">content = #{content},</if>
+            <if test="cityId != null">city_id = #{cityId},</if>
+            <if test="cityName != null">city_name = #{cityName},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="auditRemark != null">audit_remark = #{auditRemark},</if>
+            <if test="viewCount != null">view_count = #{viewCount},</if>
+            <if test="likeCount != null">like_count = #{likeCount},</if>
+            <if test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
+            <if test="commentCount != null">comment_count = #{commentCount},</if>
+            <if test="isFeatured != null">is_featured = #{isFeatured},</if>
             update_time = NOW()
         WHERE id = #{id} AND del_flag = 0
     </update>

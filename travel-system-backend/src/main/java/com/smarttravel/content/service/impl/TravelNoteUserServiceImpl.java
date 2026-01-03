@@ -347,8 +347,38 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
             throw new RuntimeException("无权修改此游记");
         }
 
-        // 更新游记
+        // 如果原状态是已发布（pass），修改后需要重新审核，状态重置为待审核（pending）
+        // 如果原状态是待审核（pending）或被驳回（reject），保持待审核状态
+        // 如果原状态是私人（private），保持私人状态
+        if ("pass".equals(existing.getStatus())) {
+            note.setStatus("pending"); // 已发布的游记修改后需要重新审核
+        } else if (existing.getStatus() != null && !"private".equals(existing.getStatus())) {
+            // 待审核或被驳回的游记，修改后仍为待审核
+            note.setStatus("pending");
+        }
+        // 如果是私人状态，保持原状态不变（不设置status，让数据库保持原值）
+
+        // 从现有记录中获取不应该被修改的字段值，确保更新时不会丢失
         note.setUserId(userId); // 确保userId不被修改
+        // 保留统计字段的原有值（用户不能直接修改这些字段）
+        if (note.getViewCount() == null) {
+            note.setViewCount(existing.getViewCount() != null ? existing.getViewCount() : 0L);
+        }
+        if (note.getLikeCount() == null) {
+            note.setLikeCount(existing.getLikeCount() != null ? existing.getLikeCount() : 0L);
+        }
+        if (note.getFavoriteCount() == null) {
+            note.setFavoriteCount(existing.getFavoriteCount() != null ? existing.getFavoriteCount() : 0L);
+        }
+        if (note.getCommentCount() == null) {
+            note.setCommentCount(existing.getCommentCount() != null ? existing.getCommentCount() : 0L);
+        }
+        // 保留 is_featured 字段的原有值（只有管理员可以修改）
+        if (note.getIsFeatured() == null) {
+            note.setIsFeatured(existing.getIsFeatured() != null ? existing.getIsFeatured() : 0);
+        }
+
+        // 更新游记
         travelNoteMapper.update(note);
 
         // 删除旧图片

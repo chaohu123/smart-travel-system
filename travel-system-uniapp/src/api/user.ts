@@ -52,5 +52,47 @@ export const userApi = {
       showLoading: true,
     })
   },
+
+  // 签到
+  checkIn: (userId: number) => {
+    return request({
+      url: '/user/checkin',
+      method: 'POST',
+      data: { userId },
+      showLoading: true,
+      needAuth: true,
+    })
+  },
+
+  // 获取粉丝列表
+  getFollowers: (userId: number, pageNum: number = 1, pageSize: number = 20) => {
+    return request({
+      url: '/user/followers',
+      method: 'GET',
+      data: { userId, pageNum, pageSize },
+      showLoading: false,
+    })
+  },
+
+  // 获取关注列表
+  getFollowing: (userId: number, pageNum: number = 1, pageSize: number = 20) => {
+    return request({
+      url: '/user/following',
+      method: 'GET',
+      data: { userId, pageNum, pageSize },
+      showLoading: false,
+    })
+  },
+
+  // 关注/取消关注用户
+  toggleFollow: (userId: number, targetUserId: number) => {
+    return request({
+      url: '/user/follow',
+      method: 'POST',
+      data: { userId, targetUserId },
+      showLoading: true,
+      needAuth: true,
+    })
+  },
 }
 

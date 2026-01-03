@@ -183,7 +183,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const viewAuthorProfile = (userId) => {
       if (userId) {
-        utils_router.safeNavigateTo(`/pages/profile/other?userId=${userId}`);
+        common_vendor.index.navigateTo({ url: `/pages/profile/user-home?userId=${userId}` });
       }
     };
     const toggleLike = async (note) => {

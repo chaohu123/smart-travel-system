@@ -1,0 +1,160 @@
+
+.following-page.data-v-437ebe57 {
+  min-height: 100vh;
+  background-color: #f8fafb;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 导航栏 */
+.navbar.data-v-437ebe57 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 30rpx;
+  padding-top: calc(20rpx + env(safe-area-inset-top));
+  background: #fff;
+  border-bottom: 1rpx solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-back.data-v-437ebe57 {
+  width: 60rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nav-back .iconfont.data-v-437ebe57 {
+  font-size: 36rpx;
+  color: #333;
+}
+.nav-title.data-v-437ebe57 {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #333;
+}
+.nav-placeholder.data-v-437ebe57 {
+  width: 60rpx;
+}
+
+/* 列表 */
+.list-scroll.data-v-437ebe57 {
+  flex: 1;
+  height: calc(100vh - 120rpx);
+}
+.following-list.data-v-437ebe57 {
+  padding: 20rpx;
+}
+.following-item.data-v-437ebe57 {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 24rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+.user-avatar.data-v-437ebe57 {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.user-info.data-v-437ebe57 {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.user-name.data-v-437ebe57 {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+.user-signature.data-v-437ebe57 {
+  font-size: 24rpx;
+  color: #999;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+}
+.unfollow-btn.data-v-437ebe57 {
+  padding: 12rpx 32rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  border: 1rpx solid #ddd;
+  background: #fff;
+  color: #666;
+  flex-shrink: 0;
+}
+
+/* 空状态 */
+.empty-state.data-v-437ebe57 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 200rpx 40rpx;
+  gap: 24rpx;
+}
+.empty-icon.data-v-437ebe57 {
+  font-size: 120rpx;
+  opacity: 0.3;
+}
+.empty-text.data-v-437ebe57 {
+  font-size: 32rpx;
+  color: #666;
+}
+.empty-tip.data-v-437ebe57 {
+  font-size: 26rpx;
+  color: #999;
+}
+
+/* 加载更多 */
+.load-more.data-v-437ebe57 {
+  text-align: center;
+  padding: 40rpx;
+}
+.load-more-text.data-v-437ebe57 {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* 骨架屏 */
+.skeleton-list.data-v-437ebe57 {
+  padding: 20rpx;
+}
+.skeleton-item.data-v-437ebe57 {
+  display: flex;
+  gap: 20rpx;
+  padding: 24rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  margin-bottom: 20rpx;
+}
+.skeleton-avatar.data-v-437ebe57 {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: #f0f0f0;
+  flex-shrink: 0;
+}
+.skeleton-content.data-v-437ebe57 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+.skeleton-line.data-v-437ebe57 {
+  height: 24rpx;
+  background: #f0f0f0;
+  border-radius: 4rpx;
+}
+.skeleton-line.short.data-v-437ebe57 {
+  width: 60%;
+}

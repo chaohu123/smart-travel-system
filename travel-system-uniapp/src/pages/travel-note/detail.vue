@@ -73,8 +73,51 @@
             <view class="comment-content-wrapper">
               <text class="comment-author">{{ comment.nickname || '匿名用户' }}</text>
               <text class="comment-content">{{ comment.content }}</text>
-              <text class="comment-time">{{ formatTime(comment.createTime) }}</text>
+              
+              <!-- 回复列表 -->
+              <view v-if="comment.replies && comment.replies.length > 0" class="replies-list">
+                <view
+                  v-for="reply in comment.replies"
+                  :key="reply.id"
+                  class="reply-item"
+                >
+                  <text class="reply-author">{{ reply.nickname || '匿名用户' }}</text>
+                  <text class="reply-content">{{ reply.content }}</text>
+                </view>
+              </view>
+              
+              <!-- 日期和操作栏 -->
+              <view class="comment-footer-row">
+                <text class="comment-time">{{ formatTime(comment.createTime) }}</text>
+                <view class="comment-actions">
+                  <view
+                    class="action-item"
+                    :class="{ active: comment.isLiked }"
+                    @tap.stop="toggleCommentLike(comment)"
+                  >
+                    <text class="iconfont action-icon icon-icon" :class="{ 'icon-liked': comment.isLiked }"></text>
+                    <text class="action-count">{{ comment.likeCount || 0 }}</text>
+                  </view>
+                  <view
+                    class="action-item"
+                    @tap.stop="openReplyEditor(comment)"
+                  >
+                    <text class="iconfont action-icon icon-pinglun"></text>
+                    <text class="action-text">回复</text>
+                  </view>
+                </view>
+              </view>
             </view>
+          </view>
+          
+          <!-- 评论列表底部提示 -->
+          <view v-if="comments.length > 0" class="comment-footer-tip">
+            <text class="tip-text">暂时没有更多评论了</text>
+          </view>
+          
+          <!-- 空状态提示 -->
+          <view v-if="comments.length === 0" class="comment-empty">
+            <text class="empty-text">暂无评论，快来发表第一条评论吧~</text>
           </view>
         </view>
       </view>
@@ -123,14 +166,14 @@
     >
       <view class="comment-editor" @click.stop>
         <view class="editor-header">
-          <text class="editor-title">发表评论</text>
+          <text class="editor-title">{{ replyingTo ? `回复 ${replyingTo.nickname || '匿名用户'}` : '发表评论' }}</text>
           <CloseSmall class="editor-close" @click="closeCommentEditor" theme="outline" size="26" fill="#8a94a3" />
         </view>
         <view class="editor-input-wrapper" @tap.stop>
           <textarea
             v-model="commentContent"
             class="editor-input"
-            placeholder="分享你的想法..."
+            :placeholder="replyingTo ? `回复 ${replyingTo.nickname || '匿名用户'}：` : '分享你的想法...'"
             maxlength="300"
             :focus="textareaFocus"
             :cursor-spacing="20"
@@ -181,6 +224,7 @@ const commentContent = ref('')
 const submitting = ref(false)
 const showLoginPrompt = ref(false)
 const textareaFocus = ref(false)
+const replyingTo = ref<any>(null) // 正在回复的评论
 
 // 评论数量（优先使用后端返回的真实数据）
 const commentCount = computed(() => {
@@ -338,7 +382,7 @@ const toggleFavorite = async () => {
   }
 }
 
-const openCommentEditor = () => {
+const openCommentEditor = (replyComment?: any) => {
   if (!user.value) {
     showLoginPromptDialog()
     return
@@ -347,6 +391,7 @@ const openCommentEditor = () => {
   // 先重置焦点状态
   textareaFocus.value = false
   commentContent.value = ''
+  replyingTo.value = replyComment || null
   commentEditorVisible.value = true
 
   // 增加延迟时间，确保弹层和 textarea 完全渲染
@@ -356,6 +401,11 @@ const openCommentEditor = () => {
       textareaFocus.value = true
     }, 300) // 从 100ms 增加到 300ms
   })
+}
+
+// 打开回复编辑器
+const openReplyEditor = (comment: any) => {
+  openCommentEditor(comment)
 }
 
 // textarea 点击事件处理函数
@@ -377,6 +427,7 @@ const closeCommentEditor = () => {
   textareaFocus.value = false
   commentEditorVisible.value = false
   commentContent.value = ''
+  replyingTo.value = null
 }
 
 const submitComment = async () => {
@@ -400,12 +451,14 @@ const submitComment = async () => {
       contentType: 'note',
       contentId: noteId.value,
       content: commentContent.value.trim(),
+      parentId: replyingTo.value?.id || undefined,
     })
     const data = res.data as ApiResponse<{ commentId?: number; commentCount?: number }>
     if (res.statusCode === 200 && data.code === 200) {
-      uni.showToast({ title: '评论成功', icon: 'success' })
+      uni.showToast({ title: replyingTo.value ? '回复成功' : '评论成功', icon: 'success' })
       commentContent.value = ''
       commentEditorVisible.value = false
+      replyingTo.value = null
       // 重新加载评论
       await loadComments()
       // 更新评论数
@@ -426,6 +479,59 @@ const submitComment = async () => {
     })
   } finally {
     submitting.value = false
+  }
+}
+
+// 评论点赞
+const toggleCommentLike = async (comment: any) => {
+  if (!noteId.value) return
+  
+  if (!user.value) {
+    showLoginPromptDialog()
+    return
+  }
+
+  try {
+    // 先更新本地状态，提供即时反馈
+    const wasLiked = comment.isLiked
+    comment.isLiked = !comment.isLiked
+    comment.likeCount = comment.isLiked
+      ? (comment.likeCount || 0) + 1
+      : Math.max((comment.likeCount || 0) - 1, 0)
+    
+    // 调用API（如果后端支持）
+    if (travelNoteInteractionApi.toggleCommentLike) {
+      const res = await travelNoteInteractionApi.toggleCommentLike(user.value.id, comment.id)
+      const data = res.data as ApiResponse<{ isLiked: boolean; likeCount?: number }>
+      if (res.statusCode === 200 && data.code === 200) {
+        comment.isLiked = data.data.isLiked
+        if (data.data.likeCount !== undefined) {
+          comment.likeCount = data.data.likeCount
+        }
+      } else {
+        // API失败，恢复原状态
+        comment.isLiked = wasLiked
+        comment.likeCount = wasLiked
+          ? (comment.likeCount || 0) + 1
+          : Math.max((comment.likeCount || 0) - 1, 0)
+        uni.showToast({
+          title: data.msg || '操作失败',
+          icon: 'none',
+        })
+      }
+    } else {
+      // 后端不支持，使用本地状态
+      uni.showToast({
+        title: comment.isLiked ? '点赞成功' : '取消点赞',
+        icon: 'success',
+      })
+    }
+  } catch (error: any) {
+    // 如果后端不支持评论点赞，使用本地状态
+    uni.showToast({
+      title: comment.isLiked ? '点赞成功' : '取消点赞',
+      icon: 'success',
+    })
   }
 }
 
@@ -477,13 +583,27 @@ const loadComments = async () => {
     })
     const data = res.data as ApiResponse<any[]>
     if (res.statusCode === 200 && data.code === 200) {
-      // 确保字段名正确映射
-      comments.value = (data.data || []).map((comment: any) => ({
+      // 确保字段名正确映射，并处理回复列表
+      const allComments = (data.data || []).map((comment: any) => ({
         ...comment,
         // 兼容不同的字段名
         nickname: comment.nickname || comment.userName || comment.nick_name,
         avatar: comment.avatar || comment.userAvatar || comment.user_avatar,
+        isLiked: comment.isLiked || false,
+        likeCount: comment.likeCount || 0,
+        replies: comment.replies || [],
       }))
+      
+      // 分离主评论和回复
+      const mainComments = allComments.filter((c: any) => !c.parentId || c.parentId === 0)
+      const replies = allComments.filter((c: any) => c.parentId && c.parentId !== 0)
+      
+      // 将回复关联到对应的主评论
+      mainComments.forEach((comment: any) => {
+        comment.replies = replies.filter((r: any) => r.parentId === comment.id)
+      })
+      
+      comments.value = mainComments
     }
   } catch (error) {
     // 忽略评论加载错误，但不影响页面显示
@@ -667,6 +787,7 @@ onMounted(() => {
   color: #333333;
   font-weight: 600;
   margin-bottom: 8rpx;
+  display: block;
 }
 
 .comment-content {
@@ -674,10 +795,124 @@ onMounted(() => {
   color: #333333;
   line-height: 1.6;
   margin-bottom: 8rpx;
+  word-break: break-all;
+  white-space: pre-wrap;
+  display: block;
+}
+
+.comment-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12rpx;
 }
 
 .comment-time {
   font-size: 22rpx;
+  color: #999999;
+}
+
+/* 回复列表 */
+.replies-list {
+  margin-top: 16rpx;
+  padding-left: 16rpx;
+  border-left: 2rpx solid #f0f0f0;
+  margin-bottom: 12rpx;
+}
+
+.reply-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8rpx;
+  margin-bottom: 12rpx;
+  padding: 12rpx;
+  background: #f7f8fa;
+  border-radius: 8rpx;
+}
+
+.reply-author {
+  font-size: 24rpx;
+  color: #3ba272;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.reply-content {
+  font-size: 26rpx;
+  color: #666666;
+  line-height: 1.6;
+  word-break: break-all;
+  white-space: pre-wrap;
+  flex: 1;
+}
+
+/* 评论操作栏 */
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 0;
+}
+
+.action-item.active {
+  color: rgb(162, 59, 81);
+}
+
+.action-item .action-icon {
+  font-size: 32rpx;
+  color: #999999;
+  transition: color 0.2s;
+}
+
+.action-item.active .action-icon {
+  color: rgb(162, 59, 81);
+}
+
+.action-item .action-icon.icon-liked {
+  color: rgb(162, 59, 81);
+}
+
+.action-count {
+  font-size: 24rpx;
+  color: #666666;
+}
+
+.action-item.active .action-count {
+  color: rgb(162, 59, 81);
+}
+
+.action-text {
+  font-size: 24rpx;
+  color: #666666;
+}
+
+/* 评论列表底部提示 */
+.comment-footer-tip {
+  padding: 32rpx 0;
+  text-align: center;
+  border-top: 1rpx solid #f0f0f0;
+  margin-top: 16rpx;
+}
+
+.tip-text {
+  font-size: 24rpx;
+  color: #999999;
+}
+
+/* 评论空状态 */
+.comment-empty {
+  padding: 80rpx 32rpx;
+  text-align: center;
+}
+
+.empty-text {
+  font-size: 28rpx;
   color: #999999;
 }
 

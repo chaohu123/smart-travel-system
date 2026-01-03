@@ -1,168 +1,157 @@
 <template>
   <view class="user-home-page">
-    <!-- 顶部用户信息卡片 -->
+    <!-- 用户信息区域 -->
     <view class="user-header">
       <view class="header-bg"></view>
-      <view class="user-info-card">
-        <!-- 用户头像（可点击放大或更换） -->
-        <view class="avatar-section">
-          <image
-            class="user-avatar"
-            :src="userInfo.avatar || defaultAvatar"
-            mode="aspectFill"
-            @click="previewAvatar"
-          />
-          <view v-if="isOwnProfile" class="avatar-edit-btn" @click="changeAvatar">
-            <text class="iconfont icon-bianji"></text>
+      <view class="user-info-container">
+        <!-- 头像和昵称（一行） -->
+        <view class="user-top-row">
+          <view class="avatar-wrapper" @click="previewAvatar">
+            <image
+              class="user-avatar"
+              :src="userInfo.avatar || defaultAvatar"
+              mode="aspectFill"
+            />
+            <view v-if="isOwnProfile" class="avatar-edit-icon" @click.stop="changeAvatar">
+              <text class="iconfont icon-bianji"></text>
+            </view>
+          </view>
+          <view class="user-name-section">
+            <view class="name-level-row">
+              <text class="user-name">{{ userInfo.nickname || '未设置昵称' }}</text>
+              <text class="level-tag">LV{{ userInfo.level || 1 }}</text>
+            </view>
+            <!-- 经验条 -->
+            <view class="exp-bar-container">
+              <view class="exp-bar-bg">
+                <view
+                  class="exp-bar-fill"
+                  :style="{ width: expProgress + '%' }"
+                ></view>
+              </view>
+              <text class="exp-text">{{ currentExp }}/{{ nextLevelExp }}</text>
+            </view>
           </view>
         </view>
 
-        <!-- 用户昵称 -->
-        <text class="user-name">{{ userInfo.nickname || '未设置昵称' }}</text>
+        <!-- 粉丝数 关注数（一行） -->
+        <view class="follow-row">
+          <view class="follow-item" @click="viewFollowers">
+            <text class="follow-number">{{ userStats.followers || 0 }}</text>
+            <text class="follow-text">粉丝</text>
+          </view>
+          <view class="follow-item" @click="viewFollowing">
+            <text class="follow-number">{{ userStats.following || 0 }}</text>
+            <text class="follow-text">关注</text>
+          </view>
+        </view>
 
-        <!-- 用户等级和经验条 -->
-        <view class="level-section">
-          <view class="level-info">
-            <text class="level-badge">LV{{ userInfo.level || 1 }}</text>
-            <view v-if="userInfo.medals && userInfo.medals.length > 0" class="medals">
-              <text
-                v-for="(medal, index) in userInfo.medals.slice(0, 3)"
-                :key="index"
-                class="medal-icon"
-              >
-                {{ getMedalIcon(medal) }}
-              </text>
-              <text v-if="userInfo.medals.length > 3" class="medal-more">
-                +{{ userInfo.medals.length - 3 }}
-              </text>
-            </view>
-          </view>
-          <view class="exp-bar-wrapper">
-            <view class="exp-bar">
-              <view
-                class="exp-progress"
-                :style="{ width: expProgress + '%' }"
-              ></view>
-            </view>
-            <text class="exp-text">
-              {{ currentExp }}/{{ nextLevelExp }} 经验
-            </text>
-          </view>
+        <!-- 个性签名 -->
+        <view class="signature-row">
+          <text class="signature-label">个人签名：</text>
+          <text class="signature-text">{{ userInfo.signature || '这个人很懒，还没有设置个性签名~' }}</text>
         </view>
 
         <!-- 操作按钮 -->
-        <view class="action-buttons">
+        <view class="action-buttons-row">
           <button
             v-if="isOwnProfile"
-            class="action-btn primary"
+            class="action-btn primary-btn"
             @click="editProfile"
           >
-            <text class="iconfont icon-bianji"></text>
             <text>编辑资料</text>
           </button>
-          <button
-            v-else-if="!isOwnProfile"
-            class="action-btn"
-            @click="followUser"
-          >
-            <text class="iconfont" :class="isFollowing ? 'icon-guanzhu' : 'icon-guanzhu1'"></text>
-            <text>{{ isFollowing ? '已关注' : '关注' }}</text>
-          </button>
+          <template v-else>
+            <button
+              class="action-btn follow-btn"
+              @click="followUser"
+            >
+              <text>{{ isFollowing ? '已关注' : '关注' }}</text>
+            </button>
+            <button
+              class="action-btn chat-btn"
+              @click="openChat"
+            >
+              <text>私信</text>
+            </button>
+          </template>
           <button
             v-if="isOwnProfile"
-            class="action-btn secondary"
+            class="action-btn checkin-btn"
+            :class="{ 'checked-in': hasCheckedInToday }"
             @click="checkIn"
           >
-            <text class="iconfont icon-daka"></text>
-            <text>签到</text>
+            <text>{{ hasCheckedInToday ? '已签到' : '签到' }}</text>
           </button>
         </view>
       </view>
     </view>
 
-    <!-- 统计数据 -->
+    <!-- 数据面板（可点击） -->
     <view class="stats-section">
       <view class="stats-item" @click="viewNotes">
         <text class="stats-count">{{ userStats.notes || 0 }}</text>
-        <text class="stats-label">游记</text>
+        <text class="stats-label">游记数</text>
       </view>
       <view class="stats-divider"></view>
-      <view class="stats-item" @click="viewInteractions">
-        <text class="stats-count">{{ (userStats.likes || 0) + (userStats.favorites || 0) + (userStats.comments || 0) }}</text>
-        <text class="stats-label">互动</text>
+      <view class="stats-item">
+        <text class="stats-count">{{ userStats.totalLikes || 0 }}</text>
+        <text class="stats-label">获赞数</text>
       </view>
       <view class="stats-divider"></view>
       <view class="stats-item" @click="viewCheckins">
         <text class="stats-count">{{ userStats.checkins || 0 }}</text>
-        <text class="stats-label">足迹</text>
+        <text class="stats-label">足迹数</text>
       </view>
     </view>
 
-    <!-- 内容标签页 -->
-    <view class="tabs-section">
-      <view
-        v-for="tab in tabs"
-        :key="tab.key"
-        class="tab-item"
-        :class="{ active: currentTab === tab.key }"
-        @click="switchTab(tab.key)"
-      >
-        <text class="tab-text">{{ tab.label }}</text>
+    <!-- 我的消息 -->
+    <view v-if="isOwnProfile" class="message-section" @click="viewMessages">
+      <view class="section-title-row">
+        <text class="section-title-text">我的消息</text>
+        <view class="message-badge" v-if="unreadMessageCount > 0">
+          <text class="badge-text">{{ unreadMessageCount > 99 ? '99+' : unreadMessageCount }}</text>
+        </view>
+        <text class="iconfont icon-arrow-right section-arrow"></text>
+      </view>
+      <view class="message-preview" v-if="latestMessage">
+        <text class="message-text">{{ latestMessage }}</text>
       </view>
     </view>
 
-    <!-- 内容区域 -->
-    <scroll-view
-      scroll-y
-      class="content-scroll"
-      @scrolltolower="loadMore"
-      :refresher-enabled="true"
-      :refresher-triggered="refreshing"
-      @refresherrefresh="onRefresh"
-    >
-      <!-- 游记列表 -->
-      <view v-if="currentTab === 'notes'" class="content-list">
+    <!-- 互动动态模块 -->
+    <view v-if="isOwnProfile" class="interaction-section">
+      <view class="section-header">
+        <text class="section-title">互动动态</text>
+        <text class="section-more" @click="viewAllInteractions">查看全部</text>
+      </view>
+      <view class="interaction-list">
         <view
-          v-for="note in contentList"
-          :key="note.id"
-          class="note-card"
-          @click="viewNoteDetail(note.id)"
+          v-for="(item, index) in interactionList"
+          :key="index"
+          class="interaction-item"
+          @click="handleInteractionClick(item)"
         >
-          <view class="note-cover-wrapper">
+          <view class="interaction-avatar">
             <image
-              v-if="note.coverImage"
-              class="note-cover"
-              :src="getImageUrl(note.coverImage)"
+              v-if="item.userAvatar"
+              class="avatar-img"
+              :src="item.userAvatar"
               mode="aspectFill"
             />
+            <view v-else class="avatar-placeholder">{{ getInteractionIcon(item.type) }}</view>
           </view>
-          <view class="note-info">
-            <text class="note-title">{{ note.title }}</text>
-            <view class="note-meta">
-              <text class="note-time">{{ formatTime(note.createTime) }}</text>
-              <view class="note-stats">
-                <text class="stat-item">👍 {{ note.likeCount || 0 }}</text>
-                <text class="stat-item">💬 {{ note.commentCount || 0 }}</text>
-              </view>
-            </view>
+          <view class="interaction-content">
+            <text class="interaction-text">{{ formatInteractionText(item) }}</text>
+            <text class="interaction-time">{{ formatTime(item.createTime) }}</text>
           </view>
         </view>
+        <view v-if="interactionList.length === 0" class="empty-interaction">
+          <text class="empty-text">暂无互动动态</text>
+        </view>
       </view>
+    </view>
 
-      <!-- 空状态 -->
-      <view v-if="!loading && contentList.length === 0" class="empty-state">
-        <text class="empty-icon">{{ getEmptyIcon() }}</text>
-        <text class="empty-text">{{ getEmptyText() }}</text>
-      </view>
-
-      <!-- 加载更多 -->
-      <view v-if="hasMore && !loading" class="load-more">
-        <text>加载中...</text>
-      </view>
-      <view v-if="!hasMore && contentList.length > 0" class="load-more">
-        <text>没有更多了</text>
-      </view>
-    </scroll-view>
 
     <!-- 头像预览弹窗 -->
     <view v-if="showAvatarPreview" class="avatar-preview-modal" @click="closeAvatarPreview">
@@ -178,9 +167,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { userApi } from '@/api/user'
-import { travelNoteApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
+import { getCache, setCache } from '@/utils/storage'
 
 const store = useUserStore()
 const currentUser = computed(() => store.state.profile)
@@ -204,8 +194,18 @@ const userStats = ref({
   likes: 0,
   favorites: 0,
   comments: 0,
-  checkins: 0
+  checkins: 0,
+  totalLikes: 0,
+  followers: 0,
+  following: 0
 })
+
+// 收到的消息
+const unreadMessageCount = ref(0)
+const latestMessage = ref('')
+
+// 互动动态
+const interactionList = ref<any[]>([])
 
 // 是否是自己主页
 const isOwnProfile = computed(() => {
@@ -218,31 +218,41 @@ const currentExp = computed(() => userInfo.value.experience || 0)
 const nextLevelExp = computed(() => {
   const level = userInfo.value.level || 1
   // 等级经验公式：每级需要 100 * level 的经验
+  // 例如：LV1需要100经验，LV2需要200经验，LV3需要300经验
   return 100 * (level + 1)
+})
+const prevLevelExp = computed(() => {
+  const level = userInfo.value.level || 1
+  // 当前等级所需经验（上一级所需经验）
+  // LV1从0开始，LV2需要100，LV3需要200
+  if (level === 1) {
+    return 0 // LV1从0开始
+  }
+  return 100 * (level - 1)
 })
 const expProgress = computed(() => {
   const current = currentExp.value
   const next = nextLevelExp.value
-  const prev = 100 * (userInfo.value.level || 1)
+  const prev = prevLevelExp.value
+  // 计算当前等级内的经验进度
   if (next === prev) return 100
-  return Math.floor(((current - prev) / (next - prev)) * 100)
+  if (current <= prev) return 0 // 如果当前经验小于等于上一级所需经验，进度为0
+  const progress = ((current - prev) / (next - prev)) * 100
+  // 确保进度在0-100之间
+  const result = Math.max(0, Math.min(100, progress))
+  return result
 })
 
-// 标签页
-const tabs = [
-  { key: 'notes', label: '游记' }
-]
-const currentTab = ref('notes')
-const contentList = ref<any[]>([])
+// 加载状态
 const loading = ref(false)
 const refreshing = ref(false)
-const pageNum = ref(1)
-const pageSize = ref(10)
-const hasMore = ref(true)
 
 // 关注状态
 const isFollowing = ref(false)
 const showAvatarPreview = ref(false)
+
+// 签到状态
+const hasCheckedInToday = ref(false)
 
 // 获取勋章图标
 const getMedalIcon = (medal: any) => {
@@ -283,7 +293,8 @@ const loadUserInfo = async () => {
         avatar: userInfoData.avatar || '',
         level: userInfoData.level || 1,
         experience: userInfoData.experience || 0,
-        medals: userInfoData.medals || []
+        medals: userInfoData.medals || [],
+        signature: userInfoData.signature || ''
       }
     }
 
@@ -296,7 +307,24 @@ const loadUserInfo = async () => {
         likes: stats.likeCount || 0,
         favorites: stats.favoriteCount || 0,
         comments: stats.commentCount || 0,
-        checkins: stats.checkinCount || 0
+        checkins: stats.checkinCount || 0,
+        totalLikes: stats.totalLikes || stats.likeCount || 0,
+        followers: stats.followerCount || stats.followers || 0,
+        following: stats.followingCount || stats.following || 0
+      }
+    }
+
+    // 如果不是自己的主页，检查是否已关注
+    if (!isOwnProfile.value && currentUser.value?.id) {
+      try {
+        // 通过检查关注列表来判断是否已关注
+        const followingRes = await userApi.getFollowing(currentUser.value.id, 1, 100)
+        if (followingRes.statusCode === 200 && followingRes.data.code === 200) {
+          const followingList = followingRes.data.data?.list || []
+          isFollowing.value = followingList.some((u: any) => u.id === userId)
+        }
+      } catch (error) {
+        console.error('检查关注状态失败', error)
       }
     }
   } catch (error) {
@@ -304,69 +332,17 @@ const loadUserInfo = async () => {
     uni.showToast({ title: '加载失败', icon: 'none' })
   } finally {
     loading.value = false
+    // 加载完用户信息后检查签到状态
+    checkTodayCheckInStatus()
   }
 }
 
-// 加载内容列表
-const loadContent = async (reset = false) => {
-  const userId = targetUserId.value || currentUser.value?.id
-  if (!userId) return
-
-  if (reset) {
-    pageNum.value = 1
-    hasMore.value = true
-    contentList.value = []
-  }
-
-  if (loading.value || (!reset && !hasMore.value)) return
-
-  loading.value = true
-
-  try {
-    if (currentTab.value === 'notes') {
-      const res = await travelNoteApi.listMyNotes(userId, pageNum.value, pageSize.value)
-      if (res.statusCode === 200 && res.data.code === 200) {
-        const data = res.data.data || {}
-        const list = data.list || []
-        
-        if (reset) {
-          contentList.value = list
-        } else {
-          contentList.value.push(...list)
-        }
-
-        hasMore.value = list.length >= pageSize.value
-        if (hasMore.value) {
-          pageNum.value++
-        }
-      }
-    }
-  } catch (error) {
-    console.error('加载内容失败', error)
-  } finally {
-    loading.value = false
-    refreshing.value = false
-  }
-}
-
-// 切换标签
-const switchTab = (key: string) => {
-  currentTab.value = key
-  loadContent(true)
-}
 
 // 下拉刷新
 const onRefresh = () => {
   refreshing.value = true
   loadUserInfo()
-  loadContent(true)
-}
-
-// 加载更多
-const loadMore = () => {
-  if (!loading.value && hasMore.value) {
-    loadContent(false)
-  }
+  loadInteractions()
 }
 
 // 预览头像
@@ -400,26 +376,180 @@ const editProfile = () => {
   uni.navigateTo({ url: '/pages/profile/edit-profile' })
 }
 
+// 打开私信
+const openChat = () => {
+  const targetId = targetUserId.value || userInfo.value?.id
+  if (!targetId) {
+    uni.showToast({ title: '用户不存在', icon: 'none' })
+    return
+  }
+  
+  uni.navigateTo({
+    url: `/pages/profile/chat?userId=${targetId}&nickname=${encodeURIComponent(userInfo.value.nickname || '')}&avatar=${encodeURIComponent(userInfo.value.avatar || '')}`
+  })
+}
+
+// 检查今天是否已签到
+const checkTodayCheckInStatus = () => {
+  if (!isOwnProfile.value) return
+  
+  const today = new Date().toDateString()
+  const lastCheckInDate = getCache<string>('lastCheckInDate')
+  hasCheckedInToday.value = lastCheckInDate === today
+}
+
 // 签到
 const checkIn = async () => {
+  const userId = currentUser.value?.id
+  if (!userId) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+
+  // 检查今天是否已签到
+  const today = new Date().toDateString()
+  const lastCheckInDate = getCache<string>('lastCheckInDate')
+  
+  if (lastCheckInDate === today) {
+    uni.showToast({ title: '今天已经签到过了', icon: 'none' })
+    return
+  }
+
   try {
-    // TODO: 调用签到API
-    uni.showToast({ title: '签到成功！+5经验', icon: 'success' })
-    // 刷新用户信息
-    await loadUserInfo()
-  } catch (error) {
-    uni.showToast({ title: '签到失败', icon: 'none' })
+    const res = await userApi.checkIn(userId)
+    if (res.statusCode === 200 && res.data.code === 200) {
+      // 保存签到日期
+      setCache('lastCheckInDate', today, 24 * 60) // 24小时后过期
+      hasCheckedInToday.value = true // 更新签到状态
+      uni.showToast({ title: '签到成功！+10经验', icon: 'success' })
+      // 刷新用户信息
+      await loadUserInfo()
+      // 确保状态更新
+      checkTodayCheckInStatus()
+    } else {
+      uni.showToast({ title: res.data.msg || '签到失败', icon: 'none' })
+    }
+  } catch (error: any) {
+    console.error('签到失败', error)
+    // 如果后端返回已签到错误，也更新本地缓存
+    if (error?.data?.code === 400 && error?.data?.msg?.includes('已签到')) {
+      setCache('lastCheckInDate', today, 24 * 60)
+      hasCheckedInToday.value = true
+      checkTodayCheckInStatus() // 确保状态更新
+      uni.showToast({ title: '今天已经签到过了', icon: 'none' })
+    } else {
+      uni.showToast({ title: '签到失败，请稍后重试', icon: 'none' })
+    }
   }
 }
 
 // 关注用户
 const followUser = async () => {
-  // TODO: 实现关注功能
-  isFollowing.value = !isFollowing.value
-  uni.showToast({
-    title: isFollowing.value ? '关注成功' : '取消关注',
-    icon: 'success'
+  console.log('=== 关注功能调试信息 ===')
+  console.log('1. Store状态:', {
+    store: store,
+    state: store.state,
+    profile: store.state.profile,
+    currentUserValue: currentUser.value,
+    currentUserId: currentUser.value?.id
   })
+  
+  // 尝试从多个来源获取当前用户ID
+  let currentUserId = currentUser.value?.id
+  console.log('2. 从Store获取的userId:', currentUserId)
+  
+  if (!currentUserId) {
+    // 尝试从本地缓存获取
+    const cachedUser = getCache<any>('user')
+    console.log('3. 从缓存获取的user:', cachedUser)
+    
+    if (cachedUser?.id) {
+      currentUserId = cachedUser.id
+      console.log('4. 使用缓存中的userId:', currentUserId)
+      // 更新store
+      if (cachedUser) {
+        store.setUser(cachedUser)
+        console.log('5. 已更新Store中的用户信息')
+      }
+    } else {
+      console.log('4. 缓存中也没有用户信息')
+    }
+  }
+  
+  const targetId = targetUserId.value || userInfo.value?.id
+  console.log('6. 目标用户ID:', {
+    targetUserId: targetUserId.value,
+    userInfoId: userInfo.value?.id,
+    finalTargetId: targetId
+  })
+  
+  // 检查token
+  const token = getCache<string>('token')
+  console.log('7. Token信息:', {
+    hasToken: !!token,
+    tokenLength: token?.length,
+    tokenPreview: token ? token.substring(0, 20) + '...' : null
+  })
+  
+  if (!currentUserId) {
+    console.error('❌ 无法获取当前用户ID:', {
+      storeProfile: currentUser.value,
+      cachedUser: getCache<any>('user'),
+      token: token
+    })
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  
+  if (!targetId) {
+    console.error('❌ 无法获取目标用户ID')
+    uni.showToast({ title: '用户不存在', icon: 'none' })
+    return
+  }
+
+  console.log('8. 准备调用关注API:', {
+    currentUserId: currentUserId,
+    targetId: targetId,
+    currentUserIdType: typeof currentUserId,
+    targetIdType: typeof targetId
+  })
+
+  try {
+    const res = await userApi.toggleFollow(Number(currentUserId), Number(targetId))
+    console.log('9. API响应:', res)
+    if (res.statusCode === 200 && res.data.code === 200) {
+      console.log('✅ 关注操作成功')
+      isFollowing.value = !isFollowing.value
+      // 更新粉丝数和关注数
+      if (isFollowing.value) {
+        userStats.value.followers = (userStats.value.followers || 0) + 1
+      } else {
+        userStats.value.followers = Math.max(0, (userStats.value.followers || 0) - 1)
+      }
+      uni.showToast({
+        title: isFollowing.value ? '关注成功' : '取消关注',
+        icon: 'success'
+      })
+    } else {
+      console.error('❌ API返回错误:', {
+        statusCode: res.statusCode,
+        code: res.data?.code,
+        msg: res.data?.msg,
+        data: res.data
+      })
+      uni.showToast({ title: res.data.msg || '操作失败', icon: 'none' })
+    }
+  } catch (error: any) {
+    console.error('❌ 关注操作异常:', {
+      error: error,
+      message: error?.message,
+      data: error?.data,
+      response: error?.response,
+      statusCode: error?.statusCode
+    })
+    uni.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
+  }
+  console.log('=== 关注功能调试信息结束 ===')
 }
 
 // 查看游记
@@ -443,9 +573,134 @@ const viewCheckins = () => {
   }
 }
 
-// 查看游记详情
-const viewNoteDetail = (id: number) => {
-  uni.navigateTo({ url: `/pages/travel-note/detail?id=${id}` })
+// 查看粉丝
+const viewFollowers = () => {
+  const userId = targetUserId.value || currentUser.value?.id
+  if (userId) {
+    uni.navigateTo({ url: `/pages/profile/followers?userId=${userId}` })
+  }
+}
+
+// 查看关注
+const viewFollowing = () => {
+  const userId = targetUserId.value || currentUser.value?.id
+  if (userId) {
+    uni.navigateTo({ url: `/pages/profile/following?userId=${userId}` })
+  }
+}
+
+// 查看消息
+// 加载未读消息数量
+const loadUnreadMessageCount = () => {
+  // 从本地存储读取未读消息数量
+  const count = getCache<number>('unread_message_count')
+  unreadMessageCount.value = count || 0
+}
+
+const viewMessages = () => {
+  uni.navigateTo({ url: '/pages/profile/messages' })
+}
+
+// 查看全部互动
+const viewAllInteractions = () => {
+  uni.navigateTo({ url: '/pages/profile/my-interaction' })
+}
+
+// 处理互动项点击
+const handleInteractionClick = (item: any) => {
+  if (item.type === 'like' || item.type === 'comment') {
+    if (item.contentId) {
+      uni.navigateTo({ url: `/pages/travel-note/detail?id=${item.contentId}` })
+    }
+  } else if (item.type === 'follow') {
+    if (item.userId) {
+      uni.navigateTo({ url: `/pages/profile/user-home?userId=${item.userId}` })
+    }
+  } else if (item.type === 'newNote') {
+    if (item.noteId) {
+      uni.navigateTo({ url: `/pages/travel-note/detail?id=${item.noteId}` })
+    } else if (item.userId) {
+      uni.navigateTo({ url: `/pages/profile/user-home?userId=${item.userId}` })
+    }
+  }
+}
+
+// 格式化互动文本
+const formatInteractionText = (item: any) => {
+  const userName = item.userName || '某用户'
+  if (item.type === 'like') {
+    return `${userName} 赞了你的游记`
+  } else if (item.type === 'comment') {
+    return `${userName} 评论了你的游记`
+  } else if (item.type === 'follow') {
+    return `${userName} 关注了你`
+  } else if (item.type === 'newNote') {
+    return `${userName} 发布了新游记《${item.noteTitle || '新游记'}》`
+  }
+  return ''
+}
+
+// 获取互动图标
+const getInteractionIcon = (type: string) => {
+  if (type === 'like') return '👍'
+  if (type === 'comment') return '💬'
+  if (type === 'follow') return '➕'
+  if (type === 'newNote') return '📝'
+  return '🔔'
+}
+
+// 加载互动动态
+const loadInteractions = async () => {
+  if (!isOwnProfile.value) return
+  
+  try {
+    // 模拟数据，实际应该从API获取
+    // TODO: 调用API获取最近的点赞、评论、新关注、新游记
+    const mockInteractions = [
+      {
+        type: 'newNote',
+        userName: '旅行达人',
+        userAvatar: '',
+        userId: 3,
+        noteId: 1,
+        noteTitle: '成都美食之旅',
+        createTime: new Date().toISOString()
+      },
+      {
+        type: 'newNote',
+        userName: '探索者',
+        userAvatar: '',
+        userId: 4,
+        noteId: 2,
+        noteTitle: '西安古城游记',
+        createTime: new Date(Date.now() - 3600000).toISOString()
+      },
+      {
+        type: 'like',
+        userName: '旅行达人',
+        userAvatar: '',
+        contentId: 1,
+        createTime: new Date(Date.now() - 7200000).toISOString()
+      },
+      {
+        type: 'comment',
+        userName: '探索者',
+        userAvatar: '',
+        contentId: 2,
+        createTime: new Date(Date.now() - 10800000).toISOString()
+      },
+      {
+        type: 'follow',
+        userName: '新朋友',
+        userAvatar: '',
+        userId: 123,
+        createTime: new Date(Date.now() - 14400000).toISOString()
+      }
+    ]
+    interactionList.value = mockInteractions.slice(0, 5)
+  } catch (error) {
+    console.error('加载互动动态失败', error)
+  }
 }
 
 // 格式化时间
@@ -469,33 +724,87 @@ const getImageUrl = (url: string) => {
   return `https://your-api-domain.com${url}`
 }
 
-// 获取空状态图标
-const getEmptyIcon = () => {
-  if (currentTab.value === 'notes') return '📝'
-  return '📭'
-}
-
-// 获取空状态文本
-const getEmptyText = () => {
-  if (currentTab.value === 'notes') {
-    return isOwnProfile.value ? '还没有发布过游记' : '该用户还没有发布游记'
-  }
-  return '暂无内容'
-}
 
 onMounted(() => {
+  console.log('=== 用户主页页面加载 ===')
+  console.log('1. 页面加载时的Store状态:', {
+    store: store,
+    state: store.state,
+    profile: store.state.profile,
+    currentUser: currentUser.value
+  })
+  
   // 在 onMounted 中获取页面参数
   const pages = getCurrentPages()
   if (pages && pages.length > 0) {
     const currentPage = pages[pages.length - 1]
     const options = (currentPage as any).options || {}
+    console.log('2. 页面参数:', options)
     if (options.userId) {
       targetUserId.value = Number(options.userId)
+      console.log('3. 目标用户ID:', targetUserId.value)
     }
   }
   
+  // 确保用户信息已加载到store中
+  const cachedUser = getCache<any>('user')
+  const cachedToken = getCache<string>('token')
+  console.log('4. 缓存信息:', {
+    cachedUser: cachedUser,
+    cachedToken: cachedToken ? cachedToken.substring(0, 20) + '...' : null,
+    hasCachedUser: !!cachedUser,
+    hasCachedToken: !!cachedToken
+  })
+  
+  if (!currentUser.value?.id) {
+    console.log('5. Store中没有用户信息，尝试从缓存恢复')
+    if (cachedUser?.id) {
+      store.setUser(cachedUser)
+      console.log('6. 已从缓存恢复用户信息到Store:', cachedUser)
+    } else {
+      console.warn('7. ⚠️ 缓存中也没有用户信息，用户可能未登录')
+    }
+  } else {
+    console.log('5. Store中已有用户信息:', currentUser.value)
+  }
+  
+  console.log('8. 最终Store状态:', {
+    profile: store.state.profile,
+    currentUser: currentUser.value
+  })
+  
   loadUserInfo()
-  loadContent(true)
+  loadInteractions()
+  checkTodayCheckInStatus()
+  loadUnreadMessageCount() // 加载未读消息数量
+  console.log('=== 用户主页页面加载完成 ===')
+})
+
+// 页面显示时刷新数据（从其他页面返回时）
+onShow(() => {
+  console.log('=== 用户主页页面显示 (onShow) ===')
+  console.log('1. Store状态:', {
+    profile: store.state.profile,
+    currentUser: currentUser.value,
+    currentUserId: currentUser.value?.id
+  })
+  
+  // 确保用户信息已加载到store中
+  if (!currentUser.value?.id) {
+    const cachedUser = getCache<any>('user')
+    console.log('2. Store中没有用户信息，从缓存获取:', cachedUser)
+    if (cachedUser?.id) {
+      store.setUser(cachedUser)
+      console.log('3. 已从缓存恢复用户信息到Store')
+    }
+  } else {
+    console.log('2. Store中已有用户信息')
+  }
+  
+  // 重新加载用户信息，确保显示最新数据
+  loadUserInfo()
+  checkTodayCheckInStatus()
+  console.log('=== 用户主页页面显示完成 ===')
 })
 </script>
 
@@ -507,69 +816,223 @@ onMounted(() => {
 
 .user-header {
   position: relative;
-  padding-bottom: 40rpx;
-}
-
-.header-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 400rpx;
+  padding: 40rpx 0 30rpx;
   background: linear-gradient(135deg, #3ba272, #57c18c);
 }
 
-.user-info-card {
-  position: relative;
-  margin: 0 40rpx;
-  margin-top: 100rpx;
-  background: #fff;
-  border-radius: 24rpx;
-  padding: 40rpx;
-  box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.header-bg {
+  display: none;
 }
 
-.avatar-section {
+.user-info-container {
   position: relative;
-  margin-bottom: 24rpx;
+  padding: 0 40rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+/* 头像和昵称（一行） */
+.user-top-row {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+}
+
+.avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
 }
 
 .user-avatar {
-  width: 160rpx;
-  height: 160rpx;
+  width: 120rpx;
+  height: 120rpx;
   border-radius: 50%;
-  border: 6rpx solid #fff;
-  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, 0.15);
+  border: 4rpx solid rgba(255, 255, 255, 0.3);
+  background: #fff;
 }
 
-.avatar-edit-btn {
+.avatar-edit-icon {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 56rpx;
-  height: 56rpx;
+  width: 40rpx;
+  height: 40rpx;
   background: #3ba272;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 4rpx solid #fff;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.15);
+  border: 3rpx solid #fff;
 }
 
-.avatar-edit-btn .iconfont {
-  font-size: 28rpx;
+.avatar-edit-icon .iconfont {
+  font-size: 20rpx;
   color: #fff;
 }
 
+.user-name-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.name-level-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
 .user-name {
-  font-size: 40rpx;
+  font-size: 36rpx;
   font-weight: bold;
-  color: #333;
-  margin-bottom: 24rpx;
+  color: #fff;
+}
+
+.level-tag {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 600;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.4);
+}
+
+/* 经验条 */
+.exp-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  width: 100%;
+}
+
+.exp-bar-bg {
+  flex: 1;
+  height: 8rpx;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4rpx;
+  overflow: hidden;
+  position: relative;
+}
+
+.exp-bar-fill {
+  height: 100%;
+  background: #fff;
+  border-radius: 4rpx;
+  transition: width 0.3s ease;
+  min-width: 2rpx; /* 确保即使进度很小也能看到 */
+}
+
+.exp-text {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  min-width: 100rpx;
+  text-align: right;
+}
+
+/* 粉丝数 关注数（一行） */
+.follow-row {
+  display: flex;
+  align-items: center;
+  gap: 60rpx;
+  padding-left: 144rpx;
+}
+
+.follow-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8rpx;
+}
+
+.follow-number {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #fff;
+}
+
+.follow-text {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 个性签名 */
+.signature-row {
+  padding-left: 144rpx;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.signature-label {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.signature-text {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  flex: 1;
+}
+
+/* 操作按钮 */
+.action-buttons-row {
+  display: flex;
+  gap: 20rpx;
+  padding-left: 144rpx;
+  margin-top: 8rpx;
+}
+
+.action-btn {
+  padding: 16rpx 32rpx;
+  border-radius: 30rpx;
+  font-size: 26rpx;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  max-width: 200rpx;
+}
+
+.primary-btn {
+  background: #fff;
+  color: #3ba272;
+  font-weight: 600;
+}
+
+.follow-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1rpx solid rgba(255, 255, 255, 0.4);
+}
+
+.chat-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1rpx solid rgba(255, 255, 255, 0.4);
+}
+
+.checkin-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1rpx solid rgba(255, 255, 255, 0.4);
+}
+
+.checkin-btn.checked-in {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  border: 1rpx solid rgba(255, 255, 255, 0.2);
 }
 
 .level-section {
@@ -784,6 +1247,7 @@ onMounted(() => {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
 }
 
@@ -852,6 +1316,156 @@ onMounted(() => {
   max-width: 600rpx;
   height: 80%;
   max-height: 600rpx;
+}
+
+/* 我的消息 */
+.message-section {
+  background: #fff;
+  margin: 20rpx 40rpx;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.section-title-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+
+.message-badge {
+  background: #ff4757;
+  color: #fff;
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+  min-width: 36rpx;
+  text-align: center;
+}
+
+.badge-text {
+  font-size: 20rpx;
+  color: #fff;
+}
+
+.section-arrow {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.message-preview {
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f5f5f5;
+}
+
+.message-text {
+  font-size: 26rpx;
+  color: #999;
+  line-height: 1.6;
+  display: block;
+}
+
+/* 互动动态模块 */
+.interaction-section {
+  background: #fff;
+  margin: 20rpx 40rpx;
+  border-radius: 20rpx;
+  padding: 30rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  margin-bottom: 40rpx;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.section-more {
+  font-size: 26rpx;
+  color: #3ba272;
+}
+
+.interaction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.interaction-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f5f5f5;
+}
+
+.interaction-item:last-child {
+  border-bottom: none;
+}
+
+.interaction-avatar {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-placeholder {
+  font-size: 40rpx;
+}
+
+.interaction-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.interaction-text {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.5;
+}
+
+.interaction-time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.empty-interaction {
+  text-align: center;
+  padding: 60rpx 0;
+}
+
+.empty-interaction .empty-text {
+  font-size: 26rpx;
+  color: #999;
 }
 </style>
 

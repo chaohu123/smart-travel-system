@@ -110,9 +110,8 @@ const travelNoteApi = {
   },
   delete: (id, userId) => {
     return utils_http.request({
-      url: `/travel/note/${id}`,
+      url: `/travel/note/${id}?userId=${userId}`,
       method: "DELETE",
-      data: { userId },
       needAuth: true
     });
   },
@@ -187,6 +186,14 @@ const travelNoteInteractionApi = {
       url: "/travel/note/my/comments",
       method: "GET",
       data: { userId, pageNum, pageSize },
+      needAuth: true
+    });
+  },
+  toggleCommentLike: (userId, commentId) => {
+    return utils_http.request({
+      url: "/travel/note/interaction/comment/like",
+      method: "POST",
+      data: { userId, commentId },
       needAuth: true
     });
   }

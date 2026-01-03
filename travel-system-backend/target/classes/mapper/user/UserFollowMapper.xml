@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smarttravel.user.mapper.UserFollowMapper">
+
+    <resultMap id="BaseResultMap" type="com.smarttravel.user.domain.UserFollow">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="followed_user_id" property="followedUserId"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="del_flag" property="delFlag"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.smarttravel.user.domain.UserFollow">
+        INSERT INTO user_follow (user_id, followed_user_id, create_time, update_time, del_flag)
+        VALUES (#{userId}, #{followedUserId}, NOW(), NOW(), 0)
+    </insert>
+
+    <update id="delete">
+        UPDATE user_follow
+        SET del_flag = 1, update_time = NOW()
+        WHERE user_id = #{userId} AND followed_user_id = #{followedUserId} AND del_flag = 0
+    </update>
+
+    <select id="selectByUserAndFollowed" resultMap="BaseResultMap">
+        SELECT * FROM user_follow
+        WHERE user_id = #{userId} AND followed_user_id = #{followedUserId} AND del_flag = 0
+        LIMIT 1
+    </select>
+
+    <select id="selectFollowers" resultType="java.util.HashMap">
+        SELECT 
+            u.id,
+            u.nickname,
+            u.avatar,
+            u.signature,
+            CASE WHEN f2.id IS NOT NULL THEN 1 ELSE 0 END AS isFollowing
+        FROM user_follow uf
+        INNER JOIN user u ON uf.user_id = u.id
+        LEFT JOIN user_follow f2 ON f2.user_id = #{currentUserId} AND f2.followed_user_id = u.id AND f2.del_flag = 0
+        WHERE uf.followed_user_id = #{userId} AND uf.del_flag = 0 AND u.del_flag = 0
+        ORDER BY uf.create_time DESC
+        <if test="offset != null and pageSize != null">
+            LIMIT #{offset}, #{pageSize}
+        </if>
+    </select>
+
+    <select id="selectFollowing" resultType="java.util.HashMap">
+        SELECT 
+            u.id,
+            u.nickname,
+            u.avatar,
+            u.signature
+        FROM user_follow uf
+        INNER JOIN user u ON uf.followed_user_id = u.id
+        WHERE uf.user_id = #{userId} AND uf.del_flag = 0 AND u.del_flag = 0
+        ORDER BY uf.create_time DESC
+        <if test="offset != null and pageSize != null">
+            LIMIT #{offset}, #{pageSize}
+        </if>
+    </select>
+
+    <select id="countFollowers" resultType="int">
+        SELECT COUNT(1)
+        FROM user_follow uf
+        INNER JOIN user u ON uf.user_id = u.id
+        WHERE uf.followed_user_id = #{userId} AND uf.del_flag = 0 AND u.del_flag = 0
+    </select>
+
+    <select id="countFollowing" resultType="int">
+        SELECT COUNT(1)
+        FROM user_follow uf
+        INNER JOIN user u ON uf.followed_user_id = u.id
+        WHERE uf.user_id = #{userId} AND uf.del_flag = 0 AND u.del_flag = 0
+    </select>
+
+</mapper>
+

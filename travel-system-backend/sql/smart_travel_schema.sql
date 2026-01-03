@@ -455,6 +455,34 @@ CREATE TABLE IF NOT EXISTS `user_level` (
 
 
 
+-- 用户关注关系表
+CREATE TABLE IF NOT EXISTS `user_follow` (
+    `id`          bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id`     bigint(20) NOT NULL COMMENT '关注者ID',
+    `followed_user_id` bigint(20) NOT NULL COMMENT '被关注者ID',
+    `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '关注时间',
+    `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `del_flag`    tinyint(1) NOT NULL DEFAULT 0 COMMENT '删除标记：0正常 1删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_user_follow` (`user_id`, `followed_user_id`, `del_flag`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_followed_user_id` (`followed_user_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注关系表';
+
+-- 用户签到记录表
+CREATE TABLE IF NOT EXISTS `user_checkin` (
+    `id`          bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id`     bigint(20) NOT NULL COMMENT '用户ID',
+    `checkin_date` date NOT NULL COMMENT '签到日期',
+    `experience_gained` int(11) DEFAULT 10 COMMENT '获得经验值',
+    `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '签到时间',
+    `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uniq_user_date` (`user_id`, `checkin_date`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_checkin_date` (`checkin_date`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户签到记录表';
+
 
 
 

@@ -22,6 +22,63 @@
   background-color: #F6F7F8;
   display: flex;
   flex-direction: column;
+  /* 消除子元素之间的空白字符间隙 */
+  font-size: 0;
+}
+
+/* 搜索框和状态筛选的公共容器 */
+.search-filter-container.data-v-45957dff {
+  background-color: #FFFFFF;
+  flex-shrink: 0;
+  /* 恢复字体大小 */
+  font-size: 28rpx;
+}
+
+/* 搜索框容器 */
+.search-bar-wrapper.data-v-45957dff {
+  padding: 20rpx 24rpx 0 24rpx;
+  margin: 0;
+  background-color: transparent;
+  flex-shrink: 0;
+  /* 确保紧贴导航栏，无间隙 */
+  position: relative;
+  /* 恢复字体大小 */
+  font-size: 28rpx;
+}
+
+/* 搜索框 */
+.search-bar.data-v-45957dff {
+  display: flex;
+  align-items: center;
+  background-color: #F6F7F8;
+  border-radius: 48rpx;
+  padding: 16rpx 24rpx;
+  gap: 16rpx;
+  margin: 0;
+  margin-bottom: 0;
+}
+.search-icon.data-v-45957dff {
+  font-size: 32rpx;
+  color: #9EA7B0;
+  flex-shrink: 0;
+}
+.search-input.data-v-45957dff {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333333;
+  background-color: transparent;
+  border: none;
+  outline: none;
+}
+.search-input.data-v-45957dff::placeholder {
+  color: #9EA7B0;
+}
+.clear-icon.data-v-45957dff {
+  font-size: 28rpx;
+  color: #9EA7B0;
+  flex-shrink: 0;
+  padding: 4rpx;
+  cursor: pointer;
 }
 
 /* 状态筛选行 */
@@ -29,15 +86,26 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  padding: 20rpx 24rpx;
-  background-color: #FFFFFF;
+  padding: 12rpx 24rpx 20rpx 24rpx;
+  margin: 0;
+  background-color: transparent;
   border-bottom: 1rpx solid #F0F0F0;
+  border-top: none;
   overflow-x: auto;
   white-space: nowrap;
   position: sticky;
-  top: 0;
-  z-index: 9;
+  /* 导航栏高度通常是 88rpx（44px * 2），加上搜索框高度约 80rpx */
+  top: calc(88rpx + 80rpx);
+  z-index: 100;
   flex-shrink: 0;
+  /* 确保状态筛选行有足够的高度和可见性 */
+  min-height: 80rpx;
+  width: 100%;
+  box-sizing: border-box;
+  /* 确保状态筛选行始终在最上层，不被其他元素遮挡 */
+  will-change: transform;
+  /* 恢复字体大小 */
+  font-size: 24rpx;
 }
 .status-filter-item.data-v-45957dff {
   padding: 12rpx 24rpx;
@@ -47,6 +115,10 @@
   color: #666666;
   transition: all 120ms ease;
   flex-shrink: 0;
+  /* 确保文字可见 */
+  min-width: fit-content;
+  white-space: nowrap;
+  line-height: 1.5;
 }
 .status-filter-item.active.data-v-45957dff {
   background-color: #3BA272;
@@ -60,8 +132,10 @@
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
-  /* 确保 scroll-view 始终有高度，避免切换状态时高度变为 0 */
-  height: 0;
+  background-color: #F6F7F8;
+  /* 使用 flex: 1 和 min-height: 0 确保 scroll-view 始终占据可用空间 */
+  /* 避免切换状态时高度变为 0 导致白色背景闪烁 */
+  /* 设置背景色与页面一致，避免白色闪烁 */
 }
 
 /* 卡片列表 */
@@ -71,6 +145,9 @@
   padding: 24rpx;
   gap: 24rpx;
   box-sizing: border-box;
+  background-color: #F6F7F8;
+  /* 确保背景色与页面一致，避免切换状态时出现白色背景 */
+  min-height: 100%;
 }
 .note-card.data-v-45957dff {
   width: calc((100% - 24rpx) / 2);

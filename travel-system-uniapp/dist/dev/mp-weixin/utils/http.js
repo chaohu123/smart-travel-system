@@ -44,8 +44,19 @@ const request = (options) => {
   const headers = { ...header };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
+    if (needAuth) {
+      console.log("\u{1F510} [HTTP\u8BF7\u6C42] \u9700\u8981\u8BA4\u8BC1\u7684\u8BF7\u6C42:", {
+        url,
+        token,
+        tokenLength: token.length,
+        tokenPreview: token.substring(0, 30) + "...",
+        authorizationHeader: headers.Authorization,
+        authorizationPreview: headers.Authorization.substring(0, 40) + "..."
+      });
+    }
   }
   if (needAuth && !token) {
+    console.error("\u274C [HTTP\u8BF7\u6C42] \u9700\u8981\u8BA4\u8BC1\u4F46token\u4E3A\u7A7A:", url);
     handleAuthFail();
     return Promise.reject(new Error("no-token"));
   }
@@ -56,14 +67,6 @@ const request = (options) => {
   const run = () => new Promise((resolve, reject) => {
     const timeout = rest.timeout || 6e4;
     const fullUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`;
-    console.log("[HTTP Request]", {
-      url: fullUrl,
-      method: rest.method || "GET",
-      data: cleanedData,
-      headers: Object.keys(headers),
-      needAuth,
-      hasToken: !!token
-    });
     common_vendor.index.request({
       url: fullUrl,
       header: headers,
@@ -71,11 +74,6 @@ const request = (options) => {
       timeout,
       ...rest,
       success: (res) => {
-        console.log("[HTTP Response]", {
-          url: fullUrl,
-          statusCode: res.statusCode,
-          data: res.data
-        });
         if (res.statusCode === 401 || res.statusCode === 403) {
           handleAuthFail();
           reject(res);
@@ -84,10 +82,6 @@ const request = (options) => {
         resolve(res);
       },
       fail: (err) => {
-        console.error("[HTTP Error]", {
-          url: fullUrl,
-          error: err
-        });
         reject(err);
       },
       complete: () => {
