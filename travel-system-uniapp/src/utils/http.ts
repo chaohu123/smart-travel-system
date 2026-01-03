@@ -77,13 +77,31 @@ export const request = <T = any>(options: RequestOptions) => {
       // 设置默认超时时间为60秒，如果options中指定了timeout则使用指定的值
       const timeout = (rest as any).timeout || 60000
       
+      const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`
+      
+      // 调试日志
+      console.log('[HTTP Request]', {
+        url: fullUrl,
+        method: (rest as any).method || 'GET',
+        data: cleanedData,
+        headers: Object.keys(headers),
+        needAuth,
+        hasToken: !!token
+      })
+      
       uni.request({
-        url: url.startsWith('http') ? url : `${BASE_URL}${url}`,
+        url: fullUrl,
         header: headers,
         data: cleanedData,
         timeout: timeout,
         ...rest,
         success: (res) => {
+          console.log('[HTTP Response]', {
+            url: fullUrl,
+            statusCode: res.statusCode,
+            data: res.data
+          })
+          
           if (res.statusCode === 401 || res.statusCode === 403) {
             handleAuthFail()
             reject(res)
@@ -91,7 +109,13 @@ export const request = <T = any>(options: RequestOptions) => {
           }
           resolve(res as any)
         },
-        fail: reject,
+        fail: (err) => {
+          console.error('[HTTP Error]', {
+            url: fullUrl,
+            error: err
+          })
+          reject(err)
+        },
         complete: () => {
           if (showLoading) {
             uni.hideLoading()

@@ -113,19 +113,60 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       activeFeatureId.value = null;
     };
     const onFeatureClick = (item) => {
+      console.log("\u70B9\u51FB\u667A\u80FD\u5165\u53E3:", item.type);
       if (item.type === "planner") {
-        utils_router.safeSwitchTab("/pages/route/plan");
+        utils_router.safeSwitchTab("/pages/route/plan").catch((err) => {
+          console.error("\u5207\u6362 Tab \u5931\u8D25:", err);
+          common_vendor.index.showToast({
+            title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
+            icon: "none"
+          });
+        });
       } else if (item.type === "hot-routes") {
-        utils_router.safeNavigateTo("/pages/route/hot-routes");
+        utils_router.safeNavigateTo("/pages/route/hot-routes").catch((err) => {
+          console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+          common_vendor.index.showToast({
+            title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
+            icon: "none"
+          });
+        });
       } else if (item.type === "interest") {
-        utils_router.safeNavigateTo("/pages/recommend/interest");
+        utils_router.safeNavigateTo("/pages/recommend/interest").catch((err) => {
+          console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+          common_vendor.index.showToast({
+            title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
+            icon: "none"
+          });
+        });
       }
     };
     const onViewRoute = (route) => {
-      utils_router.safeNavigateTo(`/pages/itinerary/itinerary-detail?id=${route.id}`);
+      console.log("\u70B9\u51FB\u7EBF\u8DEF\u5361\u7247:", route.id);
+      if (!route || !route.id) {
+        console.error("\u7EBF\u8DEF\u6570\u636E\u65E0\u6548:", route);
+        return;
+      }
+      utils_router.safeNavigateTo(`/pages/itinerary/itinerary-detail?id=${route.id}`).catch((err) => {
+        console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+        common_vendor.index.showToast({
+          title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
+          icon: "none"
+        });
+      });
     };
     const onViewNote = (note) => {
-      utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${note.id}`);
+      console.log("\u70B9\u51FB\u6E38\u8BB0\u5361\u7247:", note.id);
+      if (!note || !note.id) {
+        console.error("\u6E38\u8BB0\u6570\u636E\u65E0\u6548:", note);
+        return;
+      }
+      utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${note.id}`).catch((err) => {
+        console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+        common_vendor.index.showToast({
+          title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
+          icon: "none"
+        });
+      });
     };
     const showLoginPromptDialog = () => {
       common_vendor.index.showModal({
@@ -195,14 +236,37 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${note.id}&tab=comment`);
     };
     const onViewScenic = async (item) => {
+      console.log("\u70B9\u51FB\u666F\u70B9\u5361\u7247:", item.id);
+      if (!item || !item.id) {
+        console.error("\u666F\u70B9\u6570\u636E\u65E0\u6548:", item);
+        return;
+      }
       try {
         await api_content.scenicSpotApi.incrementHotScore(item.id);
       } catch (error) {
+        console.warn("\u589E\u52A0\u70ED\u5EA6\u5931\u8D25:", error);
       }
-      utils_router.safeNavigateTo(`/pages/scenic/detail?id=${item.id}`);
+      utils_router.safeNavigateTo(`/pages/scenic/detail?id=${item.id}`).catch((err) => {
+        console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+        common_vendor.index.showToast({
+          title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
+          icon: "none"
+        });
+      });
     };
     const onViewFood = (item) => {
-      utils_router.safeNavigateTo(`/pages/food/detail?id=${item.id}`);
+      console.log("\u70B9\u51FB\u7F8E\u98DF\u5361\u7247:", item.id);
+      if (!item || !item.id) {
+        console.error("\u7F8E\u98DF\u6570\u636E\u65E0\u6548:", item);
+        return;
+      }
+      utils_router.safeNavigateTo(`/pages/food/detail?id=${item.id}`).catch((err) => {
+        console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+        common_vendor.index.showToast({
+          title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
+          icon: "none"
+        });
+      });
     };
     const fetchHomeData = async () => {
       var _a, _b;

@@ -102,11 +102,11 @@ export const scenicSpotApi = {
   },
 
   // 获取用户收藏的景点列表
-  getMyFavorites: (userId: number) => {
+  getMyFavorites: (userId: number, pageNum: number = 1, pageSize: number = 10) => {
     return request({
       url: '/scenic/my/favorites',
       method: 'GET',
-      data: { userId },
+      data: { userId, pageNum, pageSize },
       needAuth: true,
     })
   },
@@ -199,11 +199,21 @@ export const travelNoteApi = {
   },
 
   // 我发布的游记列表
-  listMyNotes: (userId: number, pageNum: number = 1, pageSize: number = 10) => {
+  listMyNotes: (userId: number, pageNum: number = 1, pageSize: number = 10, status?: string) => {
     return request({
       url: '/travel/note/my/list',
       method: 'GET',
-      data: { userId, pageNum, pageSize },
+      data: { userId, pageNum, pageSize, status },
+      needAuth: true,
+    })
+  },
+
+  // 设为私人游记
+  setPrivate: (id: number, userId: number, isPrivate: boolean) => {
+    return request({
+      url: `/travel/note/${id}/private`,
+      method: 'PUT',
+      data: { userId, isPrivate },
       needAuth: true,
     })
   },
@@ -261,6 +271,26 @@ export const travelNoteInteractionApi = {
       showLoading: false,
     })
   },
+
+  // 获取用户点赞的游记列表
+  listMyLikes: (userId: number, pageNum: number = 1, pageSize: number = 10) => {
+    return request({
+      url: '/travel/note/my/likes',
+      method: 'GET',
+      data: { userId, pageNum, pageSize },
+      needAuth: true,
+    })
+  },
+
+  // 获取用户评论列表
+  listMyComments: (userId: number, pageNum: number = 1, pageSize: number = 10) => {
+    return request({
+      url: '/travel/note/my/comments',
+      method: 'GET',
+      data: { userId, pageNum, pageSize },
+      needAuth: true,
+    })
+  },
 }
 
 // 美食API
@@ -301,11 +331,35 @@ export const foodApi = {
   },
 
   // 获取用户收藏的美食列表
-  getMyFavorites: (userId: number) => {
+  getMyFavorites: (userId: number, pageNum: number = 1, pageSize: number = 10) => {
     return request({
       url: '/food/my/favorites',
       method: 'GET',
+      data: { userId, pageNum, pageSize },
+      needAuth: true,
+    })
+  },
+}
+
+// 打卡API
+export const checkinApi = {
+  // 获取我的打卡列表
+  getMyCheckins: (userId: number, pageNum: number = 1, pageSize: number = 100) => {
+    return request({
+      url: '/checkin/my',
+      method: 'GET',
+      data: { userId, pageNum, pageSize },
+      showLoading: false,
+      needAuth: true,
+    })
+  },
+  // 获取用户足迹统计（城市、省份、美食数量等）
+  getFootprintStats: (userId: number) => {
+    return request({
+      url: '/checkin/footprint/stats',
+      method: 'GET',
       data: { userId },
+      showLoading: false,
       needAuth: true,
     })
   },

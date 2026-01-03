@@ -77,9 +77,75 @@
     {
       "path": "pages/profile/profile",
       "style": {
-        "navigationBarTitleText": "我的",
+        "navigationBarTitleText": "",
+        "navigationStyle": "custom",
         "navigationBarBackgroundColor": "#3BA272",
         "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/my-interaction",
+      "style": {
+        "navigationBarTitleText": "我的互动",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/my-article",
+      "style": {
+        "navigationBarTitleText": "我的游记",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/feedback",
+      "style": {
+        "navigationBarTitleText": "意见反馈",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/about",
+      "style": {
+        "navigationBarTitleText": "关于我们",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/preference",
+      "style": {
+        "navigationBarTitleText": "AI偏好设置",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/history",
+      "style": {
+        "navigationBarTitleText": "规划历史",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/profile/user-home",
+      "style": {
+        "navigationBarTitleText": "用户主页",
+        "navigationBarBackgroundColor": "#3BA272",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/footprint/footprint",
+      "style": {
+        "navigationBarTitleText": "我的足迹",
+        "navigationStyle": "custom",
+        "navigationBarBackgroundColor": "#FFFFFF",
+        "navigationBarTextStyle": "black"
       }
     },
     {

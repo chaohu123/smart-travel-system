@@ -98,7 +98,8 @@ import {
   Ticket,
   MagicStick,
   Setting,
-  DocumentChecked
+  DocumentChecked,
+  Trophy
 } from '@element-plus/icons-vue';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -120,6 +121,7 @@ const iconMap = {
   运营配置: MagicStick,
   活动专题管理: Ticket,
   推荐策略: MagicStick,
+  等级管理: Trophy,
   系统管理: Setting,
   系统参数: Setting,
   操作日志: DocumentChecked

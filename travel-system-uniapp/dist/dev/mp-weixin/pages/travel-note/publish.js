@@ -13,6 +13,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const store = store_user.useUserStore();
     const user = common_vendor.computed(() => store.state.profile);
+    const noteId = common_vendor.ref(null);
+    const isEditMode = common_vendor.computed(() => noteId.value !== null);
     const title = common_vendor.ref("");
     const content = common_vendor.ref("");
     const imageUrls = common_vendor.ref([]);
@@ -23,6 +25,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const tagOptions = common_vendor.ref([]);
     const tagIds = common_vendor.ref([]);
     const submitting = common_vendor.ref(false);
+    const loading = common_vendor.ref(false);
     const loadCities = async () => {
       const res = await api_content.cityApi.list();
       const data = res.data;
@@ -121,6 +124,42 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
       return true;
     };
+    const loadNoteDetail = async (id) => {
+      if (!user.value)
+        return;
+      loading.value = true;
+      try {
+        const res = await api_content.travelNoteApi.getDetail(id, user.value.id);
+        const data = res.data;
+        if (res.statusCode === 200 && data.code === 200) {
+          const note = data.data;
+          title.value = note.title || "";
+          content.value = note.content || "";
+          imageUrls.value = note.imageUrls || note.images || [];
+          if (note.cityId) {
+            const city = cityList.value.find((c) => c.id === note.cityId);
+            if (city) {
+              selectedCity.value = city;
+              await loadScenic(city.id);
+            }
+          }
+          scenicIds.value = note.scenicIds || [];
+          tagIds.value = note.tagIds || [];
+        } else {
+          common_vendor.index.showToast({ title: data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
+          setTimeout(() => {
+            common_vendor.index.navigateBack();
+          }, 1500);
+        }
+      } catch (error) {
+        common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
+        setTimeout(() => {
+          common_vendor.index.navigateBack();
+        }, 1500);
+      } finally {
+        loading.value = false;
+      }
+    };
     const onSubmit = async () => {
       if (submitting.value)
         return;
@@ -133,24 +172,49 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
       submitting.value = true;
       try {
-        const res = await api_content.travelNoteApi.publish({
-          userId: user.value.id,
-          title: title.value.trim(),
-          content: content.value.trim(),
-          cityId: selectedCity.value.id,
-          cityName: selectedCity.value.name,
-          imageUrls: imageUrls.value,
-          scenicIds: scenicIds.value,
-          tagIds: tagIds.value
-        });
+        let res;
+        if (isEditMode.value && noteId.value) {
+          res = await api_content.travelNoteApi.update(noteId.value, {
+            userId: user.value.id,
+            title: title.value.trim(),
+            content: content.value.trim(),
+            cityId: selectedCity.value.id,
+            cityName: selectedCity.value.name,
+            imageUrls: imageUrls.value,
+            scenicIds: scenicIds.value,
+            tagIds: tagIds.value
+          });
+        } else {
+          res = await api_content.travelNoteApi.publish({
+            userId: user.value.id,
+            title: title.value.trim(),
+            content: content.value.trim(),
+            cityId: selectedCity.value.id,
+            cityName: selectedCity.value.name,
+            imageUrls: imageUrls.value,
+            scenicIds: scenicIds.value,
+            tagIds: tagIds.value
+          });
+        }
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
-          common_vendor.index.showToast({ title: "\u53D1\u5E03\u6210\u529F", icon: "success" });
-          setTimeout(() => {
-            common_vendor.index.redirectTo({ url: `/pages/travel-note/detail?id=${data.data.noteId}` });
-          }, 300);
+          if (isEditMode.value) {
+            common_vendor.index.showToast({ title: "\u66F4\u65B0\u6210\u529F", icon: "success" });
+            setTimeout(() => {
+              if (noteId.value) {
+                common_vendor.index.redirectTo({ url: `/pages/travel-note/detail?id=${noteId.value}` });
+              } else {
+                common_vendor.index.navigateBack();
+              }
+            }, 300);
+          } else {
+            common_vendor.index.showToast({ title: "\u5DF2\u63D0\u4EA4\uFF0C\u7B49\u5F85\u5BA1\u6838", icon: "success" });
+            setTimeout(() => {
+              common_vendor.index.redirectTo({ url: "/pages/profile/my-article?status=pending" });
+            }, 1500);
+          }
         } else {
-          common_vendor.index.showToast({ title: data.msg || "\u53D1\u5E03\u5931\u8D25", icon: "none" });
+          common_vendor.index.showToast({ title: data.msg || (isEditMode.value ? "\u66F4\u65B0\u5931\u8D25" : "\u53D1\u5E03\u5931\u8D25"), icon: "none" });
         }
       } catch (error) {
         common_vendor.index.showToast({ title: "\u7F51\u7EDC\u9519\u8BEF", icon: "none" });
@@ -159,9 +223,33 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     common_vendor.onMounted(() => {
-      loadCities();
-      loadTags();
-      loadScenic();
+      common_vendor.nextTick(() => {
+        try {
+          let pages = [];
+          if (typeof common_vendor.index !== "undefined" && common_vendor.index.getCurrentPages) {
+            const getPagesFn = common_vendor.index.getCurrentPages;
+            if (typeof getPagesFn === "function") {
+              pages = getPagesFn();
+            }
+          }
+          if (pages && pages.length > 0) {
+            const currentPage = pages[pages.length - 1];
+            const options = currentPage.options || {};
+            if (options.id) {
+              noteId.value = parseInt(options.id);
+            }
+          }
+        } catch (error) {
+          console.warn("\u83B7\u53D6\u9875\u9762\u53C2\u6570\u5931\u8D25:", error);
+        }
+        loadCities().then(() => {
+          loadTags();
+          loadScenic();
+          if (noteId.value) {
+            loadNoteDetail(noteId.value);
+          }
+        });
+      });
     });
     return (_ctx, _cache) => {
       var _a;
@@ -208,8 +296,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             d: common_vendor.o(($event) => toggleTag(tag.id))
           };
         }),
-        p: common_vendor.t(submitting.value ? "\u53D1\u5E03\u4E2D..." : "\u53D1\u5E03"),
-        q: submitting.value,
+        p: common_vendor.t(loading.value ? "\u52A0\u8F7D\u4E2D..." : submitting.value ? common_vendor.unref(isEditMode) ? "\u66F4\u65B0\u4E2D..." : "\u53D1\u5E03\u4E2D..." : common_vendor.unref(isEditMode) ? "\u66F4\u65B0" : "\u53D1\u5E03"),
+        q: submitting.value || loading.value,
         r: common_vendor.o(onSubmit)
       });
     };

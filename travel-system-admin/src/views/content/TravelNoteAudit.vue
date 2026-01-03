@@ -69,6 +69,12 @@
             <el-tag :type="statusTagType(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="auditRemark" label="审核备注" min-width="200" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.auditRemark" style="color: #E6A23C;">{{ row.auditRemark }}</span>
+            <span v-else style="color: #909399;">-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="isFeatured" label="精选" width="90">
           <template #default="{ row }">
             <el-tag :type="row.isFeatured ? 'success' : 'info'">
@@ -84,12 +90,12 @@
         <el-table-column label="操作" width="500" fixed="right">
           <template #default="{ row }">
             <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-              <el-button size="small" type="primary" text @click="handleView(row)">详情</el-button>
+            <el-button size="small" type="primary" text @click="handleView(row)">详情</el-button>
               <el-button size="small" type="success" text @click="handleAudit(row, 'pass')">通过</el-button>
               <el-button size="small" type="warning" text @click="handleAudit(row, 'reject')">拒绝</el-button>
-              <el-button size="small" type="info" text @click="toggleFeatured(row)">
-                {{ row.isFeatured ? '取消精选' : '设为精选' }}
-              </el-button>
+            <el-button size="small" type="info" text @click="toggleFeatured(row)">
+              {{ row.isFeatured ? '取消精选' : '设为精选' }}
+            </el-button>
               <el-button size="small" type="danger" text @click="handleDelete(row)">删除</el-button>
             </div>
           </template>
@@ -105,6 +111,9 @@
           <p>城市：{{ detail.cityName || detail.city || '-' }}</p>
           <p>提交时间：{{ formatTime(detail.createTime) }}</p>
           <p>状态：<el-tag :type="statusTagType(detail.status)">{{ statusText(detail.status) }}</el-tag></p>
+          <p v-if="detail.auditRemark" style="color: #E6A23C; margin-top: 8px;">
+            审核备注：{{ detail.auditRemark }}
+          </p>
         </div>
         <el-divider />
         <div class="content" v-html="detail.content" style="margin-bottom: 30px; line-height: 1.8;"></div>
@@ -153,12 +162,15 @@
 
     <el-dialog v-model="auditDialog.visible" :title="auditDialog.title" width="480px">
       <el-form label-width="100px">
-        <el-form-item label="审核意见">
+        <el-form-item 
+          :label="auditDialog.action === 'reject' ? '驳回原因' : '审核意见'"
+          :rules="auditDialog.action === 'reject' ? [{ required: true, message: '驳回原因不能为空', trigger: 'blur' }] : []"
+        >
           <el-input
             v-model="auditDialog.remark"
             type="textarea"
             :rows="3"
-            placeholder="可填写审核原因或备注"
+            :placeholder="auditDialog.action === 'reject' ? '请填写驳回原因（必填）' : '可填写审核原因或备注'"
           />
         </el-form-item>
       </el-form>
@@ -273,11 +285,17 @@ const handleAudit = (row: TravelNote, action: 'pass' | 'reject') => {
 };
 
 const submitAudit = async () => {
+  // 如果是驳回操作，必须填写备注
+  if (auditDialog.action === 'reject' && !auditDialog.remark?.trim()) {
+    ElMessage.warning('驳回时必须填写驳回原因');
+    return;
+  }
+  
   try {
     const resp = await auditTravelNote({
       id: auditDialog.currentId,
       action: auditDialog.action,
-      remark: auditDialog.remark
+      remark: auditDialog.remark?.trim() || null
     });
     if (resp.data.code === 200) {
       ElMessage.success('操作成功');

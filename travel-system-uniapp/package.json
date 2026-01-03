@@ -3,9 +3,10 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev:mp-weixin": "cross-env NODE_OPTIONS=--max-old-space-size=4096 node scripts/uni-wrapper.js -p mp-weixin",
-    "build:mp-weixin": "cross-env NODE_OPTIONS=--max-old-space-size=4096 uni build -p mp-weixin",
-    "resize-icons": "node scripts/resize-tabbar-icons.js"
+    "dev:mp-weixin": "cross-env NODE_OPTIONS=--max-old-space-size=4096 node scripts/uni-wrapper.js -p mp-weixin && node scripts/fix-project-config.js",
+    "build:mp-weixin": "cross-env NODE_OPTIONS=--max-old-space-size=4096 uni build -p mp-weixin && node scripts/fix-project-config.js",
+    "resize-icons": "node scripts/resize-tabbar-icons.js",
+    "fix-config": "node scripts/fix-project-config.js"
   },
   "dependencies": {
     "vue": "^3.4.0",

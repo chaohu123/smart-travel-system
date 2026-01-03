@@ -55,13 +55,27 @@ const request = (options) => {
   const cleanedData = data ? cleanParams(data) : void 0;
   const run = () => new Promise((resolve, reject) => {
     const timeout = rest.timeout || 6e4;
+    const fullUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`;
+    console.log("[HTTP Request]", {
+      url: fullUrl,
+      method: rest.method || "GET",
+      data: cleanedData,
+      headers: Object.keys(headers),
+      needAuth,
+      hasToken: !!token
+    });
     common_vendor.index.request({
-      url: url.startsWith("http") ? url : `${BASE_URL}${url}`,
+      url: fullUrl,
       header: headers,
       data: cleanedData,
       timeout,
       ...rest,
       success: (res) => {
+        console.log("[HTTP Response]", {
+          url: fullUrl,
+          statusCode: res.statusCode,
+          data: res.data
+        });
         if (res.statusCode === 401 || res.statusCode === 403) {
           handleAuthFail();
           reject(res);
@@ -69,7 +83,13 @@ const request = (options) => {
         }
         resolve(res);
       },
-      fail: reject,
+      fail: (err) => {
+        console.error("[HTTP Error]", {
+          url: fullUrl,
+          error: err
+        });
+        reject(err);
+      },
       complete: () => {
         if (showLoading) {
           common_vendor.index.hideLoading();

@@ -13,7 +13,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const userStats = common_vendor.ref({
       notes: 0,
       favorites: 0,
-      checkins: 0
+      checkins: 0,
+      likes: 0,
+      comments: 0
     });
     const showLoginForm = common_vendor.ref(false);
     const form = common_vendor.reactive({
@@ -21,28 +23,84 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       nickname: ""
     });
     const loggingIn = common_vendor.ref(false);
+    const loadUserStats = async () => {
+      var _a;
+      if (!((_a = user.value) == null ? void 0 : _a.id))
+        return;
+      try {
+        const res = await api_user.userApi.getStats(user.value.id);
+        if (res.statusCode === 200 && res.data.code === 200) {
+          const stats = res.data.data || {};
+          userStats.value = {
+            notes: stats.noteCount || 0,
+            favorites: stats.favoriteCount || 0,
+            checkins: stats.checkinCount || 0,
+            likes: stats.likeCount || 0,
+            comments: stats.commentCount || 0
+          };
+        }
+      } catch (e) {
+        console.error("\u52A0\u8F7D\u7528\u6237\u7EDF\u8BA1\u5931\u8D25", e);
+      }
+    };
     common_vendor.watch(user, (newUser) => {
       if (newUser) {
         showLoginForm.value = false;
+        loadUserStats();
       }
     }, { immediate: true });
-    const navigateToMyRoutes = () => {
-      common_vendor.index.navigateTo({ url: "/pages/itinerary/itinerary-detail" });
-    };
+    common_vendor.onMounted(() => {
+      if (user.value) {
+        loadUserStats();
+      }
+    });
     const navigateToMyNotes = () => {
-      common_vendor.index.navigateTo({ url: "/pages/travel-note/list" });
+      if (!user.value) {
+        common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
+        return;
+      }
+      common_vendor.index.navigateTo({ url: "/pages/profile/my-article" });
     };
     const navigateToMyCheckins = () => {
-      common_vendor.index.navigateTo({ url: "/pages/checkin/checkin" });
+      if (!user.value) {
+        common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
+        return;
+      }
+      common_vendor.index.navigateTo({ url: "/pages/footprint/footprint" });
     };
-    const navigateToMyFavorites = () => {
-      common_vendor.index.showToast({ title: "\u656C\u8BF7\u671F\u5F85", icon: "none" });
+    const navigateToMyInteraction = () => {
+      if (!user.value) {
+        common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
+        return;
+      }
+      common_vendor.index.navigateTo({ url: "/pages/profile/my-interaction" });
     };
     const navigateToFeedback = () => {
-      common_vendor.index.showToast({ title: "\u656C\u8BF7\u671F\u5F85", icon: "none" });
+      common_vendor.index.navigateTo({ url: "/pages/profile/feedback" });
     };
     const navigateToAbout = () => {
-      common_vendor.index.showToast({ title: "\u656C\u8BF7\u671F\u5F85", icon: "none" });
+      common_vendor.index.navigateTo({ url: "/pages/profile/about" });
+    };
+    const navigateToPreference = () => {
+      if (!user.value) {
+        common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
+        return;
+      }
+      common_vendor.index.navigateTo({ url: "/pages/profile/preference" });
+    };
+    const navigateToHistory = () => {
+      if (!user.value) {
+        common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
+        return;
+      }
+      common_vendor.index.navigateTo({ url: "/pages/profile/history" });
+    };
+    const navigateToUserHome = () => {
+      if (!user.value) {
+        common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
+        return;
+      }
+      common_vendor.index.navigateTo({ url: `/pages/profile/user-home?userId=${user.value.id}` });
     };
     const openLogin = () => {
       showLoginForm.value = true;
@@ -73,6 +131,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           );
           common_vendor.index.showToast({ title: "\u767B\u5F55\u6210\u529F", icon: "success" });
           showLoginForm.value = false;
+          await loadUserStats();
         } else {
           common_vendor.index.showToast({ title: res.data.msg || "\u767B\u5F55\u5931\u8D25", icon: "none" });
         }
@@ -105,20 +164,24 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         k: common_vendor.unref(user).avatar || defaultAvatar,
         l: common_vendor.t(common_vendor.unref(user).nickname),
         m: common_vendor.t(common_vendor.unref(user).signature || "\u8BA9AI\u4E3A\u60A8\u91CF\u8EAB\u6253\u9020\u4E0B\u4E00\u6B21\u65C5\u884C"),
-        n: common_vendor.o(logout)
+        n: common_vendor.o(navigateToUserHome)
       }, {
         o: common_vendor.t(userStats.value.notes || 0),
-        p: common_vendor.o(navigateToMyRoutes),
-        q: common_vendor.t(userStats.value.checkins || 0),
-        r: common_vendor.o(navigateToMyCheckins),
-        s: common_vendor.o(openLogin),
-        t: common_vendor.o(navigateToMyFavorites),
-        v: common_vendor.o(navigateToMyNotes),
-        w: common_vendor.o(navigateToFeedback),
-        x: common_vendor.o(navigateToAbout),
-        y: common_vendor.unref(user)
+        p: common_vendor.o(navigateToMyNotes),
+        q: common_vendor.t((userStats.value.likes || 0) + (userStats.value.favorites || 0) + (userStats.value.comments || 0)),
+        r: common_vendor.o(navigateToMyInteraction),
+        s: common_vendor.t(userStats.value.checkins || 0),
+        t: common_vendor.o(navigateToMyCheckins),
+        v: common_vendor.o(navigateToPreference),
+        w: common_vendor.o(navigateToHistory),
+        x: common_vendor.o(navigateToMyInteraction),
+        y: common_vendor.o(navigateToMyNotes),
+        z: common_vendor.o(navigateToMyCheckins),
+        A: common_vendor.o(navigateToFeedback),
+        B: common_vendor.o(navigateToAbout),
+        C: common_vendor.unref(user)
       }, common_vendor.unref(user) ? {
-        z: common_vendor.o(logout)
+        D: common_vendor.o(logout)
       } : {});
     };
   }

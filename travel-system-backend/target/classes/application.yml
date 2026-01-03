@@ -1,5 +1,9 @@
 server:
   port: 8080
+  address: 0.0.0.0  # 监听所有网络接口，支持 localhost 和 IP 访问
+  # 这样配置后：
+  # - H5 平台可以通过 localhost:8080 访问
+  # - 微信小程序可以通过 192.168.142.1:8080 访问
 
 spring:
   datasource:

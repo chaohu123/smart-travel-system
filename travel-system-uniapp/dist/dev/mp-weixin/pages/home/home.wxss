@@ -111,6 +111,12 @@
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.06);
   border: 2rpx solid #f0f0f0;
   transition: all 0.2s;
+  cursor: pointer;
+  position: relative;
+}
+.feature-card.data-v-087d42bb:active {
+  transform: scale(0.95);
+  opacity: 0.9;
 }
 .feature-card--active.data-v-087d42bb {
   background-color: #e8f6f0;
@@ -154,6 +160,12 @@
   border-radius: 24rpx;
   overflow: hidden;
   box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.route-card.data-v-087d42bb:active {
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 .route-card--grid.data-v-087d42bb {
   border: 2rpx solid #f0f0f0;
@@ -217,6 +229,13 @@
   overflow: hidden;
   margin-bottom: 24rpx;
   box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.05);
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.note-card.data-v-087d42bb:active {
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 
 /* 封面图片 */
@@ -387,6 +406,12 @@
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.food-card.data-v-087d42bb:active {
+  transform: scale(0.95);
+  opacity: 0.9;
 }
 
 /* 美食图片 */
@@ -485,6 +510,12 @@
   border-radius: 24rpx;
   overflow: hidden;
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.scenic-card.data-v-087d42bb:active {
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 .scenic-image-wrapper.data-v-087d42bb {
   width: 100%;

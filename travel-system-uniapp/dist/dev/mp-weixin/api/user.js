@@ -30,6 +30,22 @@ const userApi = {
       data: { id: userId, interests },
       needAuth: false
     });
+  },
+  getStats: (userId) => {
+    return utils_http.request({
+      url: "/user/stats",
+      method: "GET",
+      data: userId ? { userId } : {},
+      showLoading: false
+    });
+  },
+  getProfile: (userId) => {
+    return utils_http.request({
+      url: "/user/profile",
+      method: "GET",
+      data: { userId },
+      showLoading: true
+    });
   }
 };
 exports.userApi = userApi;

@@ -8,7 +8,7 @@
         <!-- 渐变背景 -->
       </view>
       <view class="header-content">
-        <view class="search-bar" @click="onSearchClick">
+        <view class="search-bar" @tap="onSearchClick">
           <Search class="search-icon" theme="outline" size="28" fill="#5f6c7b" />
           <input
             class="search-input"
@@ -41,7 +41,7 @@
             :class="{ 'feature-card--active': activeFeatureId === item.id }"
             @touchstart="onFeatureTouchStart(item.id)"
             @touchend="onFeatureTouchEnd"
-            @click="onFeatureClick(item)"
+            @tap="onFeatureClick(item)"
           >
             <view class="feature-icon-wrapper">
               <text class="feature-icon-text">{{ item.text }}</text>
@@ -76,7 +76,7 @@
             v-for="item in filteredScenicList"
             :key="item.id"
             class="scenic-card"
-            @click="onViewScenic(item)"
+            @tap="onViewScenic(item)"
           >
             <!-- 景点图片 -->
             <view class="scenic-image-wrapper">
@@ -136,7 +136,7 @@
             v-for="route in routeList.slice(0, 4)"
             :key="route.id"
             class="route-card route-card--grid"
-            @click="onViewRoute(route)"
+            @tap="onViewRoute(route)"
           >
             <view class="route-cover-wrapper route-cover-wrapper--grid">
               <image
@@ -235,7 +235,7 @@
               v-for="item in foodList"
               :key="item.id"
               class="food-card"
-              @click="onViewFood(item)"
+              @tap="onViewFood(item)"
             >
               <!-- 美食图片 -->
               <view class="food-image-wrapper">
@@ -272,7 +272,7 @@
     <view
       class="back-to-top"
       :class="{ 'show': showBackToTop }"
-      @click="scrollToTop"
+      @tap="scrollToTop"
     >
       <text class="back-to-top-icon">↑</text>
     </view>
@@ -471,22 +471,63 @@ const onFeatureTouchEnd = () => {
 }
 
 const onFeatureClick = (item: (typeof featureEntries.value)[number]) => {
+  console.log('点击智能入口:', item.type)
   if (item.type === 'planner') {
-    safeSwitchTab('/pages/route/plan')
+    safeSwitchTab('/pages/route/plan').catch((err) => {
+      console.error('切换 Tab 失败:', err)
+      uni.showToast({
+        title: '跳转失败，请重试',
+        icon: 'none'
+      })
+    })
   } else if (item.type === 'hot-routes') {
-    safeNavigateTo('/pages/route/hot-routes')
+    safeNavigateTo('/pages/route/hot-routes').catch((err) => {
+      console.error('跳转失败:', err)
+      uni.showToast({
+        title: '跳转失败，请重试',
+        icon: 'none'
+      })
+    })
   } else if (item.type === 'interest') {
-    safeNavigateTo('/pages/recommend/interest')
+    safeNavigateTo('/pages/recommend/interest').catch((err) => {
+      console.error('跳转失败:', err)
+      uni.showToast({
+        title: '跳转失败，请重试',
+        icon: 'none'
+      })
+    })
   }
 }
 
 // 查看跳转
 const onViewRoute = (route: RouteItem) => {
-  safeNavigateTo(`/pages/itinerary/itinerary-detail?id=${route.id}`)
+  console.log('点击线路卡片:', route.id)
+  if (!route || !route.id) {
+    console.error('线路数据无效:', route)
+    return
+  }
+  safeNavigateTo(`/pages/itinerary/itinerary-detail?id=${route.id}`).catch((err) => {
+    console.error('跳转失败:', err)
+    uni.showToast({
+      title: '跳转失败，请重试',
+      icon: 'none'
+    })
+  })
 }
 
 const onViewNote = (note: NoteItem) => {
-  safeNavigateTo(`/pages/travel-note/detail?id=${note.id}`)
+  console.log('点击游记卡片:', note.id)
+  if (!note || !note.id) {
+    console.error('游记数据无效:', note)
+    return
+  }
+  safeNavigateTo(`/pages/travel-note/detail?id=${note.id}`).catch((err) => {
+    console.error('跳转失败:', err)
+    uni.showToast({
+      title: '跳转失败，请重试',
+      icon: 'none'
+    })
+  })
 }
 
 // 显示登录提示
@@ -583,17 +624,40 @@ const handleComment = (note: NoteItem) => {
 }
 
 const onViewScenic = async (item: ScenicItem) => {
+  console.log('点击景点卡片:', item.id)
+  if (!item || !item.id) {
+    console.error('景点数据无效:', item)
+    return
+  }
   // 点击景点时增加热度
   try {
     await scenicSpotApi.incrementHotScore(item.id)
   } catch (error) {
     // 静默失败，不影响页面跳转
+    console.warn('增加热度失败:', error)
   }
-  safeNavigateTo(`/pages/scenic/detail?id=${item.id}`)
+  safeNavigateTo(`/pages/scenic/detail?id=${item.id}`).catch((err) => {
+    console.error('跳转失败:', err)
+    uni.showToast({
+      title: '跳转失败，请重试',
+      icon: 'none'
+    })
+  })
 }
 
 const onViewFood = (item: FoodItem) => {
-  safeNavigateTo(`/pages/food/detail?id=${item.id}`)
+  console.log('点击美食卡片:', item.id)
+  if (!item || !item.id) {
+    console.error('美食数据无效:', item)
+    return
+  }
+  safeNavigateTo(`/pages/food/detail?id=${item.id}`).catch((err) => {
+    console.error('跳转失败:', err)
+    uni.showToast({
+      title: '跳转失败，请重试',
+      icon: 'none'
+    })
+  })
 }
 
 // 拉取首页推荐数据
@@ -856,6 +920,13 @@ onReachBottom(() => {
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.06);
   border: 2rpx solid #f0f0f0;
   transition: all 0.2s;
+  cursor: pointer;
+  position: relative;
+}
+
+.feature-card:active {
+  transform: scale(0.95);
+  opacity: 0.9;
 }
 
 .feature-card--active {
@@ -904,6 +975,13 @@ onReachBottom(() => {
   border-radius: 24rpx;
   overflow: hidden;
   box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.route-card:active {
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 
 .route-card--grid {
@@ -976,6 +1054,14 @@ onReachBottom(() => {
   overflow: hidden;
   margin-bottom: 24rpx;
   box-shadow: 0 10rpx 30rpx rgba(0, 0, 0, 0.05);
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.note-card:active {
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 
 /* 封面图片 */
@@ -1159,6 +1245,13 @@ onReachBottom(() => {
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.food-card:active {
+  transform: scale(0.95);
+  opacity: 0.9;
 }
 
 /* 美食图片 */
@@ -1267,6 +1360,13 @@ onReachBottom(() => {
   border-radius: 24rpx;
   overflow: hidden;
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scenic-card:active {
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 
 .scenic-image-wrapper {

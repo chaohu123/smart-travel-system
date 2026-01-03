@@ -453,9 +453,12 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
     }
 
     @Override
-    public Map<String, Object> listMyNotes(Long userId, Integer pageNum, Integer pageSize) {
+    public Map<String, Object> listMyNotes(Long userId, Integer pageNum, Integer pageSize, String status) {
         TravelNote query = new TravelNote();
         query.setUserId(userId);
+        if (status != null && !status.isEmpty()) {
+            query.setStatus(status);
+        }
         List<TravelNote> all = travelNoteMapper.selectList(query);
         // 按时间排序
         all.sort((a, b) -> {
@@ -494,6 +497,84 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
         return result;
     }
 
+    @Override
+    public Map<String, Object> listMyLikes(Long userId, Integer pageNum, Integer pageSize) {
+        int offset = (pageNum - 1) * pageSize;
+        List<Long> noteIds = userBehaviorMapper.selectContentIds(userId,
+            com.smarttravel.content.enums.BehaviorType.LIKE.getCode(), "note", offset, pageSize);
+        int total = userBehaviorMapper.countByUserAndBehavior(userId,
+            com.smarttravel.content.enums.BehaviorType.LIKE.getCode(), "note");
+
+        List<TravelNote> notes = noteIds.isEmpty() ? new ArrayList<>() : travelNoteMapper.selectByIds(noteIds);
+        // 保持原有顺序
+        Map<Long, TravelNote> noteMap = notes.stream().collect(Collectors.toMap(TravelNote::getId, n -> n));
+        List<TravelNote> ordered = new ArrayList<>();
+        for (Long id : noteIds) {
+            if (noteMap.containsKey(id)) {
+                ordered.add(noteMap.get(id));
+            }
+        }
+
+        Set<Long> favoriteIds = noteIds.isEmpty() ? java.util.Collections.emptySet()
+            : userBehaviorMapper.selectContentIdsInList(userId,
+            com.smarttravel.content.enums.BehaviorType.FAVORITE.getCode(), "note", noteIds)
+            .stream().collect(Collectors.toSet());
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (TravelNote note : ordered) {
+            Map<String, Object> item = buildNoteCard(note);
+            item.put("isLiked", true);
+            item.put("isFavorite", favoriteIds.contains(note.getId()));
+            list.add(item);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("pageNum", pageNum);
+        result.put("pageSize", pageSize);
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> listMyComments(Long userId, Integer pageNum, Integer pageSize) {
+        int offset = (pageNum - 1) * pageSize;
+        List<Comment> comments = commentMapper.selectByUserId(userId, offset, pageSize);
+        int total = commentMapper.countByUserId(userId);
+
+        List<Map<String, Object>> list = new ArrayList<>();
+        for (Comment comment : comments) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", comment.getId());
+            item.put("contentType", comment.getContentType());
+            item.put("contentId", comment.getContentId());
+            item.put("content", comment.getContent());
+            item.put("likeCount", comment.getLikeCount() != null ? comment.getLikeCount() : 0);
+            item.put("createTime", comment.getCreateTime());
+
+            // 获取评论对应的内容标题
+            if ("note".equals(comment.getContentType())) {
+                TravelNote note = travelNoteMapper.selectById(comment.getContentId());
+                if (note != null) {
+                    item.put("contentTitle", note.getTitle());
+                } else {
+                    item.put("contentTitle", "游记已删除");
+                }
+            } else {
+                item.put("contentTitle", "未知内容");
+            }
+
+            list.add(item);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("pageNum", pageNum);
+        result.put("pageSize", pageSize);
+        return result;
+    }
+
     private Map<String, Object> buildNoteCard(TravelNote note) {
         // 填充封面
         if (note.getCoverImage() == null) {
@@ -513,6 +594,16 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
         item.put("commentCount", note.getCommentCount());
         item.put("createTime", note.getCreateTime());
         item.put("status", note.getStatus());
+        item.put("auditRemark", note.getAuditRemark()); // 添加审核备注
+        item.put("userId", note.getUserId());
+        
+        // 添加作者信息
+        User author = userMapper.selectById(note.getUserId());
+        if (author != null) {
+            item.put("authorName", author.getNickname());
+            item.put("authorAvatar", author.getAvatar());
+        }
+        
         return item;
     }
 }

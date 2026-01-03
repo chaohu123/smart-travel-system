@@ -82,6 +82,21 @@
         WHERE id = #{id} AND del_flag = 0
     </update>
 
+    <select id="selectByUserId" resultMap="CommentResult">
+        SELECT id, content_type, content_id, user_id, content, parent_id, status, like_count,
+               create_time, update_time, del_flag
+        FROM comment
+        WHERE user_id = #{userId} AND del_flag = 0
+        ORDER BY create_time DESC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+    <select id="countByUserId" resultType="int">
+        SELECT COUNT(*)
+        FROM comment
+        WHERE user_id = #{userId} AND del_flag = 0
+    </select>
+
 </mapper>
 
 

@@ -33,50 +33,49 @@
         </view>
       </view>
 
-      <view v-else class="user-info-box">
-        <image class="user-avatar" :src="user.avatar || defaultAvatar" mode="aspectFill" />
-        <view class="user-details">
-          <view class="name-row">
-            <text class="user-name">{{ user.nickname }}</text>
-            <view class="level-tag">智旅达人</view>
+      <view v-else class="user-info-box" @click="navigateToUserHome">
+        <view class="user-center-content">
+          <image class="user-avatar" :src="user.avatar || defaultAvatar" mode="aspectFill" />
+          <view class="user-details">
+            <view class="name-row">
+              <text class="user-name">{{ user.nickname }}</text>
+              <view class="level-tag">智旅达人</view>
+            </view>
+            <text class="user-sign">{{ user.signature || '让AI为您量身打造下一次旅行' }}</text>
           </view>
-          <text class="user-sign">{{ user.signature || '让AI为您量身打造下一次旅行' }}</text>
-        </view>
-        <view class="setting-icon" @click="logout">
-          <text style="font-size: 24rpx; color: #fff; opacity: 0.8;">退出</text>
         </view>
       </view>
     </view>
 
     <!-- 行程状态条 -->
     <view class="trip-status-bar">
-      <view class="status-item" @click="navigateToMyRoutes">
+      <view class="status-item" @click="navigateToMyNotes">
         <text class="count">{{ userStats.notes || 0 }}</text>
-        <text class="label">进行中行程</text>
+        <text class="label">我的游记</text>
       </view>
       <view class="v-line"></view>
-      <view class="status-item">
-        <text class="count">0</text>
-        <text class="label">AI生成计划</text>
+      <view class="status-item" @click="navigateToMyInteraction">
+        <text class="count">{{ (userStats.likes || 0) + (userStats.favorites || 0) + (userStats.comments || 0) }}</text>
+        <text class="label">我的互动</text>
       </view>
       <view class="v-line"></view>
       <view class="status-item" @click="navigateToMyCheckins">
         <text class="count">{{ userStats.checkins || 0 }}</text>
-        <text class="label">打卡足迹</text>
+        <text class="label">我的足迹</text>
       </view>
     </view>
 
     <!-- AI智能服务 -->
     <view class="section-title">AI 智能服务</view>
     <view class="ai-tool-grid">
-      <view class="ai-tool-card" @click="openLogin">
+      <view class="ai-tool-card" @click="navigateToPreference">
         <view class="tool-icon ai-pref">
           <text class="iconfont icon-pianhaoshezhi"></text>
         </view>
         <text class="tool-name">偏好设置</text>
         <text class="tool-desc">定制AI推荐算法</text>
       </view>
-      <view class="ai-tool-card">
+      <view class="ai-tool-card" @click="navigateToHistory">
         <view class="tool-icon ai-history">
           <text class="iconfont icon-lishi"></text>
         </view>
@@ -88,20 +87,33 @@
     <!-- 功能菜单 -->
     <view class="menu-container">
       <view class="menu-list">
-        <view class="menu-item" @click="navigateToMyFavorites">
+        <view class="menu-item" @click="navigateToMyInteraction">
           <view class="menu-left">
-            <text class="icon-box iconfont icon-shoucang"></text>
-            <text>收藏的目的地</text>
+            <text class="icon-box iconfont icon-pinglun"></text>
+            <text>我的互动</text>
           </view>
           <text class="arrow iconfont icon-arrow-right"></text>
         </view>
         <view class="menu-item" @click="navigateToMyNotes">
           <view class="menu-left">
             <text class="icon-box iconfont icon-youji"></text>
-            <text>我的旅行日记</text>
+            <text>我的游记</text>
           </view>
           <text class="arrow iconfont icon-arrow-right"></text>
         </view>
+        <view class="menu-item" @click="navigateToMyCheckins">
+          <view class="menu-left">
+            <text class="icon-box iconfont icon-daka"></text>
+            <text>我的足迹</text>
+          </view>
+          <text class="arrow iconfont icon-arrow-right"></text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 其他功能 -->
+    <view class="menu-container" style="margin-top: 20rpx;">
+      <view class="menu-list">
         <view class="menu-item" @click="navigateToFeedback">
           <view class="menu-left">
             <text class="icon-box iconfont icon-yijianfankui"></text>
@@ -127,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch, onMounted } from 'vue'
 import { userApi } from '@/api/user'
 import { tagApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
@@ -141,6 +153,8 @@ const userStats = ref({
   notes: 0,
   favorites: 0,
   checkins: 0,
+  likes: 0,
+  comments: 0,
 })
 const showLoginForm = ref(false)
 
@@ -150,35 +164,94 @@ const form = reactive({
 })
 const loggingIn = ref(false)
 
-// 监听用户登录状态，如果已登录则关闭登录表单
+// 加载用户统计数据
+const loadUserStats = async () => {
+  if (!user.value?.id) return
+  try {
+    const res = await userApi.getStats(user.value.id)
+    if (res.statusCode === 200 && res.data.code === 200) {
+      const stats = res.data.data || {}
+      userStats.value = {
+        notes: stats.noteCount || 0,
+        favorites: stats.favoriteCount || 0,
+        checkins: stats.checkinCount || 0,
+        likes: stats.likeCount || 0,
+        comments: stats.commentCount || 0,
+      }
+    }
+  } catch (e) {
+    console.error('加载用户统计失败', e)
+  }
+}
+
+// 监听用户登录状态，如果已登录则关闭登录表单并加载统计数据
 watch(user, (newUser) => {
   if (newUser) {
     showLoginForm.value = false
+    loadUserStats()
   }
 }, { immediate: true })
 
-const navigateToMyRoutes = () => {
-  uni.navigateTo({ url: '/pages/itinerary/itinerary-detail' })
-}
+onMounted(() => {
+  if (user.value) {
+    loadUserStats()
+  }
+})
 
 const navigateToMyNotes = () => {
-  uni.navigateTo({ url: '/pages/travel-note/list' })
+  if (!user.value) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  uni.navigateTo({ url: '/pages/profile/my-article' })
 }
 
 const navigateToMyCheckins = () => {
-  uni.navigateTo({ url: '/pages/checkin/checkin' })
+  if (!user.value) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  uni.navigateTo({ url: '/pages/footprint/footprint' })
 }
 
-const navigateToMyFavorites = () => {
-  uni.showToast({ title: '敬请期待', icon: 'none' })
+const navigateToMyInteraction = () => {
+  if (!user.value) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  uni.navigateTo({ url: '/pages/profile/my-interaction' })
 }
 
 const navigateToFeedback = () => {
-  uni.showToast({ title: '敬请期待', icon: 'none' })
+  uni.navigateTo({ url: '/pages/profile/feedback' })
 }
 
 const navigateToAbout = () => {
-  uni.showToast({ title: '敬请期待', icon: 'none' })
+  uni.navigateTo({ url: '/pages/profile/about' })
+}
+
+const navigateToPreference = () => {
+  if (!user.value) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  uni.navigateTo({ url: '/pages/profile/preference' })
+}
+
+const navigateToHistory = () => {
+  if (!user.value) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  uni.navigateTo({ url: '/pages/profile/history' })
+}
+
+const navigateToUserHome = () => {
+  if (!user.value) {
+    uni.showToast({ title: '请先登录', icon: 'none' })
+    return
+  }
+  uni.navigateTo({ url: `/pages/profile/user-home?userId=${user.value.id}` })
 }
 
 const openLogin = () => {
@@ -212,6 +285,8 @@ const onTestLogin = async () => {
       )
       uni.showToast({ title: '登录成功', icon: 'success' })
       showLoginForm.value = false
+      // 登录成功后加载统计数据
+      await loadUserStats()
     } else {
       uni.showToast({ title: res.data.msg || '登录失败', icon: 'none' })
     }
@@ -298,7 +373,16 @@ const logout = () => {
 .user-info-box {
   display: flex;
   align-items: center;
-  position: relative;
+  justify-content: center;
+  flex-direction: column;
+  padding-top: 40rpx;
+}
+
+.user-center-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
 }
 
 .user-avatar {
@@ -307,17 +391,21 @@ const logout = () => {
   border-radius: 40rpx;
   border: 6rpx solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 10rpx 20rpx rgba(0, 0, 0, 0.1);
+  margin-bottom: 24rpx;
 }
 
 .user-details {
-  margin-left: 30rpx;
   color: #fff;
-  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .name-row {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 15rpx;
   margin-bottom: 12rpx;
 }
@@ -340,11 +428,8 @@ const logout = () => {
   color: rgba(255, 255, 255, 0.9);
 }
 
-.setting-icon {
-  position: absolute;
-  right: 0;
-  top: 0;
-  padding: 12rpx 20rpx;
+.user-sign {
+  text-align: center;
 }
 
 /* 行程状态条 */

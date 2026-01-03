@@ -12,6 +12,14 @@ if (!Math) {
   "./pages/travel-note/detail.js";
   "./pages/travel-note/publish.js";
   "./pages/profile/profile.js";
+  "./pages/profile/my-interaction.js";
+  "./pages/profile/my-article.js";
+  "./pages/profile/feedback.js";
+  "./pages/profile/about.js";
+  "./pages/profile/preference.js";
+  "./pages/profile/history.js";
+  "./pages/profile/user-home.js";
+  "./pages/footprint/footprint.js";
   "./pages/scenic/detail.js";
   "./pages/food/detail.js";
   "./pages/search/search.js";

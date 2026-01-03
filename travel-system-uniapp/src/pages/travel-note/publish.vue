@@ -87,15 +87,15 @@
     </scroll-view>
 
     <view class="submit-bar">
-      <button class="submit-btn" :loading="submitting" @click="onSubmit">
-        {{ submitting ? '发布中...' : '发布' }}
+      <button class="submit-btn" :loading="submitting || loading" @click="onSubmit">
+        {{ loading ? '加载中...' : (submitting ? (isEditMode ? '更新中...' : '发布中...') : (isEditMode ? '更新' : '发布')) }}
       </button>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
 import {
   travelNoteApi,
   cityApi,
@@ -123,6 +123,8 @@ interface TagItem {
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
+const noteId = ref<number | null>(null) // 编辑模式下的游记ID
+const isEditMode = computed(() => noteId.value !== null)
 const title = ref('')
 const content = ref('')
 const imageUrls = ref<string[]>([])
@@ -133,6 +135,7 @@ const scenicIds = ref<number[]>([])
 const tagOptions = ref<TagItem[]>([])
 const tagIds = ref<number[]>([])
 const submitting = ref(false)
+const loading = ref(false)
 
 const loadCities = async () => {
   const res = await cityApi.list()
@@ -239,6 +242,47 @@ const validate = () => {
   return true
 }
 
+// 加载游记详情（编辑模式）
+const loadNoteDetail = async (id: number) => {
+  if (!user.value) return
+  loading.value = true
+  try {
+    const res = await travelNoteApi.getDetail(id, user.value.id)
+    const data = res.data as ApiResponse<any>
+    if (res.statusCode === 200 && data.code === 200) {
+      const note = data.data
+      title.value = note.title || ''
+      content.value = note.content || ''
+      imageUrls.value = note.imageUrls || note.images || []
+      
+      // 设置城市
+      if (note.cityId) {
+        const city = cityList.value.find(c => c.id === note.cityId)
+        if (city) {
+          selectedCity.value = city
+          await loadScenic(city.id)
+        }
+      }
+      
+      // 设置景点和标签
+      scenicIds.value = note.scenicIds || []
+      tagIds.value = note.tagIds || []
+    } else {
+      uni.showToast({ title: data.msg || '加载失败', icon: 'none' })
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    }
+  } catch (error) {
+    uni.showToast({ title: '加载失败', icon: 'none' })
+    setTimeout(() => {
+      uni.navigateBack()
+    }, 1500)
+  } finally {
+    loading.value = false
+  }
+}
+
 const onSubmit = async () => {
   if (submitting.value) return
   if (!validate()) return
@@ -249,24 +293,54 @@ const onSubmit = async () => {
   }
   submitting.value = true
   try {
-    const res = await travelNoteApi.publish({
-      userId: user.value.id,
-      title: title.value.trim(),
-      content: content.value.trim(),
-      cityId: selectedCity.value!.id,
-      cityName: selectedCity.value!.name,
-      imageUrls: imageUrls.value,
-      scenicIds: scenicIds.value,
-      tagIds: tagIds.value,
-    })
-    const data = res.data as ApiResponse<{ noteId: number }>
-    if (res.statusCode === 200 && data.code === 200) {
-      uni.showToast({ title: '发布成功', icon: 'success' })
-      setTimeout(() => {
-        uni.redirectTo({ url: `/pages/travel-note/detail?id=${data.data.noteId}` })
-      }, 300)
+    let res: any
+    if (isEditMode.value && noteId.value) {
+      // 编辑模式：更新游记
+      res = await travelNoteApi.update(noteId.value, {
+        userId: user.value.id,
+        title: title.value.trim(),
+        content: content.value.trim(),
+        cityId: selectedCity.value!.id,
+        cityName: selectedCity.value!.name,
+        imageUrls: imageUrls.value,
+        scenicIds: scenicIds.value,
+        tagIds: tagIds.value,
+      })
     } else {
-      uni.showToast({ title: data.msg || '发布失败', icon: 'none' })
+      // 新建模式：发布游记
+      res = await travelNoteApi.publish({
+        userId: user.value.id,
+        title: title.value.trim(),
+        content: content.value.trim(),
+        cityId: selectedCity.value!.id,
+        cityName: selectedCity.value!.name,
+        imageUrls: imageUrls.value,
+        scenicIds: scenicIds.value,
+        tagIds: tagIds.value,
+      })
+    }
+    const data = res.data as ApiResponse<{ noteId?: number }>
+    if (res.statusCode === 200 && data.code === 200) {
+      if (isEditMode.value) {
+        // 编辑模式：更新成功，跳转到详情页
+        uni.showToast({ title: '更新成功', icon: 'success' })
+        setTimeout(() => {
+          if (noteId.value) {
+            uni.redirectTo({ url: `/pages/travel-note/detail?id=${noteId.value}` })
+          } else {
+            uni.navigateBack()
+          }
+        }, 300)
+      } else {
+        // 新建模式：已提交，等待审核，跳转到我的游记页面
+        uni.showToast({ title: '已提交，等待审核', icon: 'success' })
+        setTimeout(() => {
+          // 跳转到我的游记页面，显示待审核状态
+          uni.redirectTo({ url: '/pages/profile/my-article?status=pending' })
+        }, 1500)
+      }
+    } else {
+      uni.showToast({ title: data.msg || (isEditMode.value ? '更新失败' : '发布失败'), icon: 'none' })
     }
   } catch (error) {
     uni.showToast({ title: '网络错误', icon: 'none' })
@@ -276,9 +350,42 @@ const onSubmit = async () => {
 }
 
 onMounted(() => {
-  loadCities()
-  loadTags()
-  loadScenic()
+  // 检查是否是编辑模式
+  // 使用 nextTick 确保页面完全初始化后再获取参数
+  nextTick(() => {
+    try {
+      // 在 uniapp 中，getCurrentPages 通过 uni 对象访问
+      // 添加延迟确保页面栈已初始化（特别是通过 tabbar 切换时）
+      let pages: any[] = []
+      
+      // 尝试通过 uni.getCurrentPages 获取
+      if (typeof uni !== 'undefined' && uni.getCurrentPages) {
+        const getPagesFn = uni.getCurrentPages
+        if (typeof getPagesFn === 'function') {
+          pages = getPagesFn()
+        }
+      }
+      
+      if (pages && pages.length > 0) {
+        const currentPage = pages[pages.length - 1]
+        const options = (currentPage as any).options || {}
+        if (options.id) {
+          noteId.value = parseInt(options.id)
+        }
+      }
+    } catch (error) {
+      console.warn('获取页面参数失败:', error)
+    }
+    
+    loadCities().then(() => {
+      loadTags()
+      loadScenic()
+      // 如果是编辑模式，加载游记详情
+      if (noteId.value) {
+        loadNoteDetail(noteId.value)
+      }
+    })
+  })
 })
 </script>
 

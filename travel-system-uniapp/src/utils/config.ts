@@ -2,32 +2,17 @@
  * 应用配置文件
  * 统一管理服务器地址等配置
  * 
- * 本地开发配置说明：
- * 1. 在微信开发者工具中：使用 localhost:8080（已自动配置）
- * 2. 在真机预览时：需要修改 LOCAL_IP 为你的本机局域网 IP（如 192.168.1.100）
+ * 开发模式配置说明：
+ * 1. H5 平台：使用 localhost:8080（本地开发）
+ * 2. 微信小程序：由于平台限制，需要使用局域网 IP 地址
  * 
- * 如何获取本机 IP：
- * Windows: 在命令行运行 ipconfig，查找 IPv4 地址
- * Mac/Linux: 在终端运行 ifconfig 或 ip addr，查找局域网 IP
+ * 如何获取本机 IP（仅微信小程序需要）：
+ * Windows: 在命令行运行 ipconfig，查找 "IPv4 地址"
+ * Mac/Linux: 在终端运行 ifconfig，查找 inet 地址
  */
 
-// ========== 本地开发配置 ==========
-// 请将下面的 LOCAL_IP 替换为你的本机局域网 IP 地址
-// 例如：192.168.1.100、192.168.0.105 等
-// 注意：真机预览时必须使用局域网 IP，不能使用 localhost
-// 
-// 如何获取本机 IP：
-// Windows: 在命令行运行 ipconfig，查找 "IPv4 地址"
-// Mac/Linux: 在终端运行 ifconfig，查找 inet 地址
-// 
-// 检测到的可能 IP 地址：
-// - 192.168.142.1
-// - 192.168.214.1  
-// - 192.168.32.1
-// 请选择你当前连接 WiFi/网络对应的 IP（通常是第一个）
-const LOCAL_IP = '192.168.142.1' // ⚠️ 请修改为你的本机 IP 地址
-
-// 开发环境配置（微信开发者工具）
+// ========== 开发环境配置 ==========
+// H5 平台使用 localhost（本地开发）
 const DEV_CONFIG = {
   // API 基础地址
   API_BASE_URL: 'http://localhost:8080/api/v1',
@@ -35,8 +20,12 @@ const DEV_CONFIG = {
   STATIC_BASE_URL: 'http://localhost:8080',
 }
 
-// 真机预览配置（使用局域网 IP）
-const PREVIEW_CONFIG = {
+// ========== 微信小程序配置 ==========
+// 微信小程序由于平台限制，不能访问 localhost，需要使用局域网 IP
+// 请将下面的 LOCAL_IP 替换为你的本机局域网 IP 地址
+const LOCAL_IP = '192.168.142.1' // ⚠️ 微信小程序需要：请修改为你的本机 IP 地址
+
+const MP_WEIXIN_CONFIG = {
   // API 基础地址
   API_BASE_URL: `http://${LOCAL_IP}:8080/api/v1`,
   // 静态资源基础地址（图片等）
@@ -53,32 +42,20 @@ const PROD_CONFIG = {
 
 /**
  * 获取当前环境配置
+ * 
+ * 配置说明：
+ * - H5 平台：使用 localhost:8080（本地开发模式）
+ * - 微信小程序：由于平台限制，使用局域网 IP 地址
  */
 const getConfig = () => {
   // #ifdef MP-WEIXIN
-  // 微信小程序环境判断
-  try {
-    // @ts-ignore - wx 是微信小程序的全局对象
-    const wxGlobal = typeof wx !== 'undefined' ? wx : null
-    if (wxGlobal && wxGlobal.getAppBaseInfo) {
-      const appBaseInfo = wxGlobal.getAppBaseInfo()
-      // 开发工具环境：使用 localhost
-      if (appBaseInfo && appBaseInfo.platform === 'devtools') {
-        return DEV_CONFIG
-      }
-      // 真机预览：使用局域网 IP
-      // 注意：如果 LOCAL_IP 未配置，会使用 localhost（可能无法访问）
-      return PREVIEW_CONFIG
-    }
-  } catch (e) {
-    // 忽略错误，使用预览配置
-  }
-  // 真机预览或生产环境
-  return PREVIEW_CONFIG
+  // 微信小程序环境：必须使用局域网 IP，因为微信小程序不允许访问 localhost
+  // 注意：后端需要监听 0.0.0.0 才能通过 IP 访问
+  return MP_WEIXIN_CONFIG
   // #endif
 
   // #ifndef MP-WEIXIN
-  // 其他平台默认使用开发环境配置
+  // H5 等其他平台：使用 localhost（本地开发模式）
   return DEV_CONFIG
   // #endif
 }

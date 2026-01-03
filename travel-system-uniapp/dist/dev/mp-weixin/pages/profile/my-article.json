@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "我的游记",
+  "navigationBarBackgroundColor": "#3BA272",
+  "navigationBarTextStyle": "white",
+  "usingComponents": {
+    "skeleton-cards": "../../components/SkeletonCards"
+  }
+}

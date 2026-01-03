@@ -3,10 +3,13 @@ package com.smarttravel.user.controller;
 import com.smarttravel.content.mapper.UserBehaviorMapper;
 import com.smarttravel.content.enums.BehaviorType;
 import com.smarttravel.content.mapper.CheckinRecordMapper;
+import com.smarttravel.content.mapper.CommentMapper;
 import com.smarttravel.travel.mapper.TravelNoteMapper;
 import com.smarttravel.user.domain.User;
+import com.smarttravel.user.domain.Level;
 import com.smarttravel.user.mapper.UserMapper;
 import com.smarttravel.user.mapper.UserTagMapper;
+import com.smarttravel.user.mapper.LevelMapper;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -34,6 +37,12 @@ public class UserApiController {
 
     @Resource
     private CheckinRecordMapper checkinRecordMapper;
+
+    @Resource
+    private CommentMapper commentMapper;
+
+    @Resource
+    private LevelMapper levelMapper;
 
     /**
      * 简易登录（账号/手机号/测试用户）
@@ -161,16 +170,117 @@ public class UserApiController {
         List<Long> interestIds = userTagMapper.selectTagIdsByUserId(userId);
         info.put("interests", interestNames);
         info.put("interestIds", interestIds);
+        
+        // 添加经验值、等级、勋章信息
+        int experience = calculateExperience(userId);
+        int level = calculateLevel(experience);
+        List<Map<String, Object>> medals = getMedals(userId, level, experience);
+        
+        info.put("experience", experience);
+        info.put("level", level);
+        info.put("medals", medals);
+        
         return info;
+    }
+    
+    /**
+     * 计算用户总经验值
+     * 从配置中读取经验值规则，如果没有配置则使用默认值
+     */
+    private int calculateExperience(Long userId) {
+        // 从配置读取经验值规则（可以从系统参数表或配置文件读取）
+        // 这里先使用默认值，实际应该从配置读取
+        int commentExp = getExpRule("commentExp", 1);
+        int noteExp = getExpRule("noteExp", 10);
+        int checkinExp = getExpRule("checkinExp", 20);
+        
+        int commentCount = commentMapper.countByUserId(userId);
+        int noteCount = travelNoteMapper.countByUserId(userId);
+        int checkinCount = checkinRecordMapper.countByUserId(userId);
+        
+        return commentCount * commentExp + noteCount * noteExp + checkinCount * checkinExp;
+    }
+    
+    /**
+     * 获取经验值规则（从配置读取，如果不存在则返回默认值）
+     * TODO: 从系统参数表或配置文件读取
+     */
+    private int getExpRule(String key, int defaultValue) {
+        // 可以从系统参数表读取，key 如 'exp_rule_comment', 'exp_rule_note' 等
+        // 这里暂时返回默认值
+        return defaultValue;
+    }
+    
+    /**
+     * 根据经验值计算等级
+     * 从等级配置表中查找对应的等级
+     */
+    private int calculateLevel(int experience) {
+        if (experience <= 0) return 1;
+        
+        // 从等级配置表查询
+        Level levelConfig = levelMapper.selectByExperience(experience);
+        if (levelConfig != null) {
+            return levelConfig.getLevel();
+        }
+        
+        // 如果没有配置，使用默认公式
+        int level = (int) Math.sqrt(experience / 100.0) + 1;
+        return Math.max(1, level);
+    }
+    
+    /**
+     * 获取用户勋章列表
+     * 从等级配置表中获取当前等级对应的勋章
+     */
+    private List<Map<String, Object>> getMedals(Long userId, int level, int experience) {
+        List<Map<String, Object>> medals = new java.util.ArrayList<>();
+        
+        // 从等级配置表获取当前等级及以下所有启用的等级勋章
+        List<Level> allLevels = levelMapper.selectAllEnabled();
+        for (Level levelConfig : allLevels) {
+            if (levelConfig.getLevel() <= level && levelConfig.getStatus() == 1) {
+                Map<String, Object> medal = new HashMap<>();
+                medal.put("name", levelConfig.getMedalName());
+                medal.put("icon", levelConfig.getMedalIcon());
+                medal.put("description", levelConfig.getDescription());
+                medals.add(medal);
+            }
+        }
+        
+        // 如果没有配置，使用默认勋章
+        if (medals.isEmpty()) {
+            if (level >= 1) {
+                Map<String, Object> medal = new HashMap<>();
+                medal.put("name", "新手");
+                medal.put("icon", "🌱");
+                medal.put("description", "初来乍到");
+                medals.add(medal);
+            }
+            if (level >= 5) {
+                Map<String, Object> medal = new HashMap<>();
+                medal.put("name", "达人");
+                medal.put("icon", "⭐");
+                medal.put("description", "旅行达人");
+                medals.add(medal);
+            }
+        }
+        
+        return medals;
     }
 
     private Map<String, Object> buildStats(Long userId) {
         Map<String, Object> stats = new HashMap<>();
         int noteCount = travelNoteMapper.countByUserId(userId);
         int favoriteCount = userBehaviorMapper.countByUserAndBehavior(userId, BehaviorType.FAVORITE.getCode(), "note");
+        int likeCount = userBehaviorMapper.countByUserAndBehavior(userId, BehaviorType.LIKE.getCode(), "note");
         int checkinCount = checkinRecordMapper.countByUserId(userId);
+        int commentCount = commentMapper.countByUserId(userId);
+        
         stats.put("noteCount", noteCount);
         stats.put("favoriteCount", favoriteCount);
+        stats.put("likeCount", likeCount);
+        stats.put("commentCount", commentCount);
         stats.put("checkinCount", checkinCount);
         return stats;
     }

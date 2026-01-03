@@ -71,6 +71,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '推荐策略', category: '运营配置', showInMenu: true, icon: 'MagicStick' }
   },
   {
+    path: '/ops/level-manage',
+    name: 'LevelManage',
+    component: () => import('@/views/ops/LevelManage.vue'),
+    meta: { title: '等级管理', category: '运营配置', showInMenu: true, icon: 'Trophy' }
+  },
+  {
     path: '/system/params',
     name: 'SystemParams',
     component: () => import('@/views/system/SystemParams.vue'),

@@ -32,13 +32,21 @@ public class AdminCheckinController {
     private FoodMapper foodMapper;
 
     @GetMapping("/list")
-    public Map<String, Object> list(CheckinPoint query,
+    public Map<String, Object> list(@RequestParam(required = false) String name,
+                                    @RequestParam(required = false) String targetType,
                                     @RequestParam(value = "pageNum", defaultValue = "1") Integer pageNum,
                                     @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize) {
-        if (query == null) {
-            query = new CheckinPoint();
+        // 创建查询对象
+        CheckinPoint query = new CheckinPoint();
+        query.setDelFlag(0); // 只查询未删除的数据
+        
+        // 设置查询条件
+        if (name != null && !name.trim().isEmpty()) {
+            query.setName(name.trim());
         }
-        query.setDelFlag(0);
+        if (targetType != null && !targetType.trim().isEmpty()) {
+            query.setTargetType(targetType.trim());
+        }
 
         // 计算offset
         Integer offset = (pageNum - 1) * pageSize;
@@ -51,9 +59,15 @@ public class AdminCheckinController {
 
         // 更新打卡次数（从checkin_record表统计）
         for (CheckinPoint point : list) {
-            Integer count = checkinPointMapper.countCheckinByTarget(point.getTargetType(), point.getTargetId());
-            if (count != null) {
-                point.setCheckinCount(count);
+            if (point.getTargetType() != null && point.getTargetId() != null) {
+                Integer count = checkinPointMapper.countCheckinByTarget(point.getTargetType(), point.getTargetId());
+                if (count != null) {
+                    point.setCheckinCount(count);
+                } else {
+                    point.setCheckinCount(0);
+                }
+            } else {
+                point.setCheckinCount(0);
             }
         }
 

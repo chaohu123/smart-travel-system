@@ -95,14 +95,23 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
 
     @Override
     public Map<String, Object> getMyFavorites(Long userId) {
+        return getMyFavorites(userId, 1, 1000);
+    }
+
+    /**
+     * 获取用户收藏的景点列表（支持分页）
+     */
+    public Map<String, Object> getMyFavorites(Long userId, Integer pageNum, Integer pageSize) {
+        int offset = (pageNum - 1) * pageSize;
         // 获取用户收藏的景点ID列表
         List<Long> favoriteIds = userBehaviorMapper.selectContentIds(
             userId,
             BehaviorType.FAVORITE.getCode(),
             "scenic",
-            0,
-            1000
+            offset,
+            pageSize
         );
+        int total = userBehaviorMapper.countByUserAndBehavior(userId, BehaviorType.FAVORITE.getCode(), "scenic");
 
         // 根据ID列表查询景点详情
         List<ScenicSpot> favorites = new ArrayList<>();
@@ -117,7 +126,9 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", favorites);
-        result.put("total", favorites.size());
+        result.put("total", total);
+        result.put("pageNum", pageNum);
+        result.put("pageSize", pageSize);
         return result;
     }
 }

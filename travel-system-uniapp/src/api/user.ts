@@ -32,5 +32,25 @@ export const userApi = {
       needAuth: false,
     })
   },
+
+  // 获取用户统计信息
+  getStats: (userId?: number) => {
+    return request({
+      url: '/user/stats',
+      method: 'GET',
+      data: userId ? { userId } : {},
+      showLoading: false,
+    })
+  },
+
+  // 获取用户详细信息（包含等级、经验、勋章）
+  getProfile: (userId: number) => {
+    return request({
+      url: '/user/profile',
+      method: 'GET',
+      data: { userId },
+      showLoading: true,
+    })
+  },
 }
 

@@ -50,8 +50,19 @@ public interface TravelNoteUserService {
 
     /**
      * 查询我发布的游记
+     * @param status 可选，状态筛选：pending-待审核, pass-已通过, reject-已驳回
      */
-    Map<String, Object> listMyNotes(Long userId, Integer pageNum, Integer pageSize);
+    Map<String, Object> listMyNotes(Long userId, Integer pageNum, Integer pageSize, String status);
+
+    /**
+     * 查询我点赞的游记
+     */
+    Map<String, Object> listMyLikes(Long userId, Integer pageNum, Integer pageSize);
+
+    /**
+     * 查询我的评论列表
+     */
+    Map<String, Object> listMyComments(Long userId, Integer pageNum, Integer pageSize);
 }
 
 

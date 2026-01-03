@@ -2,5 +2,7 @@
   "navigationBarTitleText": "游记",
   "navigationBarBackgroundColor": "#3BA272",
   "navigationBarTextStyle": "white",
-  "usingComponents": {}
+  "usingComponents": {
+    "skeleton-cards": "../../components/SkeletonCards"
+  }
 }

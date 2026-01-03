@@ -69,8 +69,11 @@ public class FoodController {
      * 获取用户收藏的美食列表
      */
     @GetMapping("/my/favorites")
-    public Map<String, Object> getMyFavorites(@RequestParam Long userId) {
-        Map<String, Object> result = foodService.getMyFavorites(userId);
+    public Map<String, Object> getMyFavorites(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        Map<String, Object> result = foodService.getMyFavorites(userId, pageNum, pageSize);
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
         response.put("msg", "success");

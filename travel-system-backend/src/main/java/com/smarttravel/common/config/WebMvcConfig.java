@@ -38,10 +38,16 @@ public class WebMvcConfig implements WebMvcConfigurer {
         String projectRoot = System.getProperty("user.dir");
         String uploadsPath = projectRoot + File.separator + "uploads";
 
+        // 确保路径以 / 结尾，Windows 下需要处理路径分隔符
+        String normalizedPath = uploadsPath.replace("\\", "/");
+        if (!normalizedPath.endsWith("/")) {
+            normalizedPath += "/";
+        }
+
         // 映射 /uploads/** 到文件系统的 uploads 目录
         // 设置缓存时间为0，确保图片更新后能立即生效
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + uploadsPath + File.separator)
+                .addResourceLocations("file:" + normalizedPath)
                 .setCachePeriod(0); // 禁用缓存，确保图片更新后立即生效
     }
 }

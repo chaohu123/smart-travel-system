@@ -96,8 +96,11 @@ public class ScenicSpotController {
      * 获取用户收藏的景点列表
      */
     @GetMapping("/my/favorites")
-    public Map<String, Object> getMyFavorites(@RequestParam Long userId) {
-        Map<String, Object> result = scenicSpotService.getMyFavorites(userId);
+    public Map<String, Object> getMyFavorites(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "1") Integer pageNum,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        Map<String, Object> result = scenicSpotService.getMyFavorites(userId, pageNum, pageSize);
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
         response.put("msg", "success");

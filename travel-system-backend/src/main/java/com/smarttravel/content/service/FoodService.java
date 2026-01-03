@@ -29,5 +29,10 @@ public interface FoodService {
      * 获取用户收藏的美食列表
      */
     Map<String, Object> getMyFavorites(Long userId);
+
+    /**
+     * 获取用户收藏的美食列表（支持分页）
+     */
+    Map<String, Object> getMyFavorites(Long userId, Integer pageNum, Integer pageSize);
 }
 

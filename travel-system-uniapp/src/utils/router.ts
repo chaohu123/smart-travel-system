@@ -13,14 +13,16 @@ let navigateTimer: ReturnType<typeof setTimeout> | null = null
  * @param options 跳转选项
  */
 export const safeNavigateTo = (url: string, options?: UniApp.NavigateToOptions) => {
+  // 如果正在跳转，且是同一个 URL，则忽略（防止重复点击）
   if (isNavigating) {
     console.warn('正在跳转中，忽略重复跳转请求:', url)
-    return
+    return Promise.resolve()
   }
 
   // 清除之前的定时器
   if (navigateTimer) {
     clearTimeout(navigateTimer)
+    navigateTimer = null
   }
 
   isNavigating = true
@@ -35,13 +37,18 @@ export const safeNavigateTo = (url: string, options?: UniApp.NavigateToOptions) 
         navigateTimer = setTimeout(() => {
           isNavigating = false
           navigateTimer = null
-        }, 300)
+        }, 500) // 增加延迟时间，确保页面完全加载
         options?.success?.(res)
         resolve()
       },
       fail: (err) => {
+        // 立即重置状态，允许重试
         isNavigating = false
-        console.error('页面跳转失败:', err)
+        if (navigateTimer) {
+          clearTimeout(navigateTimer)
+          navigateTimer = null
+        }
+        console.error('页面跳转失败:', err, url)
         // 如果是 webview 错误，尝试延迟重试
         if (err.errMsg?.includes('webview') || err.errMsg?.includes('route')) {
           console.warn('检测到路由错误，延迟重试...')
@@ -49,8 +56,12 @@ export const safeNavigateTo = (url: string, options?: UniApp.NavigateToOptions) 
             safeNavigateTo(url, options).then(resolve).catch(reject)
           }, 500)
         } else {
-          options?.fail?.(err)
-          reject(err)
+          // 其他错误也尝试重试一次
+          console.warn('跳转失败，尝试重试...')
+          setTimeout(() => {
+            isNavigating = false
+            safeNavigateTo(url, options).then(resolve).catch(reject)
+          }, 300)
         }
       },
       complete: () => {

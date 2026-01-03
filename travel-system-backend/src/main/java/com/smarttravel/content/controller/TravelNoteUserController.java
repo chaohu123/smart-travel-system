@@ -23,6 +23,32 @@ public class TravelNoteUserController {
     private TravelNoteUserService travelNoteUserService;
 
     /**
+     * 将对象列表转换为 Long 列表，兼容 Integer 和 Long 类型
+     */
+    private List<Long> convertToLongList(Object obj) {
+        List<Long> result = new ArrayList<>();
+        if (obj == null) {
+            return result;
+        }
+        if (obj instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<Object> rawList = (List<Object>) obj;
+            for (Object item : rawList) {
+                if (item instanceof Long) {
+                    result.add((Long) item);
+                } else if (item instanceof Integer) {
+                    result.add(((Integer) item).longValue());
+                } else if (item instanceof Number) {
+                    result.add(((Number) item).longValue());
+                } else {
+                    result.add(Long.valueOf(item.toString()));
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
      * 查询游记列表
      */
     @GetMapping("/list")
@@ -70,12 +96,10 @@ public class TravelNoteUserController {
             @SuppressWarnings("unchecked")
             List<String> imageUrls = request.get("imageUrls") != null ?
                 (List<String>) request.get("imageUrls") : new ArrayList<>();
-            @SuppressWarnings("unchecked")
-            List<Long> scenicIds = request.get("scenicIds") != null ?
-                (List<Long>) request.get("scenicIds") : new ArrayList<>();
-            @SuppressWarnings("unchecked")
-            List<Long> tagIds = request.get("tagIds") != null ?
-                (List<Long>) request.get("tagIds") : new ArrayList<>();
+            
+            // 处理 scenicIds 和 tagIds：兼容 Integer 和 Long 类型
+            List<Long> scenicIds = convertToLongList(request.get("scenicIds"));
+            List<Long> tagIds = convertToLongList(request.get("tagIds"));
 
             Long noteId = travelNoteUserService.publishNote(note, imageUrls, scenicIds, tagIds);
 
@@ -109,12 +133,10 @@ public class TravelNoteUserController {
             @SuppressWarnings("unchecked")
             List<String> imageUrls = request.get("imageUrls") != null ?
                 (List<String>) request.get("imageUrls") : new ArrayList<>();
-            @SuppressWarnings("unchecked")
-            List<Long> scenicIds = request.get("scenicIds") != null ?
-                (List<Long>) request.get("scenicIds") : new ArrayList<>();
-            @SuppressWarnings("unchecked")
-            List<Long> tagIds = request.get("tagIds") != null ?
-                (List<Long>) request.get("tagIds") : new ArrayList<>();
+            
+            // 处理 scenicIds 和 tagIds：兼容 Integer 和 Long 类型
+            List<Long> scenicIds = convertToLongList(request.get("scenicIds"));
+            List<Long> tagIds = convertToLongList(request.get("tagIds"));
 
             int result = travelNoteUserService.updateMyNote(userId, note, imageUrls, scenicIds, tagIds);
 
@@ -164,8 +186,39 @@ public class TravelNoteUserController {
     @GetMapping("/my/list")
     public Map<String, Object> listMyNotes(@RequestParam Long userId,
                                            @RequestParam(defaultValue = "1") Integer pageNum,
+                                           @RequestParam(defaultValue = "10") Integer pageSize,
+                                           @RequestParam(required = false) String status) {
+        Map<String, Object> data = travelNoteUserService.listMyNotes(userId, pageNum, pageSize, status);
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 200);
+        response.put("msg", "success");
+        response.put("data", data);
+        return response;
+    }
+
+    /**
+     * 我点赞的游记列表
+     */
+    @GetMapping("/my/likes")
+    public Map<String, Object> listMyLikes(@RequestParam Long userId,
+                                           @RequestParam(defaultValue = "1") Integer pageNum,
                                            @RequestParam(defaultValue = "10") Integer pageSize) {
-        Map<String, Object> data = travelNoteUserService.listMyNotes(userId, pageNum, pageSize);
+        Map<String, Object> data = travelNoteUserService.listMyLikes(userId, pageNum, pageSize);
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 200);
+        response.put("msg", "success");
+        response.put("data", data);
+        return response;
+    }
+
+    /**
+     * 我的评论列表
+     */
+    @GetMapping("/my/comments")
+    public Map<String, Object> listMyComments(@RequestParam Long userId,
+                                             @RequestParam(defaultValue = "1") Integer pageNum,
+                                             @RequestParam(defaultValue = "10") Integer pageSize) {
+        Map<String, Object> data = travelNoteUserService.listMyComments(userId, pageNum, pageSize);
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
         response.put("msg", "success");

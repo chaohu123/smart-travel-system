@@ -29,6 +29,19 @@ public class UploadController {
     private String accessPrefix;
 
     /**
+     * 获取上传目录的绝对路径
+     */
+    private String getUploadAbsolutePath() {
+        // 如果 uploadDir 是绝对路径，直接使用
+        if (new File(uploadDir).isAbsolute()) {
+            return uploadDir;
+        }
+        // 否则相对于项目根目录
+        String projectRoot = System.getProperty("user.dir");
+        return projectRoot + File.separator + uploadDir;
+    }
+
+    /**
      * 图片上传接口
      */
     @PostMapping("/image")
@@ -76,7 +89,8 @@ public class UploadController {
 
             // 构建目录路径
             String relativeDir = year + File.separator + month + File.separator + day;
-            String absoluteDir = uploadDir + File.separator + relativeDir;
+            String uploadBasePath = getUploadAbsolutePath();
+            String absoluteDir = uploadBasePath + File.separator + relativeDir;
             Path dirPath = Paths.get(absoluteDir);
 
             // 创建目录（如果不存在）

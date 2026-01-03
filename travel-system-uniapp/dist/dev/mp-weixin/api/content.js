@@ -66,11 +66,11 @@ const scenicSpotApi = {
       needAuth: false
     });
   },
-  getMyFavorites: (userId) => {
+  getMyFavorites: (userId, pageNum = 1, pageSize = 10) => {
     return utils_http.request({
       url: "/scenic/my/favorites",
       method: "GET",
-      data: { userId },
+      data: { userId, pageNum, pageSize },
       needAuth: true
     });
   }
@@ -124,11 +124,19 @@ const travelNoteApi = {
       needAuth: true
     });
   },
-  listMyNotes: (userId, pageNum = 1, pageSize = 10) => {
+  listMyNotes: (userId, pageNum = 1, pageSize = 10, status) => {
     return utils_http.request({
       url: "/travel/note/my/list",
       method: "GET",
-      data: { userId, pageNum, pageSize },
+      data: { userId, pageNum, pageSize, status },
+      needAuth: true
+    });
+  },
+  setPrivate: (id, userId, isPrivate) => {
+    return utils_http.request({
+      url: `/travel/note/${id}/private`,
+      method: "PUT",
+      data: { userId, isPrivate },
       needAuth: true
     });
   }
@@ -165,6 +173,22 @@ const travelNoteInteractionApi = {
       data: params,
       showLoading: false
     });
+  },
+  listMyLikes: (userId, pageNum = 1, pageSize = 10) => {
+    return utils_http.request({
+      url: "/travel/note/my/likes",
+      method: "GET",
+      data: { userId, pageNum, pageSize },
+      needAuth: true
+    });
+  },
+  listMyComments: (userId, pageNum = 1, pageSize = 10) => {
+    return utils_http.request({
+      url: "/travel/note/my/comments",
+      method: "GET",
+      data: { userId, pageNum, pageSize },
+      needAuth: true
+    });
   }
 };
 const foodApi = {
@@ -191,11 +215,31 @@ const foodApi = {
       showLoading: false
     });
   },
-  getMyFavorites: (userId) => {
+  getMyFavorites: (userId, pageNum = 1, pageSize = 10) => {
     return utils_http.request({
       url: "/food/my/favorites",
       method: "GET",
+      data: { userId, pageNum, pageSize },
+      needAuth: true
+    });
+  }
+};
+const checkinApi = {
+  getMyCheckins: (userId, pageNum = 1, pageSize = 100) => {
+    return utils_http.request({
+      url: "/checkin/my",
+      method: "GET",
+      data: { userId, pageNum, pageSize },
+      showLoading: false,
+      needAuth: true
+    });
+  },
+  getFootprintStats: (userId) => {
+    return utils_http.request({
+      url: "/checkin/footprint/stats",
+      method: "GET",
       data: { userId },
+      showLoading: false,
       needAuth: true
     });
   }
@@ -223,6 +267,7 @@ const uploadApi = {
     return utils_http.uploadFile("/upload/image", filePath);
   }
 };
+exports.checkinApi = checkinApi;
 exports.cityApi = cityApi;
 exports.foodApi = foodApi;
 exports.recommendApi = recommendApi;

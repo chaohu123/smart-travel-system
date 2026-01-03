@@ -10,6 +10,14 @@
     "pages/travel-note/detail",
     "pages/travel-note/publish",
     "pages/profile/profile",
+    "pages/profile/my-interaction",
+    "pages/profile/my-article",
+    "pages/profile/feedback",
+    "pages/profile/about",
+    "pages/profile/preference",
+    "pages/profile/history",
+    "pages/profile/user-home",
+    "pages/footprint/footprint",
     "pages/scenic/detail",
     "pages/food/detail",
     "pages/search/search",
@@ -66,5 +74,6 @@
   "requiredPrivateInfos": [
     "getLocation"
   ],
+  "lazyCodeLoading": "requiredComponents",
   "usingComponents": {}
 }

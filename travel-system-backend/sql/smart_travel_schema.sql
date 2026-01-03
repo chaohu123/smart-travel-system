@@ -434,6 +434,24 @@ CREATE TABLE IF NOT EXISTS `activity_registration` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动报名表';
 
 
+CREATE TABLE IF NOT EXISTS `user_level` (
+                                            `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                            `level` INT NOT NULL COMMENT '等级数字',
+                                            `level_name` VARCHAR(50) NOT NULL COMMENT '等级名称（如：新手、达人、专家）',
+    `min_experience` INT NOT NULL DEFAULT 0 COMMENT '最低经验值',
+    `max_experience` INT NULL COMMENT '最高经验值（NULL表示无上限）',
+    `medal_name` VARCHAR(50) NOT NULL COMMENT '勋章名称',
+    `medal_icon` VARCHAR(20) NOT NULL COMMENT '勋章图标（emoji）',
+    `description` VARCHAR(255) NULL COMMENT '等级描述',
+    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态：1-启用，0-禁用',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `del_flag` TINYINT NOT NULL DEFAULT 0 COMMENT '删除标志：0-未删除，1-已删除',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_level` (`level`, `del_flag`),
+    KEY `idx_status` (`status`, `del_flag`),
+    KEY `idx_experience` (`min_experience`, `max_experience`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户等级配置表';
 
 
 
