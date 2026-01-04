@@ -49,6 +49,7 @@
                 class="note-image"
                 :src="img.url"
                 mode="aspectFill"
+                :lazy-load="index > 2"
                 @click="previewImage(index)"
               />
             </view>
@@ -69,6 +70,7 @@
               class="comment-avatar"
               :src="comment.avatar || comment.userAvatar || authorAvatar"
               mode="aspectFill"
+              :lazy-load="true"
             />
             <view class="comment-content-wrapper">
               <text class="comment-author">{{ comment.nickname || '匿名用户' }}</text>

@@ -70,7 +70,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u89C4\u5212\u5386\u53F2\u5931\u8D25", error);
         loadLocalHistory();
       } finally {
         loading.value = false;

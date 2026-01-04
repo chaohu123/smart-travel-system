@@ -4,6 +4,11 @@ var utils_storage = require("./storage.js");
 var utils_config = require("./config.js");
 const BASE_URL = utils_config.API_BASE_URL;
 const getToken = () => utils_storage.getCache("token");
+const pendingRequests = /* @__PURE__ */ new Map();
+const getRequestKey = (url, method, data) => {
+  const dataStr = data ? JSON.stringify(data) : "";
+  return `${method}:${url}:${dataStr}`;
+};
 const handleAuthFail = () => {
   utils_storage.removeCache("token");
   utils_storage.removeCache("user");
@@ -36,39 +41,46 @@ const request = (options) => {
     needAuth = false,
     showLoading = true,
     needRetry = false,
+    enableCache = false,
+    cacheTime = 5 * 60,
     header = {},
     data,
+    method = "GET",
     ...rest
   } = options;
   const token = getToken();
   const headers = { ...header };
   if (token) {
     headers.Authorization = `Bearer ${token}`;
-    if (needAuth) {
-      console.log("\u{1F510} [HTTP\u8BF7\u6C42] \u9700\u8981\u8BA4\u8BC1\u7684\u8BF7\u6C42:", {
-        url,
-        token,
-        tokenLength: token.length,
-        tokenPreview: token.substring(0, 30) + "...",
-        authorizationHeader: headers.Authorization,
-        authorizationPreview: headers.Authorization.substring(0, 40) + "..."
+  }
+  if (needAuth && !token) {
+    handleAuthFail();
+    return Promise.reject(new Error("no-token"));
+  }
+  const cleanedData = data ? cleanParams(data) : void 0;
+  const requestKey = getRequestKey(url, method, cleanedData);
+  const cacheKey = `api_cache_${requestKey}`;
+  if (enableCache && method === "GET") {
+    const cached = utils_storage.getCache(cacheKey);
+    if (cached) {
+      return Promise.resolve({
+        statusCode: 200,
+        data: cached
       });
     }
   }
-  if (needAuth && !token) {
-    console.error("\u274C [HTTP\u8BF7\u6C42] \u9700\u8981\u8BA4\u8BC1\u4F46token\u4E3A\u7A7A:", url);
-    handleAuthFail();
-    return Promise.reject(new Error("no-token"));
+  if (pendingRequests.has(requestKey)) {
+    return pendingRequests.get(requestKey);
   }
   if (showLoading) {
     common_vendor.index.showLoading({ title: "\u52A0\u8F7D\u4E2D", mask: true });
   }
-  const cleanedData = data ? cleanParams(data) : void 0;
   const run = () => new Promise((resolve, reject) => {
     const timeout = rest.timeout || 6e4;
     const fullUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`;
     common_vendor.index.request({
       url: fullUrl,
+      method,
       header: headers,
       data: cleanedData,
       timeout,
@@ -79,6 +91,9 @@ const request = (options) => {
           reject(res);
           return;
         }
+        if (enableCache && method === "GET" && res.statusCode === 200 && res.data) {
+          utils_storage.setCache(cacheKey, res.data, cacheTime);
+        }
         resolve(res);
       },
       fail: (err) => {
@@ -88,15 +103,15 @@ const request = (options) => {
         if (showLoading) {
           common_vendor.index.hideLoading();
         }
+        pendingRequests.delete(requestKey);
       }
     });
   });
-  if (!needRetry) {
-    return run();
-  }
-  return run().catch((err) => {
+  const requestPromise = needRetry ? run().catch((err) => {
     return run().catch(() => Promise.reject(err));
-  });
+  }) : run();
+  pendingRequests.set(requestKey, requestPromise);
+  return requestPromise;
 };
 const uploadFile = (url, filePath) => {
   const token = getToken();

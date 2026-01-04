@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
 var utils_storage = require("../../utils/storage.js");
 var store_user = require("../../store/user.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
@@ -15,6 +16,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const nearbyFoods = common_vendor.ref([]);
     const store = store_user.useUserStore();
     const user = common_vendor.computed(() => store.state.profile);
+    let lastClickTime = 0;
+    const CLICK_DEBOUNCE_TIME = 300;
+    const CACHE_KEY_PREFIX = "scenic_detail_";
+    const CACHE_EXPIRE = 5 * 60;
     const FAVORITE_KEY = "scenic_favorites";
     const loadFavoriteStatus = () => {
       if (!scenicId.value)
@@ -29,10 +34,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       isInPendingList.value = pendingAdditions.some((item) => item.type === "scenic" && item.id === scenicId.value);
     };
     const toggleFavorite = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       if (!user.value) {
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         setTimeout(() => {
-          common_vendor.index.switchTab({ url: "/pages/profile/profile" });
+          utils_router.safeSwitchTab("/pages/profile/profile");
         }, 1500);
         return;
       }
@@ -51,9 +61,22 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
       utils_storage.setCache(FAVORITE_KEY, favorites, 365 * 24 * 60);
     };
-    const loadDetail = async () => {
+    const loadDetail = async (useCache = true) => {
       if (!scenicId.value)
         return;
+      if (useCache) {
+        const cacheKey = `${CACHE_KEY_PREFIX}${scenicId.value}`;
+        const cached = utils_storage.getCache(cacheKey);
+        if (cached) {
+          detail.value = cached;
+          loadFavoriteStatus();
+          checkPendingStatus();
+          setTimeout(() => {
+            loadNearbyFoods();
+          }, 300);
+          return;
+        }
+      }
       loading.value = true;
       try {
         const res = await api_content.scenicSpotApi.getDetail(scenicId.value);
@@ -67,9 +90,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           } else {
             detail.value = data;
           }
+          if (scenicId.value) {
+            const cacheKey = `${CACHE_KEY_PREFIX}${scenicId.value}`;
+            utils_storage.setCache(cacheKey, detail.value, CACHE_EXPIRE);
+          }
           loadFavoriteStatus();
           checkPendingStatus();
-          loadNearbyFoods();
+          setTimeout(() => {
+            loadNearbyFoods();
+          }, 300);
         } else {
           common_vendor.index.showToast({ title: res.data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
         }
@@ -80,31 +109,47 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const loadNearbyFoods = async () => {
-      if (!detail.value)
+      var _a;
+      if (!((_a = detail.value) == null ? void 0 : _a.cityId))
         return;
       try {
-        const cityId = detail.value.cityId;
-        if (!cityId)
-          return;
-        const res = await api_content.foodApi.getHot(cityId, 3);
+        const res = await api_content.foodApi.getHot(detail.value.cityId, 3);
         if (res.statusCode === 200 && res.data.code === 200) {
           nearbyFoods.value = res.data.data || [];
         }
       } catch (e) {
-        console.error("\u52A0\u8F7D\u9644\u8FD1\u7F8E\u98DF\u5931\u8D25:", e);
       }
     };
     const onViewFood = (foodId) => {
-      common_vendor.index.navigateTo({
-        url: `/pages/food/detail?id=${foodId}`
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
+      if (!foodId)
+        return;
+      utils_router.safeNavigateTo(`/pages/food/detail?id=${foodId}`).catch(() => {
+        common_vendor.index.showToast({ title: "\u9875\u9762\u8DF3\u8F6C\u5931\u8D25", icon: "none" });
       });
     };
     const goCheckin = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       if (!scenicId.value)
         return;
-      common_vendor.index.switchTab({ url: "/pages/checkin/checkin" });
+      utils_router.safeSwitchTab("/pages/checkin/checkin").catch(() => {
+        common_vendor.index.showToast({ title: "\u9875\u9762\u8DF3\u8F6C\u5931\u8D25", icon: "none" });
+      });
     };
     const addToRoute = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       if (!scenicId.value || !detail.value)
         return;
       const pendingAdditions = utils_storage.getCache("route_pending_additions") || [];
@@ -139,11 +184,17 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     common_vendor.onMounted(() => {
       const pages = getCurrentPages();
+      if (!pages || pages.length === 0)
+        return;
       const currentPage = pages[pages.length - 1];
-      const options = currentPage.options || {};
-      if (options.id) {
-        scenicId.value = Number(options.id);
-        loadDetail();
+      const options = (currentPage == null ? void 0 : currentPage.options) || {};
+      const id = options == null ? void 0 : options.id;
+      if (id) {
+        const numId = Number(id);
+        if (!isNaN(numId) && numId > 0) {
+          scenicId.value = numId;
+          loadDetail();
+        }
       }
     });
     common_vendor.onShow(() => {

@@ -71,6 +71,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { travelNoteInteractionApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
+import { safeNavigateTo } from '@/utils/router'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -85,7 +86,6 @@ const hasMore = ref(true)
 // 加载评论列表
 const loadComments = async (reset = false) => {
   if (!user.value?.id) {
-    console.log('[MyComments] 用户未登录')
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
@@ -97,56 +97,26 @@ const loadComments = async (reset = false) => {
   }
 
   if (loading.value || (!reset && !hasMore.value)) {
-    console.log('[MyComments] 正在加载或没有更多数据', { loading: loading.value, hasMore: hasMore.value, reset })
     return
   }
 
   loading.value = true
-  console.log('[MyComments] 开始加载数据', {
-    userId: user.value.id,
-    pageNum: pageNum.value,
-    pageSize: pageSize.value,
-    reset
-  })
 
   try {
     const res = await travelNoteInteractionApi.listMyComments(user.value.id, pageNum.value, pageSize.value)
-    
-    console.log('[MyComments] API响应', {
-      statusCode: res?.statusCode,
-      code: res?.data?.code,
-      msg: res?.data?.msg,
-      data: res?.data?.data
-    })
 
     if (res.statusCode === 200 && res.data.code === 200) {
       const data = res.data.data || {}
       const dataList = data.list || []
       
-      console.log('[MyComments] 解析数据', {
-        total: data.total,
-        listLength: dataList.length,
-        pageNum: data.pageNum,
-        pageSize: data.pageSize,
-        dataList: dataList
-      })
-      
       if (reset) {
         commentList.value = dataList
-        console.log('[MyComments] 重置列表，新列表长度:', commentList.value.length)
       } else {
         // 使用循环替代扩展运算符，避免 Babel runtime 错误
         for (let i = 0; i < dataList.length; i++) {
           commentList.value.push(dataList[i])
         }
-        console.log('[MyComments] 追加数据，列表长度:', commentList.value.length)
       }
-      
-      // 确保数据已赋值
-      console.log('[MyComments] 赋值后列表状态', {
-        listLength: commentList.value.length,
-        listValue: commentList.value
-      })
 
       hasMore.value = dataList.length >= pageSize.value
       if (hasMore.value) {
@@ -159,37 +129,13 @@ const loadComments = async (reset = false) => {
       
       // 等待 DOM 更新
       await nextTick()
-      
-      console.log('[MyComments] 数据加载完成', {
-        currentListLength: commentList.value.length,
-        hasMore: hasMore.value,
-        nextPageNum: pageNum.value,
-        loading: loading.value,
-        listData: commentList.value,
-        firstItem: commentList.value[0] || null
-      })
-      
-      // 验证模板条件
-      console.log('[MyComments] 模板条件检查', {
-        '!loading': !loading.value,
-        'commentList.length > 0': commentList.value.length > 0,
-        'shouldDisplay': !loading.value && commentList.value.length > 0
-      })
     } else {
-      console.error('[MyComments] API返回错误', res?.data)
       uni.showToast({ title: res.data.msg || '加载失败', icon: 'none' })
       loading.value = false
       refreshing.value = false
     }
   } catch (e: any) {
-    console.error('[MyComments] 加载评论列表失败', {
-      error: e,
-      message: e?.message,
-      statusCode: e?.statusCode,
-      stack: e?.stack
-    })
     if (e.statusCode === 404) {
-      console.log('[MyComments] 接口不存在，显示空状态')
       commentList.value = []
       hasMore.value = false
     } else {
@@ -213,10 +159,20 @@ const loadMore = () => {
   }
 }
 
+// 点击防抖
+let lastClickTime = 0
+const CLICK_DEBOUNCE_TIME = 300
+
 // 查看详情
 const viewDetail = (contentId: number, contentType: string) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (contentType === 'note') {
-    uni.navigateTo({ url: `/pages/travel-note/detail?id=${contentId}` })
+    safeNavigateTo(`/pages/travel-note/detail?id=${contentId}`).catch(() => {
+      // 静默处理错误
+    })
   } else {
     uni.showToast({ title: '暂不支持该类型', icon: 'none' })
   }

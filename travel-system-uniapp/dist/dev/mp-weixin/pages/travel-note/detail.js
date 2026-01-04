@@ -387,8 +387,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         o: common_vendor.f(noteDetail.value.images, (img, index, i0) => {
           return {
             a: img.url,
-            b: common_vendor.o(($event) => previewImage(index)),
-            c: index
+            b: index > 2,
+            c: common_vendor.o(($event) => previewImage(index)),
+            d: index
           };
         })
       } : {}, {

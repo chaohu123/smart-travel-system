@@ -169,7 +169,6 @@ const getUserInfo = async (userId: number) => {
       return info
     }
   } catch (error) {
-    console.error('获取用户信息失败', error)
   }
   
   return { nickname: '未知用户', avatar: defaultAvatar }
@@ -347,7 +346,6 @@ const loadMessages = async (reset = false) => {
     // 更新未读计数
     updateUnreadCount()
   } catch (error) {
-    console.error('加载消息失败', error)
     uni.showToast({ title: '加载失败', icon: 'none' })
   } finally {
     loading.value = false

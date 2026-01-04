@@ -73,7 +73,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           scrollToBottom();
         });
       } catch (error) {
-        console.error("\u52A0\u8F7D\u804A\u5929\u8BB0\u5F55\u5931\u8D25", error);
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
       } finally {
         loading.value = false;
@@ -100,16 +99,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       common_vendor.nextTick(() => {
         scrollToBottom();
       });
-      try {
-        console.log("\u6D88\u606F\u5DF2\u53D1\u9001:", content);
-      } catch (error) {
-        console.error("\u53D1\u9001\u6D88\u606F\u5931\u8D25", error);
-        const index = messages.value.findIndex((m) => m.id === newMessage.id);
-        if (index > -1) {
-          messages.value.splice(index, 1);
-        }
-        common_vendor.index.showToast({ title: "\u53D1\u9001\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5", icon: "none" });
-      }
     };
     const scrollToBottom = () => {
       if (messages.value.length > 0) {

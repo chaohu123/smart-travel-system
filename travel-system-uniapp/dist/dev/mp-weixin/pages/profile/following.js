@@ -2,6 +2,7 @@
 var common_vendor = require("../../common/vendor.js");
 var api_user = require("../../api/user.js");
 var store_user = require("../../store/user.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
@@ -61,7 +62,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           common_vendor.index.showToast({ title: res.data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u5173\u6CE8\u5217\u8868\u5931\u8D25", error);
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
       } finally {
         loading.value = false;
@@ -77,8 +77,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         loadFollowing(false);
       }
     };
+    let lastClickTime = 0;
+    const CLICK_DEBOUNCE_TIME = 300;
     const viewUserProfile = (userId) => {
-      common_vendor.index.navigateTo({ url: `/pages/profile/user-home?userId=${userId}` });
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
+      utils_router.safeNavigateTo(`/pages/profile/user-home?userId=${userId}`).catch(() => {
+      });
     };
     const toggleFollow = async (following) => {
       if (!currentUserId.value) {
@@ -102,7 +109,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
                 common_vendor.index.showToast({ title: result.data.msg || "\u64CD\u4F5C\u5931\u8D25", icon: "none" });
               }
             } catch (error) {
-              console.error("\u53D6\u6D88\u5173\u6CE8\u5931\u8D25", error);
               common_vendor.index.showToast({ title: "\u64CD\u4F5C\u5931\u8D25", icon: "none" });
             }
           }
@@ -113,6 +119,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       common_vendor.index.navigateBack();
     };
     common_vendor.onMounted(() => {
+      utils_router.resetNavigationState();
       const pages = getCurrentPages();
       if (pages && pages.length > 0) {
         const currentPage = pages[pages.length - 1];

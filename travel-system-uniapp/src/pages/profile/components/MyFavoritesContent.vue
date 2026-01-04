@@ -166,6 +166,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { travelNoteApi, scenicSpotApi, foodApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
+import { safeNavigateTo } from '@/utils/router'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -204,7 +205,6 @@ const getCategoryLabel = () => {
 // 加载数据
 const loadData = async (reset = false) => {
   if (!user.value?.id) {
-    console.log('[MyFavorites] 用户未登录')
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
@@ -215,68 +215,34 @@ const loadData = async (reset = false) => {
   }
 
   if (loading.value || !hasMore.value) {
-    console.log('[MyFavorites] 正在加载或没有更多数据', { loading: loading.value, hasMore: hasMore.value })
     return
   }
 
   loading.value = true
-  console.log('[MyFavorites] 开始加载数据', {
-    category: currentCategory.value,
-    userId: user.value.id,
-    pageNum: pageNum.value,
-    pageSize: pageSize.value,
-    reset
-  })
 
   try {
     let res: any
 
     if (currentCategory.value === 'note') {
-      console.log('[MyFavorites] 调用游记收藏接口')
       res = await travelNoteApi.listMyFavorites(user.value.id, pageNum.value, pageSize.value)
     } else if (currentCategory.value === 'scenic') {
-      console.log('[MyFavorites] 调用景点收藏接口')
       res = await scenicSpotApi.getMyFavorites(user.value.id, pageNum.value, pageSize.value)
     } else if (currentCategory.value === 'food') {
-      console.log('[MyFavorites] 调用美食收藏接口')
       res = await foodApi.getMyFavorites(user.value.id, pageNum.value, pageSize.value)
     }
-
-    console.log('[MyFavorites] API响应', {
-      statusCode: res?.statusCode,
-      code: res?.data?.code,
-      msg: res?.data?.msg,
-      data: res?.data?.data
-    })
 
     if (res && res.statusCode === 200 && res.data.code === 200) {
       const data = res.data.data || {}
       const dataList = data.list || []
       
-      console.log('[MyFavorites] 解析数据', {
-        total: data.total,
-        listLength: dataList.length,
-        pageNum: data.pageNum,
-        pageSize: data.pageSize,
-        dataList: dataList
-      })
-      
       if (reset) {
         list.value = dataList
-        console.log('[MyFavorites] 重置列表，新列表长度:', list.value.length)
       } else {
         // 使用循环替代扩展运算符，避免 Babel runtime 错误
         for (let i = 0; i < dataList.length; i++) {
           list.value.push(dataList[i])
         }
-        console.log('[MyFavorites] 追加数据，列表长度:', list.value.length)
       }
-      
-      // 确保数据已赋值
-      console.log('[MyFavorites] 赋值后列表状态', {
-        listLength: list.value.length,
-        listValue: list.value
-      })
 
       hasMore.value = dataList.length >= pageSize.value
       if (hasMore.value) {
@@ -289,28 +255,12 @@ const loadData = async (reset = false) => {
       
       // 等待 DOM 更新
       await nextTick()
-      
-      console.log('[MyFavorites] 数据加载完成', {
-        currentListLength: list.value.length,
-        hasMore: hasMore.value,
-        nextPageNum: pageNum.value,
-        currentCategory: currentCategory.value,
-        loading: loading.value,
-        listData: list.value
-      })
     } else {
-      console.error('[MyFavorites] API返回错误', res?.data)
       uni.showToast({ title: res?.data?.msg || '加载失败', icon: 'none' })
       loading.value = false
       refreshing.value = false
     }
   } catch (e: any) {
-    console.error('[MyFavorites] 加载收藏列表失败', {
-      error: e,
-      message: e?.message,
-      statusCode: e?.statusCode,
-      stack: e?.stack
-    })
     uni.showToast({ title: '加载失败: ' + (e?.message || '未知错误'), icon: 'none', duration: 3000 })
     loading.value = false
     refreshing.value = false
@@ -330,17 +280,36 @@ const loadMore = () => {
   }
 }
 
+// 点击防抖
+let lastClickTime = 0
+const CLICK_DEBOUNCE_TIME = 300
+
 // 查看详情
 const viewNoteDetail = (id: number) => {
-  uni.navigateTo({ url: `/pages/travel-note/detail?id=${id}` })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  safeNavigateTo(`/pages/travel-note/detail?id=${id}`).catch(() => {
+    // 静默处理错误
+  })
 }
 
 const viewScenicDetail = (id: number) => {
-  uni.navigateTo({ url: `/pages/scenic/detail?id=${id}` })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  safeNavigateTo(`/pages/scenic/detail?id=${id}`).catch(() => {
+    // 静默处理错误
+  })
 }
 
 const viewFoodDetail = (id: number) => {
-  uni.navigateTo({ url: `/pages/food/detail?id=${id}` })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  safeNavigateTo(`/pages/food/detail?id=${id}`).catch(() => {
+    // 静默处理错误
+  })
 }
 
 // 格式化时间

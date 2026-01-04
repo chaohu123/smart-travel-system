@@ -88,14 +88,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             }));
             noteList.value.push(...newNotes);
             allNoteList.value.push(...newNotes);
-            newNotes.forEach((note) => {
+            newNotes.forEach((note, index) => {
               if (note.coverImage) {
-                imageLoadedMap.value[note.id] = false;
-                setTimeout(() => {
-                  if (!imageLoadedMap.value[note.id]) {
-                    imageLoadedMap.value[note.id] = true;
-                  }
-                }, 100);
+                if (index < 6) {
+                  imageLoadedMap.value[note.id] = true;
+                } else {
+                  imageLoadedMap.value[note.id] = false;
+                }
               }
             });
             if (data.list.length < pageSize.value) {
@@ -144,16 +143,21 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         loadNotes();
       }
     };
+    let scrollTimer = null;
     const onScroll = (e) => {
       scrollTop.value = e.detail.scrollTop;
-      checkLazyLoad();
+      if (scrollTimer) {
+        clearTimeout(scrollTimer);
+      }
+      scrollTimer = setTimeout(() => {
+        checkLazyLoad();
+      }, 200);
     };
     const checkLazyLoad = () => {
-      noteList.value.forEach((note) => {
+      const visibleCount = 10;
+      noteList.value.slice(0, visibleCount).forEach((note) => {
         if (!imageLoadedMap.value[note.id] && note.coverImage) {
-          setTimeout(() => {
-            imageLoadedMap.value[note.id] = true;
-          }, 100);
+          imageLoadedMap.value[note.id] = true;
         }
       });
     };
@@ -178,12 +182,24 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
       return null;
     };
+    let lastClickTime = 0;
+    const CLICK_DEBOUNCE_TIME = 300;
     const viewDetail = (id) => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${id}`);
     };
     const viewAuthorProfile = (userId) => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       if (userId) {
-        common_vendor.index.navigateTo({ url: `/pages/profile/user-home?userId=${userId}` });
+        utils_router.safeNavigateTo(`/pages/profile/user-home?userId=${userId}`);
       }
     };
     const toggleLike = async (note) => {
@@ -454,6 +470,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     });
     common_vendor.onUnmounted(() => {
       fabExpanded.value = false;
+      if (scrollTimer) {
+        clearTimeout(scrollTimer);
+        scrollTimer = null;
+      }
     });
     return (_ctx, _cache) => {
       var _a;

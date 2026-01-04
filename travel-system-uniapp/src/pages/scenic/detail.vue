@@ -6,6 +6,7 @@
         class="header-img"
         :src="detail.imageUrl"
         mode="aspectFill"
+        :lazy-load="false"
       />
       <view class="header-overlay"></view>
     </view>
@@ -135,6 +136,7 @@
                 class="food-image"
                 :src="food.imageUrl"
                 mode="aspectFill"
+                :lazy-load="true"
               />
               <view v-else class="food-image-placeholder">
                 <text class="iconfont icon-meishi food-icon"></text>
@@ -183,6 +185,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { scenicSpotApi, foodApi } from '@/api/content'
 import { getCache, setCache, removeCache } from '@/utils/storage'
 import { useUserStore } from '@/store/user'
+import { safeNavigateTo, safeSwitchTab } from '@/utils/router'
 
 const scenicId = ref<number | null>(null)
 const loading = ref(false)
@@ -192,6 +195,14 @@ const isInPendingList = ref(false) // 是否在待选列表中
 const nearbyFoods = ref<any[]>([])
 const store = useUserStore()
 const user = computed(() => store.state.profile)
+
+// 点击防抖
+let lastClickTime = 0
+const CLICK_DEBOUNCE_TIME = 300
+
+// 数据缓存键
+const CACHE_KEY_PREFIX = 'scenic_detail_'
+const CACHE_EXPIRE = 5 * 60 // 5分钟缓存
 
 // 收藏功能（使用本地存储）
 const FAVORITE_KEY = 'scenic_favorites'
@@ -210,11 +221,16 @@ const checkPendingStatus = () => {
 }
 
 const toggleFavorite = () => {
-  // 检查用户是否登录
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
+  
   if (!user.value) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     setTimeout(() => {
-      uni.switchTab({ url: '/pages/profile/profile' })
+      safeSwitchTab('/pages/profile/profile')
     }, 1500)
     return
   }
@@ -225,22 +241,37 @@ const toggleFavorite = () => {
   const index = favorites.indexOf(scenicId.value)
 
   if (index > -1) {
-    // 取消收藏
     favorites.splice(index, 1)
     isFavorite.value = false
     uni.showToast({ title: '已取消收藏', icon: 'success' })
   } else {
-    // 收藏
     favorites.push(scenicId.value)
     isFavorite.value = true
     uni.showToast({ title: '收藏成功', icon: 'success' })
   }
 
-  setCache(FAVORITE_KEY, favorites, 365 * 24 * 60) // 保存1年
+  setCache(FAVORITE_KEY, favorites, 365 * 24 * 60)
 }
 
-const loadDetail = async () => {
+const loadDetail = async (useCache = true) => {
   if (!scenicId.value) return
+  
+  // 尝试从缓存读取
+  if (useCache) {
+    const cacheKey = `${CACHE_KEY_PREFIX}${scenicId.value}`
+    const cached = getCache<any>(cacheKey)
+    if (cached) {
+      detail.value = cached
+      loadFavoriteStatus()
+      checkPendingStatus()
+      // 延迟加载附近美食（非关键数据）
+      setTimeout(() => {
+        loadNearbyFoods()
+      }, 300)
+      return
+    }
+  }
+  
   loading.value = true
   try {
     const res = await scenicSpotApi.getDetail(scenicId.value)
@@ -255,12 +286,21 @@ const loadDetail = async () => {
       } else {
         detail.value = data
       }
+      
+      // 缓存数据
+      if (scenicId.value) {
+        const cacheKey = `${CACHE_KEY_PREFIX}${scenicId.value}`
+        setCache(cacheKey, detail.value, CACHE_EXPIRE)
+      }
+      
       // 加载收藏状态
       loadFavoriteStatus()
       // 检查待选列表状态
       checkPendingStatus()
-      // 加载附近美食
-      loadNearbyFoods()
+      // 延迟加载附近美食（非关键数据）
+      setTimeout(() => {
+        loadNearbyFoods()
+      }, 300)
     } else {
       uni.showToast({ title: res.data.msg || '加载失败', icon: 'none' })
     }
@@ -272,33 +312,50 @@ const loadDetail = async () => {
 }
 
 const loadNearbyFoods = async () => {
-  if (!detail.value) return
+  if (!detail.value?.cityId) return
   try {
-    // 根据景点的城市ID获取附近美食
-    const cityId = detail.value.cityId
-    if (!cityId) return
-
-    const res = await foodApi.getHot(cityId, 3)
+    const res = await foodApi.getHot(detail.value.cityId, 3)
     if (res.statusCode === 200 && res.data.code === 200) {
       nearbyFoods.value = res.data.data || []
     }
   } catch (e) {
-    console.error('加载附近美食失败:', e)
+    // 静默处理错误，不影响主流程
   }
 }
 
 const onViewFood = (foodId: number) => {
-  uni.navigateTo({
-    url: `/pages/food/detail?id=${foodId}`
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
+  
+  if (!foodId) return
+  safeNavigateTo(`/pages/food/detail?id=${foodId}`).catch(() => {
+    uni.showToast({ title: '页面跳转失败', icon: 'none' })
   })
 }
 
 const goCheckin = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
+  
   if (!scenicId.value) return
-  uni.switchTab({ url: '/pages/checkin/checkin' })
+  safeSwitchTab('/pages/checkin/checkin').catch(() => {
+    uni.showToast({ title: '页面跳转失败', icon: 'none' })
+  })
 }
 
 const addToRoute = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
+  
   if (!scenicId.value || !detail.value) return
 
   // 将景点添加到路线规划的待选列表中，用户可以在路线规划页面选择任意天数添加
@@ -342,11 +399,16 @@ const addToRoute = () => {
 
 onMounted(() => {
   const pages = getCurrentPages()
+  if (!pages || pages.length === 0) return
   const currentPage = pages[pages.length - 1] as any
-  const options = (currentPage.options || {}) as { id?: string }
-  if (options.id) {
-    scenicId.value = Number(options.id)
-    loadDetail()
+  const options = (currentPage?.options || {}) as { id?: string }
+  const id = options?.id
+  if (id) {
+    const numId = Number(id)
+    if (!isNaN(numId) && numId > 0) {
+      scenicId.value = numId
+      loadDetail()
+    }
   }
 })
 

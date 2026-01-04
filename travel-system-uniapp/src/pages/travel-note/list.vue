@@ -377,16 +377,15 @@ const loadNotes = async () => {
         noteList.value.push(...newNotes)
         allNoteList.value.push(...newNotes)
         
-        // 初始化图片加载状态（延迟加载，实现懒加载效果）
-        newNotes.forEach((note: any) => {
+        // 初始化图片加载状态（只加载前几个可见的图片）
+        newNotes.forEach((note: any, index: number) => {
           if (note.coverImage) {
-            imageLoadedMap.value[note.id] = false
-            // 延迟加载图片，实现懒加载
-            setTimeout(() => {
-              if (!imageLoadedMap.value[note.id]) {
-                imageLoadedMap.value[note.id] = true
-              }
-            }, 100)
+            // 前6个图片立即加载，其他的延迟加载
+            if (index < 6) {
+              imageLoadedMap.value[note.id] = true
+            } else {
+              imageLoadedMap.value[note.id] = false
+            }
           }
         })
         
@@ -447,22 +446,28 @@ const loadMore = () => {
   }
 }
 
-// 滚动事件（用于懒加载）
+// 滚动事件（用于懒加载）- 使用节流优化性能
+let scrollTimer: ReturnType<typeof setTimeout> | null = null
 const onScroll = (e: any) => {
   scrollTop.value = e.detail.scrollTop
-  checkLazyLoad()
+  
+  // 节流：每200ms检查一次懒加载
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
+  }
+  scrollTimer = setTimeout(() => {
+    checkLazyLoad()
+  }, 200)
 }
 
-// 检查懒加载
+// 检查懒加载 - 优化：只加载可见区域的图片
 const checkLazyLoad = () => {
-  // 简单的懒加载：当卡片进入视口时加载图片
-  // 这里简化处理，实际可以使用 IntersectionObserver
-  noteList.value.forEach((note: any) => {
+  // 计算可见区域（简化处理：加载前10个卡片的图片）
+  const visibleCount = 10
+  noteList.value.slice(0, visibleCount).forEach((note: any) => {
     if (!imageLoadedMap.value[note.id] && note.coverImage) {
-      // 延迟加载图片
-      setTimeout(() => {
-        imageLoadedMap.value[note.id] = true
-      }, 100)
+      // 立即标记为加载中，避免重复检查
+      imageLoadedMap.value[note.id] = true
     }
   })
 }
@@ -494,15 +499,30 @@ const getNoteTag = (note: any) => {
   return null
 }
 
+// 点击防抖
+let lastClickTime = 0
+const CLICK_DEBOUNCE_TIME = 300
+
 // 查看详情
 const viewDetail = (id: number) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
   safeNavigateTo(`/pages/travel-note/detail?id=${id}`)
 }
 
 // 查看作者主页
 const viewAuthorProfile = (userId: number) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
+  
   if (userId) {
-    uni.navigateTo({ url: `/pages/profile/user-home?userId=${userId}` })
+    safeNavigateTo(`/pages/profile/user-home?userId=${userId}`)
   }
 }
 
@@ -829,6 +849,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   fabExpanded.value = false
+  // 清理滚动定时器
+  if (scrollTimer) {
+    clearTimeout(scrollTimer)
+    scrollTimer = null
+  }
 })
 </script>
 

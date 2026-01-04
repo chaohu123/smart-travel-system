@@ -78,6 +78,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { userApi } from '@/api/user'
 import { useUserStore } from '@/store/user'
+import { safeNavigateTo, resetNavigationState } from '@/utils/router'
 
 const store = useUserStore()
 const currentUser = computed(() => store.state.profile)
@@ -141,7 +142,6 @@ const loadFollowers = async (reset = false) => {
       uni.showToast({ title: res.data.msg || '加载失败', icon: 'none' })
     }
   } catch (error) {
-    console.error('加载粉丝列表失败', error)
     uni.showToast({ title: '加载失败', icon: 'none' })
   } finally {
     loading.value = false
@@ -162,9 +162,19 @@ const loadMore = () => {
   }
 }
 
+// 点击防抖
+let lastClickTime = 0
+const CLICK_DEBOUNCE_TIME = 300
+
 // 查看用户主页
 const viewUserProfile = (userId: number) => {
-  uni.navigateTo({ url: `/pages/profile/user-home?userId=${userId}` })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
+  safeNavigateTo(`/pages/profile/user-home?userId=${userId}`).catch(() => {
+    // 静默处理错误
+  })
 }
 
 // 关注/取消关注
@@ -186,7 +196,6 @@ const toggleFollow = async (follower: any) => {
       uni.showToast({ title: res.data.msg || '操作失败', icon: 'none' })
     }
   } catch (error) {
-    console.error('关注操作失败', error)
     uni.showToast({ title: '操作失败', icon: 'none' })
   }
 }
@@ -197,6 +206,7 @@ const goBack = () => {
 }
 
 onMounted(() => {
+  resetNavigationState()
   // 获取页面参数
   const pages = getCurrentPages()
   if (pages && pages.length > 0) {

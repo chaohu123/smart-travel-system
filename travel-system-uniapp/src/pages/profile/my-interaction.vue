@@ -422,6 +422,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { travelNoteApi, scenicSpotApi, foodApi, travelNoteInteractionApi } from '@/api/content'
 import { routeApi } from '@/api/route'
 import { useUserStore } from '@/store/user'
+import { safeNavigateTo, resetNavigationState } from '@/utils/router'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -505,7 +506,6 @@ const getFavoriteCategoryLabel = () => {
 // 加载收藏数据
 const loadFavoritesData = async (reset = false) => {
   if (!user.value?.id) {
-    console.log('[MyFavorites] 用户未登录')
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
@@ -517,33 +517,21 @@ const loadFavoritesData = async (reset = false) => {
   }
 
   if (favoritesLoading.value || (!reset && !favoritesHasMore.value)) {
-    console.log('[MyFavorites] 正在加载或没有更多数据', { loading: favoritesLoading.value, hasMore: favoritesHasMore.value, reset })
     return
   }
 
   favoritesLoading.value = true
-  console.log('[MyFavorites] 开始加载数据', {
-    category: currentFavoriteCategory.value,
-    userId: user.value.id,
-    pageNum: favoritesPageNum.value,
-    pageSize: favoritesPageSize.value,
-    reset
-  })
 
   try {
     let res: any
 
     if (currentFavoriteCategory.value === 'note') {
-      console.log('[MyFavorites] 调用游记收藏接口')
       res = await travelNoteApi.listMyFavorites(user.value.id, favoritesPageNum.value, favoritesPageSize.value)
     } else if (currentFavoriteCategory.value === 'scenic') {
-      console.log('[MyFavorites] 调用景点收藏接口')
       res = await scenicSpotApi.getMyFavorites(user.value.id, favoritesPageNum.value, favoritesPageSize.value)
     } else if (currentFavoriteCategory.value === 'food') {
-      console.log('[MyFavorites] 调用美食收藏接口')
       res = await foodApi.getMyFavorites(user.value.id, favoritesPageNum.value, favoritesPageSize.value)
     } else if (currentFavoriteCategory.value === 'route') {
-      console.log('[MyFavorites] 调用路线收藏接口')
       // 注意：这里可能需要根据实际API调整
       res = await routeApi.listMyRoutes(user.value.id)
       // 如果返回的是数组，需要转换为分页格式
@@ -558,33 +546,18 @@ const loadFavoritesData = async (reset = false) => {
       }
     }
 
-    console.log('[MyFavorites] API响应', {
-      statusCode: res?.statusCode,
-      code: res?.data?.code,
-      msg: res?.data?.msg,
-      data: res?.data?.data
-    })
 
     if (res && res.statusCode === 200 && res.data.code === 200) {
       const data = res.data.data || {}
       const dataList = data.list || []
       
-      console.log('[MyFavorites] 解析数据', {
-        total: data.total,
-        listLength: dataList.length,
-        pageNum: data.pageNum,
-        pageSize: data.pageSize,
-        dataList: dataList
-      })
       
       if (reset) {
         favoritesList.value = dataList
-        console.log('[MyFavorites] 重置列表，新列表长度:', favoritesList.value.length)
       } else {
         for (let i = 0; i < dataList.length; i++) {
           favoritesList.value.push(dataList[i])
         }
-        console.log('[MyFavorites] 追加数据，列表长度:', favoritesList.value.length)
       }
 
       favoritesHasMore.value = dataList.length >= favoritesPageSize.value
@@ -597,26 +570,12 @@ const loadFavoritesData = async (reset = false) => {
       
       await nextTick()
       
-      console.log('[MyFavorites] 数据加载完成', {
-        currentListLength: favoritesList.value.length,
-        hasMore: favoritesHasMore.value,
-        nextPageNum: favoritesPageNum.value,
-        currentCategory: currentFavoriteCategory.value,
-        loading: favoritesLoading.value
-      })
     } else {
-      console.error('[MyFavorites] API返回错误', res?.data)
       uni.showToast({ title: res?.data?.msg || '加载失败', icon: 'none' })
       favoritesLoading.value = false
       favoritesRefreshing.value = false
     }
   } catch (e: any) {
-    console.error('[MyFavorites] 加载收藏列表失败', {
-      error: e,
-      message: e?.message,
-      statusCode: e?.statusCode,
-      stack: e?.stack
-    })
     uni.showToast({ title: '加载失败: ' + (e?.message || '未知错误'), icon: 'none', duration: 3000 })
     favoritesLoading.value = false
     favoritesRefreshing.value = false
@@ -672,7 +631,6 @@ const getLikeCategoryLabel = () => {
 // 加载点赞列表
 const loadLikesData = async (reset = false) => {
   if (!user.value?.id) {
-    console.log('[MyLikes] 用户未登录')
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
@@ -684,29 +642,19 @@ const loadLikesData = async (reset = false) => {
   }
 
   if (likesLoading.value || (!reset && !likesHasMore.value)) {
-    console.log('[MyLikes] 正在加载或没有更多数据', { loading: likesLoading.value, hasMore: likesHasMore.value, reset })
     return
   }
 
   likesLoading.value = true
-  console.log('[MyLikes] 开始加载数据', {
-    category: currentLikeCategory.value,
-    userId: user.value.id,
-    pageNum: likesPageNum.value,
-    pageSize: likesPageSize.value,
-    reset
-  })
 
   try {
     let res: any
     
     if (currentLikeCategory.value === 'note') {
       // 加载点赞的游记
-      console.log('[MyLikes] 调用点赞游记接口')
       res = await travelNoteInteractionApi.listMyLikes(user.value.id, likesPageNum.value, likesPageSize.value)
     } else if (currentLikeCategory.value === 'comment') {
       // 加载点赞的评论
-      console.log('[MyLikes] 调用点赞评论接口')
       // 注意：如果后端没有专门的点赞评论API，这里可以尝试从评论列表中筛选
       // 或者显示提示信息
       try {
@@ -740,7 +688,6 @@ const loadLikesData = async (reset = false) => {
           likesHasMore.value = false
         }
       } catch (error) {
-        console.log('[MyLikes] 点赞评论功能暂未完全开放', error)
         // 如果接口不存在，显示空状态而不是错误提示
         likesList.value = []
         likesHasMore.value = false
@@ -751,33 +698,18 @@ const loadLikesData = async (reset = false) => {
       return
     }
     
-    console.log('[MyLikes] API响应', {
-      statusCode: res?.statusCode,
-      code: res?.data?.code,
-      msg: res?.data?.msg,
-      data: res?.data?.data
-    })
 
     if (res.statusCode === 200 && res.data.code === 200) {
       const data = res.data.data || {}
       const dataList = data.list || []
       
-      console.log('[MyLikes] 解析数据', {
-        total: data.total,
-        listLength: dataList.length,
-        pageNum: data.pageNum,
-        pageSize: data.pageSize,
-        dataList: dataList
-      })
       
       if (reset) {
         likesList.value = dataList
-        console.log('[MyLikes] 重置列表，新列表长度:', likesList.value.length)
       } else {
         for (let i = 0; i < dataList.length; i++) {
           likesList.value.push(dataList[i])
         }
-        console.log('[MyLikes] 追加数据，列表长度:', likesList.value.length)
       }
 
       likesHasMore.value = dataList.length >= likesPageSize.value
@@ -790,25 +722,12 @@ const loadLikesData = async (reset = false) => {
       
       await nextTick()
       
-      console.log('[MyLikes] 数据加载完成', {
-        currentListLength: likesList.value.length,
-        hasMore: likesHasMore.value,
-        nextPageNum: likesPageNum.value,
-        loading: likesLoading.value
-      })
     } else {
-      console.error('[MyLikes] API返回错误', res?.data)
       uni.showToast({ title: res.data.msg || '加载失败', icon: 'none' })
       likesLoading.value = false
       likesRefreshing.value = false
     }
   } catch (e: any) {
-    console.error('[MyLikes] 加载点赞列表失败', {
-      error: e,
-      message: e?.message,
-      statusCode: e?.statusCode,
-      stack: e?.stack
-    })
     uni.showToast({ title: '加载失败: ' + (e?.message || '未知错误'), icon: 'none', duration: 3000 })
     likesLoading.value = false
     likesRefreshing.value = false
@@ -839,7 +758,6 @@ const commentsHasMore = ref(true)
 // 加载评论列表
 const loadCommentsData = async (reset = false) => {
   if (!user.value?.id) {
-    console.log('[MyComments] 用户未登录')
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
@@ -851,48 +769,26 @@ const loadCommentsData = async (reset = false) => {
   }
 
   if (commentsLoading.value || (!reset && !commentsHasMore.value)) {
-    console.log('[MyComments] 正在加载或没有更多数据', { loading: commentsLoading.value, hasMore: commentsHasMore.value, reset })
     return
   }
 
   commentsLoading.value = true
-  console.log('[MyComments] 开始加载数据', {
-    userId: user.value.id,
-    pageNum: commentsPageNum.value,
-    pageSize: commentsPageSize.value,
-    reset
-  })
 
   try {
     const res = await travelNoteInteractionApi.listMyComments(user.value.id, commentsPageNum.value, commentsPageSize.value)
     
-    console.log('[MyComments] API响应', {
-      statusCode: res?.statusCode,
-      code: res?.data?.code,
-      msg: res?.data?.msg,
-      data: res?.data?.data
-    })
 
     if (res.statusCode === 200 && res.data.code === 200) {
       const data = res.data.data || {}
       const dataList = data.list || []
       
-      console.log('[MyComments] 解析数据', {
-        total: data.total,
-        listLength: dataList.length,
-        pageNum: data.pageNum,
-        pageSize: data.pageSize,
-        dataList: dataList
-      })
       
       if (reset) {
         commentsList.value = dataList
-        console.log('[MyComments] 重置列表，新列表长度:', commentsList.value.length)
       } else {
         for (let i = 0; i < dataList.length; i++) {
           commentsList.value.push(dataList[i])
         }
-        console.log('[MyComments] 追加数据，列表长度:', commentsList.value.length)
       }
 
       commentsHasMore.value = dataList.length >= commentsPageSize.value
@@ -905,27 +801,13 @@ const loadCommentsData = async (reset = false) => {
       
       await nextTick()
       
-      console.log('[MyComments] 数据加载完成', {
-        currentListLength: commentsList.value.length,
-        hasMore: commentsHasMore.value,
-        nextPageNum: commentsPageNum.value,
-        loading: commentsLoading.value
-      })
     } else {
-      console.error('[MyComments] API返回错误', res?.data)
       uni.showToast({ title: res.data.msg || '加载失败', icon: 'none' })
       commentsLoading.value = false
       commentsRefreshing.value = false
     }
   } catch (e: any) {
-    console.error('[MyComments] 加载评论列表失败', {
-      error: e,
-      message: e?.message,
-      statusCode: e?.statusCode,
-      stack: e?.stack
-    })
     if (e.statusCode === 404) {
-      console.log('[MyComments] 接口不存在，显示空状态')
       commentsList.value = []
       commentsHasMore.value = false
     } else {
@@ -950,26 +832,56 @@ const loadMoreComments = () => {
 }
 
 // ========== 通用方法 ==========
+// 点击防抖
+let lastClickTime = 0
+const CLICK_DEBOUNCE_TIME = 300
+
 // 查看详情
 const viewNoteDetail = (id: number) => {
-  uni.navigateTo({ url: `/pages/travel-note/detail?id=${id}` })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  safeNavigateTo(`/pages/travel-note/detail?id=${id}`).catch(() => {
+    // 静默处理错误
+  })
 }
 
 const viewScenicDetail = (id: number) => {
-  uni.navigateTo({ url: `/pages/scenic/detail?id=${id}` })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  safeNavigateTo(`/pages/scenic/detail?id=${id}`).catch(() => {
+    // 静默处理错误
+  })
 }
 
 const viewFoodDetail = (id: number) => {
-  uni.navigateTo({ url: `/pages/food/detail?id=${id}` })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  safeNavigateTo(`/pages/food/detail?id=${id}`).catch(() => {
+    // 静默处理错误
+  })
 }
 
 const viewRouteDetail = (id: number) => {
-  uni.navigateTo({ url: `/pages/route/detail?id=${id}` })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  safeNavigateTo(`/pages/route/detail?id=${id}`).catch(() => {
+    // 静默处理错误
+  })
 }
 
 const viewCommentDetail = (contentId: number, contentType: string) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (contentType === 'note') {
-    uni.navigateTo({ url: `/pages/travel-note/detail?id=${contentId}` })
+    safeNavigateTo(`/pages/travel-note/detail?id=${contentId}`).catch(() => {
+      // 静默处理错误
+    })
   } else {
     uni.showToast({ title: '暂不支持该类型', icon: 'none' })
   }

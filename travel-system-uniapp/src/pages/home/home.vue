@@ -84,6 +84,7 @@
                 class="scenic-image"
                 :src="item.imageUrl"
                 mode="aspectFill"
+                :lazy-load="true"
               />
             </view>
             <!-- 景点信息 -->
@@ -143,6 +144,7 @@
                 class="route-cover"
                 :src="route.coverImage"
                 mode="aspectFill"
+                :lazy-load="true"
               />
               <view class="route-badge">
                 {{ route.days }}天
@@ -178,6 +180,7 @@
                   class="note-cover"
                   :src="note.coverImage "
                   mode="aspectFill"
+                  :lazy-load="true"
                 />
               </view>
 
@@ -191,6 +194,7 @@
                         class="note-author-avatar"
                         :src="note.authorAvatar"
                         mode="aspectFill"
+                        :lazy-load="true"
                       />
                       <text class="note-author-name">{{ note.authorName || '匿名用户' }}</text>
                     </view>
@@ -244,6 +248,7 @@
                   class="food-image"
                   :src="item.imageUrl"
                   mode="aspectFill"
+                  :lazy-load="true"
                 />
                 <view v-else class="food-image-placeholder">
                   <text class="food-icon">🍜</text>
@@ -373,6 +378,8 @@ const notePage = ref(1)
 const noteFinished = ref(false)
 const shouldAnimateMap = ref<Record<number, boolean>>({})
 const showLoginPrompt = ref(false)
+const isInitialLoad = ref(true) // 标记是否首次加载
+const lastRefreshTime = ref(0) // 上次刷新时间
 
 // 省份列表
 const provinceList = ref([
@@ -471,6 +478,12 @@ const onFeatureTouchEnd = () => {
 }
 
 const onFeatureClick = (item: (typeof featureEntries.value)[number]) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
+  
   console.log('点击智能入口:', item.type)
   if (item.type === 'planner') {
     safeSwitchTab('/pages/route/plan').catch((err) => {
@@ -500,7 +513,17 @@ const onFeatureClick = (item: (typeof featureEntries.value)[number]) => {
 }
 
 // 查看跳转
+// 点击防抖
+let lastClickTime = 0
+const CLICK_DEBOUNCE_TIME = 300 // 300ms 防抖
+
 const onViewRoute = (route: RouteItem) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
+  
   console.log('点击线路卡片:', route.id)
   if (!route || !route.id) {
     console.error('线路数据无效:', route)
@@ -527,6 +550,12 @@ const viewAuthorProfile = (note: NoteItem) => {
 }
 
 const onViewNote = (note: NoteItem) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
+  
   console.log('点击游记卡片:', note.id)
   if (!note || !note.id) {
     console.error('游记数据无效:', note)
@@ -635,18 +664,18 @@ const handleComment = (note: NoteItem) => {
 }
 
 const onViewScenic = async (item: ScenicItem) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
+  
   console.log('点击景点卡片:', item.id)
   if (!item || !item.id) {
     console.error('景点数据无效:', item)
     return
   }
-  // 点击景点时增加热度
-  try {
-    await scenicSpotApi.incrementHotScore(item.id)
-  } catch (error) {
-    // 静默失败，不影响页面跳转
-    console.warn('增加热度失败:', error)
-  }
+  // 先跳转，热度增加异步处理，不阻塞跳转
   safeNavigateTo(`/pages/scenic/detail?id=${item.id}`).catch((err) => {
     console.error('跳转失败:', err)
     uni.showToast({
@@ -654,9 +683,21 @@ const onViewScenic = async (item: ScenicItem) => {
       icon: 'none'
     })
   })
+  
+  // 异步增加热度，不阻塞跳转
+  scenicSpotApi.incrementHotScore(item.id).catch((error) => {
+    // 静默失败，不影响页面跳转
+    console.warn('增加热度失败:', error)
+  })
 }
 
 const onViewFood = (item: FoodItem) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return // 防止快速重复点击
+  }
+  lastClickTime = now
+  
   console.log('点击美食卡片:', item.id)
   if (!item || !item.id) {
     console.error('美食数据无效:', item)
@@ -671,8 +712,8 @@ const onViewFood = (item: FoodItem) => {
   })
 }
 
-// 拉取首页推荐数据
-const fetchHomeData = async () => {
+// 拉取首页推荐数据（分阶段加载）
+const fetchHomeData = async (priority: 'high' | 'low' = 'high') => {
   if (loadingRecommend.value) return
   loadingRecommend.value = true
   const toastFail = (msg: string) => uni.showToast({ title: msg, icon: 'none' })
@@ -692,31 +733,82 @@ const fetchHomeData = async () => {
       foodParams.province = provinceValue
     }
 
-    const [routeRes, scenicRes, foodRes] = await Promise.all([
-      recommendApi.routes(undefined, 10) as Promise<ListResponse<RouteItem>>,
-      request({
-        url: '/recommend/scenic-spots',
-        method: 'GET',
-        data: scenicParams,
-        showLoading: false,
-      }) as Promise<ListResponse<ScenicItem>>,
-      request({
-        url: '/recommend/foods',
-        method: 'GET',
-        data: foodParams,
-        showLoading: false,
-      }) as Promise<ListResponse<FoodItem>>,
-    ])
+    // 高优先级：先加载首屏内容（线路和景点）
+    if (priority === 'high') {
+      const [routeRes, scenicRes] = await Promise.all([
+        recommendApi.routes(undefined, 10) as Promise<ListResponse<RouteItem>>,
+        request({
+          url: '/recommend/scenic-spots',
+          method: 'GET',
+          data: scenicParams,
+          showLoading: false,
+        }) as Promise<ListResponse<ScenicItem>>,
+      ])
 
-    if (routeRes.statusCode === 200 && routeRes.data.code === 200) {
-      routeList.value = routeRes.data.data || []
+      if (routeRes.statusCode === 200 && routeRes.data.code === 200) {
+        routeList.value = routeRes.data.data || []
+      } else {
+        toastFail(routeRes.data.msg || '推荐线路加载失败')
+      }
+
+      if (scenicRes.statusCode === 200 && scenicRes.data.code === 200) {
+        scenicList.value = scenicRes.data.data || []
+      }
+
+      // 延迟加载美食数据（低优先级）
+      setTimeout(() => {
+        fetchFoodData(foodParams, toastFail)
+      }, 300)
     } else {
-      toastFail(routeRes.data.msg || '推荐线路加载失败')
-    }
+      // 低优先级：加载所有数据
+      const [routeRes, scenicRes, foodRes] = await Promise.all([
+        recommendApi.routes(undefined, 10) as Promise<ListResponse<RouteItem>>,
+        request({
+          url: '/recommend/scenic-spots',
+          method: 'GET',
+          data: scenicParams,
+          showLoading: false,
+        }) as Promise<ListResponse<ScenicItem>>,
+        request({
+          url: '/recommend/foods',
+          method: 'GET',
+          data: foodParams,
+          showLoading: false,
+        }) as Promise<ListResponse<FoodItem>>,
+      ])
 
-    if (scenicRes.statusCode === 200 && scenicRes.data.code === 200) {
-      scenicList.value = scenicRes.data.data || []
+      if (routeRes.statusCode === 200 && routeRes.data.code === 200) {
+        routeList.value = routeRes.data.data || []
+      } else {
+        toastFail(routeRes.data.msg || '推荐线路加载失败')
+      }
+
+      if (scenicRes.statusCode === 200 && scenicRes.data.code === 200) {
+        scenicList.value = scenicRes.data.data || []
+      }
+
+      if (foodRes.statusCode === 200 && foodRes.data.code === 200) {
+        foodList.value = foodRes.data.data || []
+      } else {
+        toastFail(foodRes.data?.msg || '推荐美食加载失败')
+      }
     }
+  } catch (error) {
+    toastFail('首页推荐加载失败')
+  } finally {
+    loadingRecommend.value = false
+  }
+}
+
+// 单独加载美食数据
+const fetchFoodData = async (foodParams: any, toastFail: (msg: string) => void) => {
+  try {
+    const foodRes = await request({
+      url: '/recommend/foods',
+      method: 'GET',
+      data: foodParams,
+      showLoading: false,
+    }) as Promise<ListResponse<FoodItem>>
 
     if (foodRes.statusCode === 200 && foodRes.data.code === 200) {
       foodList.value = foodRes.data.data || []
@@ -724,9 +816,8 @@ const fetchHomeData = async () => {
       toastFail(foodRes.data?.msg || '推荐美食加载失败')
     }
   } catch (error) {
-    toastFail('首页推荐加载失败')
-  } finally {
-    loadingRecommend.value = false
+    // 静默失败，不影响主流程
+    console.warn('美食数据加载失败:', error)
   }
 }
 
@@ -772,8 +863,11 @@ onLoad(() => {
 })
 
 onMounted(() => {
-  fetchHomeData()
+  // 首次加载：优先加载首屏内容
+  fetchHomeData('high')
   loadNotes(true)
+  isInitialLoad.value = false
+  lastRefreshTime.value = Date.now()
   // 监听详情页发送的评论数量更新事件
   uni.$on('noteCommentCountUpdated', handleNoteCommentCountUpdate)
 })
@@ -785,14 +879,27 @@ onUnmounted(() => {
 
 // 页面显示时刷新数据（从详情页返回时更新评论数量等）
 onShow(() => {
-  // 刷新游记列表，确保评论数量等数据是最新的
-  loadNotes(true)
+  const now = Date.now()
+  // 避免频繁刷新：如果距离上次刷新不足5秒，且不是首次加载，则跳过
+  if (!isInitialLoad.value && now - lastRefreshTime.value < 5000) {
+    return
+  }
+  
+  // 只刷新游记列表（评论数量等），不刷新其他数据
+  // 避免不必要的网络请求
+  if (noteList.value.length > 0) {
+    loadNotes(true)
+  }
+  
+  lastRefreshTime.value = now
 })
 
 // 下拉刷新
 onPullDownRefresh(async () => {
-  await fetchHomeData()
+  // 刷新时加载所有数据
+  await fetchHomeData('low')
   await loadNotes(true)
+  lastRefreshTime.value = Date.now()
   uni.stopPullDownRefresh()
 })
 

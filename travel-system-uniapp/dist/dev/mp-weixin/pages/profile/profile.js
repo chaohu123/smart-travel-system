@@ -2,6 +2,7 @@
 var common_vendor = require("../../common/vendor.js");
 var api_user = require("../../api/user.js");
 var store_user = require("../../store/user.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
@@ -40,7 +41,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           };
         }
       } catch (e) {
-        console.error("\u52A0\u8F7D\u7528\u6237\u7EDF\u8BA1\u5931\u8D25", e);
       }
     };
     common_vendor.watch(user, (newUser) => {
@@ -50,57 +50,100 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     }, { immediate: true });
     common_vendor.onMounted(() => {
+      utils_router.resetNavigationState();
       if (user.value) {
         loadUserStats();
       }
     });
+    let lastClickTime = 0;
+    const CLICK_DEBOUNCE_TIME = 300;
     const navigateToMyNotes = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       if (!user.value) {
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         return;
       }
-      common_vendor.index.navigateTo({ url: "/pages/profile/my-article" });
+      utils_router.safeNavigateTo("/pages/profile/my-article").catch(() => {
+      });
     };
     const navigateToMyCheckins = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       if (!user.value) {
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         return;
       }
-      common_vendor.index.navigateTo({ url: "/pages/footprint/footprint" });
+      utils_router.safeNavigateTo("/pages/footprint/footprint").catch(() => {
+      });
     };
     const navigateToMyInteraction = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       if (!user.value) {
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         return;
       }
-      common_vendor.index.navigateTo({ url: "/pages/profile/my-interaction" });
+      utils_router.safeNavigateTo("/pages/profile/my-interaction").catch(() => {
+      });
     };
     const navigateToFeedback = () => {
-      common_vendor.index.navigateTo({ url: "/pages/profile/feedback" });
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
+      utils_router.safeNavigateTo("/pages/profile/feedback").catch(() => {
+      });
     };
     const navigateToAbout = () => {
-      common_vendor.index.navigateTo({ url: "/pages/profile/about" });
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
+      utils_router.safeNavigateTo("/pages/profile/about").catch(() => {
+      });
     };
     const navigateToPreference = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       if (!user.value) {
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         return;
       }
-      common_vendor.index.navigateTo({ url: "/pages/profile/preference" });
+      utils_router.safeNavigateTo("/pages/profile/preference").catch(() => {
+      });
     };
     const navigateToHistory = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       if (!user.value) {
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         return;
       }
-      common_vendor.index.navigateTo({ url: "/pages/profile/history" });
+      utils_router.safeNavigateTo("/pages/profile/history").catch(() => {
+      });
     };
     const navigateToUserHome = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       if (!user.value) {
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         return;
       }
-      common_vendor.index.navigateTo({ url: `/pages/profile/user-home?userId=${user.value.id}` });
+      utils_router.safeNavigateTo(`/pages/profile/user-home?userId=${user.value.id}`).catch(() => {
+      });
     };
     const openLogin = () => {
       showLoginForm.value = true;

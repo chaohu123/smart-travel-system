@@ -101,6 +101,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { travelNoteInteractionApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
+import { safeNavigateTo } from '@/utils/router'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -116,7 +117,6 @@ const hasMore = ref(true)
 // 加载点赞列表
 const loadLikes = async (reset = false) => {
   if (!user.value?.id) {
-    console.log('[MyLikes] 用户未登录')
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
@@ -128,56 +128,26 @@ const loadLikes = async (reset = false) => {
   }
 
   if (loading.value || (!reset && !hasMore.value)) {
-    console.log('[MyLikes] 正在加载或没有更多数据', { loading: loading.value, hasMore: hasMore.value, reset })
     return
   }
 
   loading.value = true
-  console.log('[MyLikes] 开始加载数据', {
-    userId: user.value.id,
-    pageNum: pageNum.value,
-    pageSize: pageSize.value,
-    reset
-  })
 
   try {
     const res = await travelNoteInteractionApi.listMyLikes(user.value.id, pageNum.value, pageSize.value)
-    
-    console.log('[MyLikes] API响应', {
-      statusCode: res?.statusCode,
-      code: res?.data?.code,
-      msg: res?.data?.msg,
-      data: res?.data?.data
-    })
 
     if (res.statusCode === 200 && res.data.code === 200) {
       const data = res.data.data || {}
       const dataList = data.list || []
       
-      console.log('[MyLikes] 解析数据', {
-        total: data.total,
-        listLength: dataList.length,
-        pageNum: data.pageNum,
-        pageSize: data.pageSize,
-        dataList: dataList
-      })
-      
       if (reset) {
         likeList.value = dataList
-        console.log('[MyLikes] 重置列表，新列表长度:', likeList.value.length)
       } else {
         // 使用循环替代扩展运算符，避免 Babel runtime 错误
         for (let i = 0; i < dataList.length; i++) {
           likeList.value.push(dataList[i])
         }
-        console.log('[MyLikes] 追加数据，列表长度:', likeList.value.length)
       }
-      
-      // 确保数据已赋值
-      console.log('[MyLikes] 赋值后列表状态', {
-        listLength: likeList.value.length,
-        listValue: likeList.value
-      })
 
       hasMore.value = dataList.length >= pageSize.value
       if (hasMore.value) {
@@ -190,35 +160,12 @@ const loadLikes = async (reset = false) => {
       
       // 等待 DOM 更新
       await nextTick()
-      
-      console.log('[MyLikes] 数据加载完成', {
-        currentListLength: likeList.value.length,
-        hasMore: hasMore.value,
-        nextPageNum: pageNum.value,
-        loading: loading.value,
-        listData: likeList.value,
-        firstItem: likeList.value[0] || null
-      })
-      
-      // 验证模板条件
-      console.log('[MyLikes] 模板条件检查', {
-        '!loading': !loading.value,
-        'likeList.length > 0': likeList.value.length > 0,
-        'shouldDisplay': !loading.value && likeList.value.length > 0
-      })
     } else {
-      console.error('[MyLikes] API返回错误', res?.data)
       uni.showToast({ title: res.data.msg || '加载失败', icon: 'none' })
       loading.value = false
       refreshing.value = false
     }
   } catch (e: any) {
-    console.error('[MyLikes] 加载点赞列表失败', {
-      error: e,
-      message: e?.message,
-      statusCode: e?.statusCode,
-      stack: e?.stack
-    })
     uni.showToast({ title: '加载失败: ' + (e?.message || '未知错误'), icon: 'none', duration: 3000 })
     loading.value = false
     refreshing.value = false
@@ -238,9 +185,19 @@ const loadMore = () => {
   }
 }
 
+// 点击防抖
+let lastClickTime = 0
+const CLICK_DEBOUNCE_TIME = 300
+
 // 查看详情
 const viewDetail = (noteId: number) => {
-  uni.navigateTo({ url: `/pages/travel-note/detail?id=${noteId}` })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
+  safeNavigateTo(`/pages/travel-note/detail?id=${noteId}`).catch(() => {
+    // 静默处理错误
+  })
 }
 
 // 格式化时间

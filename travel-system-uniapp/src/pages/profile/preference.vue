@@ -213,7 +213,6 @@ const loadTags = async () => {
       tagList.value = res.data.data || []
     }
   } catch (error) {
-    console.error('加载标签失败', error)
   }
 }
 
@@ -239,7 +238,6 @@ const loadPreferences = async () => {
       }
     }
   } catch (error) {
-    console.error('加载偏好设置失败', error)
   }
 }
 
@@ -279,7 +277,6 @@ const savePreferences = async () => {
       store.setUser({ ...user.value, interests: selectedTagNames }, store.state.token)
     }
   } catch (error) {
-    console.error('保存偏好设置失败', error)
     uni.showToast({ title: '保存失败，请稍后重试', icon: 'none' })
   } finally {
     saving.value = false

@@ -31,7 +31,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           form.images.push(...res.tempFilePaths);
         },
         fail: (err) => {
-          console.error("\u9009\u62E9\u56FE\u7247\u5931\u8D25", err);
           common_vendor.index.showToast({ title: "\u9009\u62E9\u56FE\u7247\u5931\u8D25", icon: "none" });
         }
       });
@@ -63,7 +62,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           common_vendor.index.navigateBack();
         }, 1500);
       } catch (error) {
-        console.error("\u63D0\u4EA4\u53CD\u9988\u5931\u8D25", error);
         common_vendor.index.showToast({ title: "\u63D0\u4EA4\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5", icon: "none" });
       } finally {
         submitting.value = false;

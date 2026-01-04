@@ -115,7 +115,6 @@ const loadUserInfo = async () => {
       formData.email = userInfoData.email || ''
     }
   } catch (error) {
-    console.error('加载用户信息失败', error)
     uni.showToast({ title: '加载失败', icon: 'none' })
   }
 }
@@ -153,7 +152,6 @@ const chooseAvatar = () => {
           uni.showToast({ title: '上传失败', icon: 'none' })
         }
       } catch (error) {
-        console.error('上传头像失败', error)
         uni.hideLoading()
         uni.showToast({ title: '上传失败', icon: 'none' })
       }
@@ -210,7 +208,6 @@ const saveProfile = async () => {
       uni.showToast({ title: res.data.msg || '保存失败', icon: 'none' })
     }
   } catch (error) {
-    console.error('保存资料失败', error)
     uni.showToast({ title: '保存失败', icon: 'none' })
   } finally {
     saving.value = false

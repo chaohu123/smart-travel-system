@@ -1,15 +1,26 @@
-import { getCache, removeCache } from './storage'
+import { getCache, removeCache, setCache } from './storage'
 import { API_BASE_URL } from './config'
 
 export interface RequestOptions extends UniApp.RequestOptions {
   needAuth?: boolean
   showLoading?: boolean
   needRetry?: boolean
+  enableCache?: boolean // 是否启用缓存
+  cacheTime?: number // 缓存时间（秒），默认5分钟
 }
 
 const BASE_URL = API_BASE_URL
 
 const getToken = () => getCache<string>('token')
+
+// 请求去重：正在进行的请求
+const pendingRequests = new Map<string, Promise<any>>()
+
+// 生成请求的唯一键
+const getRequestKey = (url: string, method: string, data: any): string => {
+  const dataStr = data ? JSON.stringify(data) : ''
+  return `${method}:${url}:${dataStr}`
+}
 
 const handleAuthFail = () => {
   removeCache('token')
@@ -49,8 +60,11 @@ export const request = <T = any>(options: RequestOptions) => {
     needAuth = false,
     showLoading = true,
     needRetry = false,
+    enableCache = false,
+    cacheTime = 5 * 60, // 默认5分钟
     header = {},
     data,
+    method = 'GET',
     ...rest
   } = options
 
@@ -58,31 +72,39 @@ export const request = <T = any>(options: RequestOptions) => {
   const headers: Record<string, any> = { ...header }
   if (token) {
     headers.Authorization = `Bearer ${token}`
-    // 调试信息：显示token和请求头
-    if (needAuth) {
-      console.log('🔐 [HTTP请求] 需要认证的请求:', {
-        url: url,
-        token: token,
-        tokenLength: token.length,
-        tokenPreview: token.substring(0, 30) + '...',
-        authorizationHeader: headers.Authorization,
-        authorizationPreview: headers.Authorization.substring(0, 40) + '...'
-      })
-    }
   }
 
   if (needAuth && !token) {
-    console.error('❌ [HTTP请求] 需要认证但token为空:', url)
     handleAuthFail()
     return Promise.reject(new Error('no-token'))
+  }
+
+  // 清理 data 中的 undefined 和 null 值
+  const cleanedData = data ? cleanParams(data) : undefined
+
+  // 生成请求键（用于去重和缓存）
+  const requestKey = getRequestKey(url, method, cleanedData)
+  const cacheKey = `api_cache_${requestKey}`
+
+  // 检查缓存（仅 GET 请求且启用缓存）
+  if (enableCache && method === 'GET') {
+    const cached = getCache<any>(cacheKey)
+    if (cached) {
+      return Promise.resolve({
+        statusCode: 200,
+        data: cached
+      } as any)
+    }
+  }
+
+  // 检查是否有正在进行的相同请求（请求去重）
+  if (pendingRequests.has(requestKey)) {
+    return pendingRequests.get(requestKey)!
   }
 
   if (showLoading) {
     uni.showLoading({ title: '加载中', mask: true })
   }
-
-  // 清理 data 中的 undefined 和 null 值
-  const cleanedData = data ? cleanParams(data) : undefined
 
   const run = () =>
     new Promise<UniApp.RequestSuccessCallbackResult & { data: any }>((resolve, reject) => {
@@ -93,6 +115,7 @@ export const request = <T = any>(options: RequestOptions) => {
       
       uni.request({
         url: fullUrl,
+        method: method as any,
         header: headers,
         data: cleanedData,
         timeout: timeout,
@@ -103,6 +126,12 @@ export const request = <T = any>(options: RequestOptions) => {
             reject(res)
             return
           }
+          
+          // 缓存成功的 GET 请求结果
+          if (enableCache && method === 'GET' && res.statusCode === 200 && res.data) {
+            setCache(cacheKey, res.data, cacheTime)
+          }
+          
           resolve(res as any)
         },
         fail: (err) => {
@@ -112,17 +141,22 @@ export const request = <T = any>(options: RequestOptions) => {
           if (showLoading) {
             uni.hideLoading()
           }
+          // 请求完成，从待处理列表中移除
+          pendingRequests.delete(requestKey)
         },
       })
     })
 
-  if (!needRetry) {
-    return run()
-  }
+  // 将请求添加到待处理列表
+  const requestPromise = needRetry
+    ? run().catch((err) => {
+        return run().catch(() => Promise.reject(err))
+      })
+    : run()
 
-  return run().catch((err) => {
-    return run().catch(() => Promise.reject(err))
-  })
+  pendingRequests.set(requestKey, requestPromise)
+
+  return requestPromise
 }
 
 export const uploadFile = (url: string, filePath: string) => {

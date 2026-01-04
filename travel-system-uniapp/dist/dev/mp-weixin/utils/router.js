@@ -2,9 +2,15 @@
 var common_vendor = require("../common/vendor.js");
 let isNavigating = false;
 let navigateTimer = null;
+let lastNavigateUrl = "";
+let lastNavigateTime = 0;
+const NAVIGATE_DEBOUNCE_TIME = 300;
 const safeNavigateTo = (url, options) => {
-  if (isNavigating) {
-    console.warn("\u6B63\u5728\u8DF3\u8F6C\u4E2D\uFF0C\u5FFD\u7565\u91CD\u590D\u8DF3\u8F6C\u8BF7\u6C42:", url);
+  const now = Date.now();
+  if (isNavigating && lastNavigateUrl === url) {
+    return Promise.resolve();
+  }
+  if (now - lastNavigateTime < NAVIGATE_DEBOUNCE_TIME && lastNavigateUrl === url) {
     return Promise.resolve();
   }
   if (navigateTimer) {
@@ -12,6 +18,8 @@ const safeNavigateTo = (url, options) => {
     navigateTimer = null;
   }
   isNavigating = true;
+  lastNavigateUrl = url;
+  lastNavigateTime = now;
   return new Promise((resolve, reject) => {
     common_vendor.index.navigateTo({
       url,
@@ -21,27 +29,32 @@ const safeNavigateTo = (url, options) => {
         navigateTimer = setTimeout(() => {
           isNavigating = false;
           navigateTimer = null;
-        }, 500);
+          lastNavigateUrl = "";
+        }, 300);
         (_a = options == null ? void 0 : options.success) == null ? void 0 : _a.call(options, res);
         resolve();
       },
       fail: (err) => {
-        var _a, _b;
+        var _a, _b, _c, _d, _e;
         isNavigating = false;
+        lastNavigateUrl = "";
         if (navigateTimer) {
           clearTimeout(navigateTimer);
           navigateTimer = null;
         }
-        console.error("\u9875\u9762\u8DF3\u8F6C\u5931\u8D25:", err, url);
-        if (((_a = err.errMsg) == null ? void 0 : _a.includes("webview")) || ((_b = err.errMsg) == null ? void 0 : _b.includes("route"))) {
-          console.warn("\u68C0\u6D4B\u5230\u8DEF\u7531\u9519\u8BEF\uFF0C\u5EF6\u8FDF\u91CD\u8BD5...");
+        if (((_a = err.errMsg) == null ? void 0 : _a.includes("timeout")) || ((_b = err.errMsg) == null ? void 0 : _b.includes("timedout"))) {
+          (_c = options == null ? void 0 : options.fail) == null ? void 0 : _c.call(options, err);
+          reject(err);
+          return;
+        }
+        if (((_d = err.errMsg) == null ? void 0 : _d.includes("webview")) || ((_e = err.errMsg) == null ? void 0 : _e.includes("route"))) {
           setTimeout(() => {
             safeNavigateTo(url, options).then(resolve).catch(reject);
           }, 500);
         } else {
-          console.warn("\u8DF3\u8F6C\u5931\u8D25\uFF0C\u5C1D\u8BD5\u91CD\u8BD5...");
           setTimeout(() => {
             isNavigating = false;
+            lastNavigateUrl = "";
             safeNavigateTo(url, options).then(resolve).catch(reject);
           }, 300);
         }
@@ -54,14 +67,19 @@ const safeNavigateTo = (url, options) => {
   });
 };
 const safeSwitchTab = (url, options) => {
-  if (isNavigating) {
-    console.warn("\u6B63\u5728\u8DF3\u8F6C\u4E2D\uFF0C\u5FFD\u7565\u91CD\u590D\u8DF3\u8F6C\u8BF7\u6C42:", url);
-    return;
+  const now = Date.now();
+  if (isNavigating && lastNavigateUrl === url) {
+    return Promise.resolve();
+  }
+  if (now - lastNavigateTime < NAVIGATE_DEBOUNCE_TIME && lastNavigateUrl === url) {
+    return Promise.resolve();
   }
   if (navigateTimer) {
     clearTimeout(navigateTimer);
   }
   isNavigating = true;
+  lastNavigateUrl = url;
+  lastNavigateTime = now;
   return new Promise((resolve, reject) => {
     common_vendor.index.switchTab({
       url,
@@ -71,16 +89,16 @@ const safeSwitchTab = (url, options) => {
         navigateTimer = setTimeout(() => {
           isNavigating = false;
           navigateTimer = null;
-        }, 300);
+          lastNavigateUrl = "";
+        }, 200);
         (_a = options == null ? void 0 : options.success) == null ? void 0 : _a.call(options, res);
         resolve();
       },
       fail: (err) => {
         var _a, _b, _c;
         isNavigating = false;
-        console.error("Tab \u5207\u6362\u5931\u8D25:", err);
+        lastNavigateUrl = "";
         if (((_a = err.errMsg) == null ? void 0 : _a.includes("webview")) || ((_b = err.errMsg) == null ? void 0 : _b.includes("route"))) {
-          console.warn("\u68C0\u6D4B\u5230\u8DEF\u7531\u9519\u8BEF\uFF0C\u5EF6\u8FDF\u91CD\u8BD5...");
           setTimeout(() => {
             safeSwitchTab(url, options).then(resolve).catch(reject);
           }, 500);
@@ -98,6 +116,8 @@ const safeSwitchTab = (url, options) => {
 };
 const resetNavigationState = () => {
   isNavigating = false;
+  lastNavigateUrl = "";
+  lastNavigateTime = 0;
   if (navigateTimer) {
     clearTimeout(navigateTimer);
     navigateTimer = null;

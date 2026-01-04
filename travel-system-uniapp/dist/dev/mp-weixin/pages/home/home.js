@@ -35,6 +35,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const noteFinished = common_vendor.ref(false);
     const shouldAnimateMap = common_vendor.ref({});
     const showLoginPrompt = common_vendor.ref(false);
+    const isInitialLoad = common_vendor.ref(true);
+    const lastRefreshTime = common_vendor.ref(0);
     const provinceList = common_vendor.ref([
       { name: "\u5168\u90E8\u7701\u4EFD", value: "" },
       { name: "\u5317\u4EAC", value: "\u5317\u4EAC" },
@@ -113,6 +115,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       activeFeatureId.value = null;
     };
     const onFeatureClick = (item) => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       console.log("\u70B9\u51FB\u667A\u80FD\u5165\u53E3:", item.type);
       if (item.type === "planner") {
         utils_router.safeSwitchTab("/pages/route/plan").catch((err) => {
@@ -140,7 +147,14 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
       }
     };
+    let lastClickTime = 0;
+    const CLICK_DEBOUNCE_TIME = 300;
     const onViewRoute = (route) => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       console.log("\u70B9\u51FB\u7EBF\u8DEF\u5361\u7247:", route.id);
       if (!route || !route.id) {
         console.error("\u7EBF\u8DEF\u6570\u636E\u65E0\u6548:", route);
@@ -163,6 +177,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const onViewNote = (note) => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       console.log("\u70B9\u51FB\u6E38\u8BB0\u5361\u7247:", note.id);
       if (!note || !note.id) {
         console.error("\u6E38\u8BB0\u6570\u636E\u65E0\u6548:", note);
@@ -244,15 +263,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${note.id}&tab=comment`);
     };
     const onViewScenic = async (item) => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       console.log("\u70B9\u51FB\u666F\u70B9\u5361\u7247:", item.id);
       if (!item || !item.id) {
         console.error("\u666F\u70B9\u6570\u636E\u65E0\u6548:", item);
         return;
-      }
-      try {
-        await api_content.scenicSpotApi.incrementHotScore(item.id);
-      } catch (error) {
-        console.warn("\u589E\u52A0\u70ED\u5EA6\u5931\u8D25:", error);
       }
       utils_router.safeNavigateTo(`/pages/scenic/detail?id=${item.id}`).catch((err) => {
         console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
@@ -261,8 +280,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           icon: "none"
         });
       });
+      api_content.scenicSpotApi.incrementHotScore(item.id).catch((error) => {
+        console.warn("\u589E\u52A0\u70ED\u5EA6\u5931\u8D25:", error);
+      });
     };
     const onViewFood = (item) => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       console.log("\u70B9\u51FB\u7F8E\u98DF\u5361\u7247:", item.id);
       if (!item || !item.id) {
         console.error("\u7F8E\u98DF\u6570\u636E\u65E0\u6548:", item);
@@ -276,7 +303,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
       });
     };
-    const fetchHomeData = async () => {
+    const fetchHomeData = async (priority = "high") => {
       var _a, _b;
       if (loadingRecommend.value)
         return;
@@ -290,38 +317,79 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           scenicParams.province = provinceValue;
           foodParams.province = provinceValue;
         }
-        const [routeRes, scenicRes, foodRes] = await Promise.all([
-          api_content.recommendApi.routes(void 0, 10),
-          utils_http.request({
-            url: "/recommend/scenic-spots",
-            method: "GET",
-            data: scenicParams,
-            showLoading: false
-          }),
-          utils_http.request({
-            url: "/recommend/foods",
-            method: "GET",
-            data: foodParams,
-            showLoading: false
-          })
-        ]);
-        if (routeRes.statusCode === 200 && routeRes.data.code === 200) {
-          routeList.value = routeRes.data.data || [];
+        if (priority === "high") {
+          const [routeRes, scenicRes] = await Promise.all([
+            api_content.recommendApi.routes(void 0, 10),
+            utils_http.request({
+              url: "/recommend/scenic-spots",
+              method: "GET",
+              data: scenicParams,
+              showLoading: false
+            })
+          ]);
+          if (routeRes.statusCode === 200 && routeRes.data.code === 200) {
+            routeList.value = routeRes.data.data || [];
+          } else {
+            toastFail(routeRes.data.msg || "\u63A8\u8350\u7EBF\u8DEF\u52A0\u8F7D\u5931\u8D25");
+          }
+          if (scenicRes.statusCode === 200 && scenicRes.data.code === 200) {
+            scenicList.value = scenicRes.data.data || [];
+          }
+          setTimeout(() => {
+            fetchFoodData(foodParams, toastFail);
+          }, 300);
         } else {
-          toastFail(routeRes.data.msg || "\u63A8\u8350\u7EBF\u8DEF\u52A0\u8F7D\u5931\u8D25");
-        }
-        if (scenicRes.statusCode === 200 && scenicRes.data.code === 200) {
-          scenicList.value = scenicRes.data.data || [];
-        }
-        if (foodRes.statusCode === 200 && foodRes.data.code === 200) {
-          foodList.value = foodRes.data.data || [];
-        } else {
-          toastFail(((_b = foodRes.data) == null ? void 0 : _b.msg) || "\u63A8\u8350\u7F8E\u98DF\u52A0\u8F7D\u5931\u8D25");
+          const [routeRes, scenicRes, foodRes] = await Promise.all([
+            api_content.recommendApi.routes(void 0, 10),
+            utils_http.request({
+              url: "/recommend/scenic-spots",
+              method: "GET",
+              data: scenicParams,
+              showLoading: false
+            }),
+            utils_http.request({
+              url: "/recommend/foods",
+              method: "GET",
+              data: foodParams,
+              showLoading: false
+            })
+          ]);
+          if (routeRes.statusCode === 200 && routeRes.data.code === 200) {
+            routeList.value = routeRes.data.data || [];
+          } else {
+            toastFail(routeRes.data.msg || "\u63A8\u8350\u7EBF\u8DEF\u52A0\u8F7D\u5931\u8D25");
+          }
+          if (scenicRes.statusCode === 200 && scenicRes.data.code === 200) {
+            scenicList.value = scenicRes.data.data || [];
+          }
+          if (foodRes.statusCode === 200 && foodRes.data.code === 200) {
+            foodList.value = foodRes.data.data || [];
+          } else {
+            toastFail(((_b = foodRes.data) == null ? void 0 : _b.msg) || "\u63A8\u8350\u7F8E\u98DF\u52A0\u8F7D\u5931\u8D25");
+          }
         }
       } catch (error) {
         toastFail("\u9996\u9875\u63A8\u8350\u52A0\u8F7D\u5931\u8D25");
       } finally {
         loadingRecommend.value = false;
+      }
+    };
+    const fetchFoodData = async (foodParams, toastFail) => {
+      var _a;
+      try {
+        const foodRes = await utils_http.request({
+          url: "/recommend/foods",
+          method: "GET",
+          data: foodParams,
+          showLoading: false
+        });
+        if (foodRes.statusCode === 200 && foodRes.data.code === 200) {
+          foodList.value = foodRes.data.data || [];
+        } else {
+          toastFail(((_a = foodRes.data) == null ? void 0 : _a.msg) || "\u63A8\u8350\u7F8E\u98DF\u52A0\u8F7D\u5931\u8D25");
+        }
+      } catch (error) {
+        console.warn("\u7F8E\u98DF\u6570\u636E\u52A0\u8F7D\u5931\u8D25:", error);
       }
     };
     const loadNotes = async (reset = false) => {
@@ -362,19 +430,29 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       utils_router.resetNavigationState();
     });
     common_vendor.onMounted(() => {
-      fetchHomeData();
+      fetchHomeData("high");
       loadNotes(true);
+      isInitialLoad.value = false;
+      lastRefreshTime.value = Date.now();
       common_vendor.index.$on("noteCommentCountUpdated", handleNoteCommentCountUpdate);
     });
     common_vendor.onUnmounted(() => {
       common_vendor.index.$off("noteCommentCountUpdated", handleNoteCommentCountUpdate);
     });
     common_vendor.onShow(() => {
-      loadNotes(true);
+      const now = Date.now();
+      if (!isInitialLoad.value && now - lastRefreshTime.value < 5e3) {
+        return;
+      }
+      if (noteList.value.length > 0) {
+        loadNotes(true);
+      }
+      lastRefreshTime.value = now;
     });
     common_vendor.onPullDownRefresh(async () => {
-      await fetchHomeData();
+      await fetchHomeData("low");
       await loadNotes(true);
+      lastRefreshTime.value = Date.now();
       common_vendor.index.stopPullDownRefresh();
     });
     common_vendor.onReachBottom(() => {

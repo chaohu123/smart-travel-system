@@ -67,7 +67,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           tagList.value = res.data.data || [];
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u6807\u7B7E\u5931\u8D25", error);
       }
     };
     const loadPreferences = async () => {
@@ -89,7 +88,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u504F\u597D\u8BBE\u7F6E\u5931\u8D25", error);
       }
     };
     const savePreferences = async () => {
@@ -115,7 +113,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           store.setUser({ ...user.value, interests: selectedTagNames }, store.state.token);
         }
       } catch (error) {
-        console.error("\u4FDD\u5B58\u504F\u597D\u8BBE\u7F6E\u5931\u8D25", error);
         common_vendor.index.showToast({ title: "\u4FDD\u5B58\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5", icon: "none" });
       } finally {
         saving.value = false;

@@ -161,7 +161,6 @@ const loadMessages = async (reset = false) => {
       scrollToBottom()
     })
   } catch (error) {
-    console.error('加载聊天记录失败', error)
     uni.showToast({ title: '加载失败', icon: 'none' })
   } finally {
     loading.value = false
@@ -199,9 +198,7 @@ const sendMessage = async () => {
     // const res = await chatApi.sendMessage(currentUser.value.id, targetUser.value.userId, content)
     
     // 模拟发送成功
-    console.log('消息已发送:', content)
   } catch (error) {
-    console.error('发送消息失败', error)
     // 发送失败，移除消息
     const index = messages.value.findIndex(m => m.id === newMessage.id)
     if (index > -1) {

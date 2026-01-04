@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
 var api_route = require("../../api/route.js");
 var store_user = require("../../store/user.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
@@ -65,9 +66,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return (category == null ? void 0 : category.label) || "\u5185\u5BB9";
     };
     const loadFavoritesData = async (reset = false) => {
-      var _a, _b, _c, _d, _e, _f;
+      var _a, _b, _c;
       if (!((_a = user.value) == null ? void 0 : _a.id)) {
-        console.log("[MyFavorites] \u7528\u6237\u672A\u767B\u5F55");
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         return;
       }
@@ -77,30 +77,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         favoritesList.value = [];
       }
       if (favoritesLoading.value || !reset && !favoritesHasMore.value) {
-        console.log("[MyFavorites] \u6B63\u5728\u52A0\u8F7D\u6216\u6CA1\u6709\u66F4\u591A\u6570\u636E", { loading: favoritesLoading.value, hasMore: favoritesHasMore.value, reset });
         return;
       }
       favoritesLoading.value = true;
-      console.log("[MyFavorites] \u5F00\u59CB\u52A0\u8F7D\u6570\u636E", {
-        category: currentFavoriteCategory.value,
-        userId: user.value.id,
-        pageNum: favoritesPageNum.value,
-        pageSize: favoritesPageSize.value,
-        reset
-      });
       try {
         let res;
         if (currentFavoriteCategory.value === "note") {
-          console.log("[MyFavorites] \u8C03\u7528\u6E38\u8BB0\u6536\u85CF\u63A5\u53E3");
           res = await api_content.travelNoteApi.listMyFavorites(user.value.id, favoritesPageNum.value, favoritesPageSize.value);
         } else if (currentFavoriteCategory.value === "scenic") {
-          console.log("[MyFavorites] \u8C03\u7528\u666F\u70B9\u6536\u85CF\u63A5\u53E3");
           res = await api_content.scenicSpotApi.getMyFavorites(user.value.id, favoritesPageNum.value, favoritesPageSize.value);
         } else if (currentFavoriteCategory.value === "food") {
-          console.log("[MyFavorites] \u8C03\u7528\u7F8E\u98DF\u6536\u85CF\u63A5\u53E3");
           res = await api_content.foodApi.getMyFavorites(user.value.id, favoritesPageNum.value, favoritesPageSize.value);
         } else if (currentFavoriteCategory.value === "route") {
-          console.log("[MyFavorites] \u8C03\u7528\u8DEF\u7EBF\u6536\u85CF\u63A5\u53E3");
           res = await api_route.routeApi.listMyRoutes(user.value.id);
           if (res && res.statusCode === 200 && res.data.code === 200) {
             const dataList = Array.isArray(res.data.data) ? res.data.data : ((_b = res.data.data) == null ? void 0 : _b.list) || [];
@@ -112,30 +100,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             };
           }
         }
-        console.log("[MyFavorites] API\u54CD\u5E94", {
-          statusCode: res == null ? void 0 : res.statusCode,
-          code: (_c = res == null ? void 0 : res.data) == null ? void 0 : _c.code,
-          msg: (_d = res == null ? void 0 : res.data) == null ? void 0 : _d.msg,
-          data: (_e = res == null ? void 0 : res.data) == null ? void 0 : _e.data
-        });
         if (res && res.statusCode === 200 && res.data.code === 200) {
           const data = res.data.data || {};
           const dataList = data.list || [];
-          console.log("[MyFavorites] \u89E3\u6790\u6570\u636E", {
-            total: data.total,
-            listLength: dataList.length,
-            pageNum: data.pageNum,
-            pageSize: data.pageSize,
-            dataList
-          });
           if (reset) {
             favoritesList.value = dataList;
-            console.log("[MyFavorites] \u91CD\u7F6E\u5217\u8868\uFF0C\u65B0\u5217\u8868\u957F\u5EA6:", favoritesList.value.length);
           } else {
             for (let i = 0; i < dataList.length; i++) {
               favoritesList.value.push(dataList[i]);
             }
-            console.log("[MyFavorites] \u8FFD\u52A0\u6570\u636E\uFF0C\u5217\u8868\u957F\u5EA6:", favoritesList.value.length);
           }
           favoritesHasMore.value = dataList.length >= favoritesPageSize.value;
           if (favoritesHasMore.value) {
@@ -144,26 +117,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           favoritesLoading.value = false;
           favoritesRefreshing.value = false;
           await common_vendor.nextTick();
-          console.log("[MyFavorites] \u6570\u636E\u52A0\u8F7D\u5B8C\u6210", {
-            currentListLength: favoritesList.value.length,
-            hasMore: favoritesHasMore.value,
-            nextPageNum: favoritesPageNum.value,
-            currentCategory: currentFavoriteCategory.value,
-            loading: favoritesLoading.value
-          });
         } else {
-          console.error("[MyFavorites] API\u8FD4\u56DE\u9519\u8BEF", res == null ? void 0 : res.data);
-          common_vendor.index.showToast({ title: ((_f = res == null ? void 0 : res.data) == null ? void 0 : _f.msg) || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
+          common_vendor.index.showToast({ title: ((_c = res == null ? void 0 : res.data) == null ? void 0 : _c.msg) || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
           favoritesLoading.value = false;
           favoritesRefreshing.value = false;
         }
       } catch (e) {
-        console.error("[MyFavorites] \u52A0\u8F7D\u6536\u85CF\u5217\u8868\u5931\u8D25", {
-          error: e,
-          message: e == null ? void 0 : e.message,
-          statusCode: e == null ? void 0 : e.statusCode,
-          stack: e == null ? void 0 : e.stack
-        });
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25: " + ((e == null ? void 0 : e.message) || "\u672A\u77E5\u9519\u8BEF"), icon: "none", duration: 3e3 });
         favoritesLoading.value = false;
         favoritesRefreshing.value = false;
@@ -204,9 +163,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return (category == null ? void 0 : category.label) || "\u5185\u5BB9";
     };
     const loadLikesData = async (reset = false) => {
-      var _a, _b, _c, _d;
+      var _a;
       if (!((_a = user.value) == null ? void 0 : _a.id)) {
-        console.log("[MyLikes] \u7528\u6237\u672A\u767B\u5F55");
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         return;
       }
@@ -216,24 +174,14 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         likesList.value = [];
       }
       if (likesLoading.value || !reset && !likesHasMore.value) {
-        console.log("[MyLikes] \u6B63\u5728\u52A0\u8F7D\u6216\u6CA1\u6709\u66F4\u591A\u6570\u636E", { loading: likesLoading.value, hasMore: likesHasMore.value, reset });
         return;
       }
       likesLoading.value = true;
-      console.log("[MyLikes] \u5F00\u59CB\u52A0\u8F7D\u6570\u636E", {
-        category: currentLikeCategory.value,
-        userId: user.value.id,
-        pageNum: likesPageNum.value,
-        pageSize: likesPageSize.value,
-        reset
-      });
       try {
         let res;
         if (currentLikeCategory.value === "note") {
-          console.log("[MyLikes] \u8C03\u7528\u70B9\u8D5E\u6E38\u8BB0\u63A5\u53E3");
           res = await api_content.travelNoteInteractionApi.listMyLikes(user.value.id, likesPageNum.value, likesPageSize.value);
         } else if (currentLikeCategory.value === "comment") {
-          console.log("[MyLikes] \u8C03\u7528\u70B9\u8D5E\u8BC4\u8BBA\u63A5\u53E3");
           try {
             const commentRes = await api_content.travelNoteInteractionApi.listMyComments(
               user.value.id,
@@ -258,7 +206,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               likesHasMore.value = false;
             }
           } catch (error) {
-            console.log("[MyLikes] \u70B9\u8D5E\u8BC4\u8BBA\u529F\u80FD\u6682\u672A\u5B8C\u5168\u5F00\u653E", error);
             likesList.value = [];
             likesHasMore.value = false;
           }
@@ -266,30 +213,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           likesRefreshing.value = false;
           return;
         }
-        console.log("[MyLikes] API\u54CD\u5E94", {
-          statusCode: res == null ? void 0 : res.statusCode,
-          code: (_b = res == null ? void 0 : res.data) == null ? void 0 : _b.code,
-          msg: (_c = res == null ? void 0 : res.data) == null ? void 0 : _c.msg,
-          data: (_d = res == null ? void 0 : res.data) == null ? void 0 : _d.data
-        });
         if (res.statusCode === 200 && res.data.code === 200) {
           const data = res.data.data || {};
           const dataList = data.list || [];
-          console.log("[MyLikes] \u89E3\u6790\u6570\u636E", {
-            total: data.total,
-            listLength: dataList.length,
-            pageNum: data.pageNum,
-            pageSize: data.pageSize,
-            dataList
-          });
           if (reset) {
             likesList.value = dataList;
-            console.log("[MyLikes] \u91CD\u7F6E\u5217\u8868\uFF0C\u65B0\u5217\u8868\u957F\u5EA6:", likesList.value.length);
           } else {
             for (let i = 0; i < dataList.length; i++) {
               likesList.value.push(dataList[i]);
             }
-            console.log("[MyLikes] \u8FFD\u52A0\u6570\u636E\uFF0C\u5217\u8868\u957F\u5EA6:", likesList.value.length);
           }
           likesHasMore.value = dataList.length >= likesPageSize.value;
           if (likesHasMore.value) {
@@ -298,25 +230,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           likesLoading.value = false;
           likesRefreshing.value = false;
           await common_vendor.nextTick();
-          console.log("[MyLikes] \u6570\u636E\u52A0\u8F7D\u5B8C\u6210", {
-            currentListLength: likesList.value.length,
-            hasMore: likesHasMore.value,
-            nextPageNum: likesPageNum.value,
-            loading: likesLoading.value
-          });
         } else {
-          console.error("[MyLikes] API\u8FD4\u56DE\u9519\u8BEF", res == null ? void 0 : res.data);
           common_vendor.index.showToast({ title: res.data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
           likesLoading.value = false;
           likesRefreshing.value = false;
         }
       } catch (e) {
-        console.error("[MyLikes] \u52A0\u8F7D\u70B9\u8D5E\u5217\u8868\u5931\u8D25", {
-          error: e,
-          message: e == null ? void 0 : e.message,
-          statusCode: e == null ? void 0 : e.statusCode,
-          stack: e == null ? void 0 : e.stack
-        });
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25: " + ((e == null ? void 0 : e.message) || "\u672A\u77E5\u9519\u8BEF"), icon: "none", duration: 3e3 });
         likesLoading.value = false;
         likesRefreshing.value = false;
@@ -338,9 +257,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const commentsPageSize = common_vendor.ref(10);
     const commentsHasMore = common_vendor.ref(true);
     const loadCommentsData = async (reset = false) => {
-      var _a, _b, _c, _d;
+      var _a;
       if (!((_a = user.value) == null ? void 0 : _a.id)) {
-        console.log("[MyComments] \u7528\u6237\u672A\u767B\u5F55");
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         return;
       }
@@ -350,42 +268,20 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         commentsList.value = [];
       }
       if (commentsLoading.value || !reset && !commentsHasMore.value) {
-        console.log("[MyComments] \u6B63\u5728\u52A0\u8F7D\u6216\u6CA1\u6709\u66F4\u591A\u6570\u636E", { loading: commentsLoading.value, hasMore: commentsHasMore.value, reset });
         return;
       }
       commentsLoading.value = true;
-      console.log("[MyComments] \u5F00\u59CB\u52A0\u8F7D\u6570\u636E", {
-        userId: user.value.id,
-        pageNum: commentsPageNum.value,
-        pageSize: commentsPageSize.value,
-        reset
-      });
       try {
         const res = await api_content.travelNoteInteractionApi.listMyComments(user.value.id, commentsPageNum.value, commentsPageSize.value);
-        console.log("[MyComments] API\u54CD\u5E94", {
-          statusCode: res == null ? void 0 : res.statusCode,
-          code: (_b = res == null ? void 0 : res.data) == null ? void 0 : _b.code,
-          msg: (_c = res == null ? void 0 : res.data) == null ? void 0 : _c.msg,
-          data: (_d = res == null ? void 0 : res.data) == null ? void 0 : _d.data
-        });
         if (res.statusCode === 200 && res.data.code === 200) {
           const data = res.data.data || {};
           const dataList = data.list || [];
-          console.log("[MyComments] \u89E3\u6790\u6570\u636E", {
-            total: data.total,
-            listLength: dataList.length,
-            pageNum: data.pageNum,
-            pageSize: data.pageSize,
-            dataList
-          });
           if (reset) {
             commentsList.value = dataList;
-            console.log("[MyComments] \u91CD\u7F6E\u5217\u8868\uFF0C\u65B0\u5217\u8868\u957F\u5EA6:", commentsList.value.length);
           } else {
             for (let i = 0; i < dataList.length; i++) {
               commentsList.value.push(dataList[i]);
             }
-            console.log("[MyComments] \u8FFD\u52A0\u6570\u636E\uFF0C\u5217\u8868\u957F\u5EA6:", commentsList.value.length);
           }
           commentsHasMore.value = dataList.length >= commentsPageSize.value;
           if (commentsHasMore.value) {
@@ -394,27 +290,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           commentsLoading.value = false;
           commentsRefreshing.value = false;
           await common_vendor.nextTick();
-          console.log("[MyComments] \u6570\u636E\u52A0\u8F7D\u5B8C\u6210", {
-            currentListLength: commentsList.value.length,
-            hasMore: commentsHasMore.value,
-            nextPageNum: commentsPageNum.value,
-            loading: commentsLoading.value
-          });
         } else {
-          console.error("[MyComments] API\u8FD4\u56DE\u9519\u8BEF", res == null ? void 0 : res.data);
           common_vendor.index.showToast({ title: res.data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
           commentsLoading.value = false;
           commentsRefreshing.value = false;
         }
       } catch (e) {
-        console.error("[MyComments] \u52A0\u8F7D\u8BC4\u8BBA\u5217\u8868\u5931\u8D25", {
-          error: e,
-          message: e == null ? void 0 : e.message,
-          statusCode: e == null ? void 0 : e.statusCode,
-          stack: e == null ? void 0 : e.stack
-        });
         if (e.statusCode === 404) {
-          console.log("[MyComments] \u63A5\u53E3\u4E0D\u5B58\u5728\uFF0C\u663E\u793A\u7A7A\u72B6\u6001");
           commentsList.value = [];
           commentsHasMore.value = false;
         } else {
@@ -433,21 +315,48 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         loadCommentsData(false);
       }
     };
+    let lastClickTime = 0;
+    const CLICK_DEBOUNCE_TIME = 300;
     const viewNoteDetail = (id) => {
-      common_vendor.index.navigateTo({ url: `/pages/travel-note/detail?id=${id}` });
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
+      utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${id}`).catch(() => {
+      });
     };
     const viewScenicDetail = (id) => {
-      common_vendor.index.navigateTo({ url: `/pages/scenic/detail?id=${id}` });
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
+      utils_router.safeNavigateTo(`/pages/scenic/detail?id=${id}`).catch(() => {
+      });
     };
     const viewFoodDetail = (id) => {
-      common_vendor.index.navigateTo({ url: `/pages/food/detail?id=${id}` });
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
+      utils_router.safeNavigateTo(`/pages/food/detail?id=${id}`).catch(() => {
+      });
     };
     const viewRouteDetail = (id) => {
-      common_vendor.index.navigateTo({ url: `/pages/route/detail?id=${id}` });
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
+      utils_router.safeNavigateTo(`/pages/route/detail?id=${id}`).catch(() => {
+      });
     };
     const viewCommentDetail = (contentId, contentType) => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       if (contentType === "note") {
-        common_vendor.index.navigateTo({ url: `/pages/travel-note/detail?id=${contentId}` });
+        utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${contentId}`).catch(() => {
+        });
       } else {
         common_vendor.index.showToast({ title: "\u6682\u4E0D\u652F\u6301\u8BE5\u7C7B\u578B", icon: "none" });
       }

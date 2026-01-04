@@ -39,7 +39,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           formData.email = userInfoData.email || "";
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u7528\u6237\u4FE1\u606F\u5931\u8D25", error);
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
       }
     };
@@ -74,7 +73,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               common_vendor.index.showToast({ title: "\u4E0A\u4F20\u5931\u8D25", icon: "none" });
             }
           } catch (error) {
-            console.error("\u4E0A\u4F20\u5934\u50CF\u5931\u8D25", error);
             common_vendor.index.hideLoading();
             common_vendor.index.showToast({ title: "\u4E0A\u4F20\u5931\u8D25", icon: "none" });
           }
@@ -122,7 +120,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           common_vendor.index.showToast({ title: res.data.msg || "\u4FDD\u5B58\u5931\u8D25", icon: "none" });
         }
       } catch (error) {
-        console.error("\u4FDD\u5B58\u8D44\u6599\u5931\u8D25", error);
         common_vendor.index.showToast({ title: "\u4FDD\u5B58\u5931\u8D25", icon: "none" });
       } finally {
         saving.value = false;

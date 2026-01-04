@@ -6,6 +6,9 @@
 // 防抖：避免快速连续跳转
 let isNavigating = false
 let navigateTimer: ReturnType<typeof setTimeout> | null = null
+let lastNavigateUrl = '' // 记录上次跳转的URL
+let lastNavigateTime = 0 // 记录上次跳转的时间
+const NAVIGATE_DEBOUNCE_TIME = 300 // 300ms 防抖时间
 
 /**
  * 安全的路由跳转（navigateTo）
@@ -13,9 +16,15 @@ let navigateTimer: ReturnType<typeof setTimeout> | null = null
  * @param options 跳转选项
  */
 export const safeNavigateTo = (url: string, options?: UniApp.NavigateToOptions) => {
-  // 如果正在跳转，且是同一个 URL，则忽略（防止重复点击）
-  if (isNavigating) {
-    console.warn('正在跳转中，忽略重复跳转请求:', url)
+  const now = Date.now()
+  
+  // 防抖：如果正在跳转，且是同一个 URL，则忽略（防止重复点击）
+  if (isNavigating && lastNavigateUrl === url) {
+    return Promise.resolve()
+  }
+  
+  // 防抖：如果距离上次跳转时间太短，且是同一个URL，则忽略
+  if (now - lastNavigateTime < NAVIGATE_DEBOUNCE_TIME && lastNavigateUrl === url) {
     return Promise.resolve()
   }
 
@@ -26,6 +35,8 @@ export const safeNavigateTo = (url: string, options?: UniApp.NavigateToOptions) 
   }
 
   isNavigating = true
+  lastNavigateUrl = url
+  lastNavigateTime = now
 
   // 使用 Promise 包装，确保跳转完成后再允许下一次跳转
   return new Promise<void>((resolve, reject) => {
@@ -37,29 +48,38 @@ export const safeNavigateTo = (url: string, options?: UniApp.NavigateToOptions) 
         navigateTimer = setTimeout(() => {
           isNavigating = false
           navigateTimer = null
-        }, 500) // 增加延迟时间，确保页面完全加载
+          lastNavigateUrl = '' // 清除URL记录
+        }, 300) // 减少延迟时间，提升响应速度
         options?.success?.(res)
         resolve()
       },
       fail: (err) => {
         // 立即重置状态，允许重试
         isNavigating = false
+        lastNavigateUrl = ''
         if (navigateTimer) {
           clearTimeout(navigateTimer)
           navigateTimer = null
         }
-        console.error('页面跳转失败:', err, url)
+        
+        // 处理超时错误
+        if (err.errMsg?.includes('timeout') || err.errMsg?.includes('timedout')) {
+          // 超时错误不重试，直接拒绝
+          options?.fail?.(err)
+          reject(err)
+          return
+        }
+        
         // 如果是 webview 错误，尝试延迟重试
         if (err.errMsg?.includes('webview') || err.errMsg?.includes('route')) {
-          console.warn('检测到路由错误，延迟重试...')
           setTimeout(() => {
             safeNavigateTo(url, options).then(resolve).catch(reject)
           }, 500)
         } else {
           // 其他错误也尝试重试一次
-          console.warn('跳转失败，尝试重试...')
           setTimeout(() => {
             isNavigating = false
+            lastNavigateUrl = ''
             safeNavigateTo(url, options).then(resolve).catch(reject)
           }, 300)
         }
@@ -77,9 +97,16 @@ export const safeNavigateTo = (url: string, options?: UniApp.NavigateToOptions) 
  * @param options 跳转选项
  */
 export const safeSwitchTab = (url: string, options?: UniApp.SwitchTabOptions) => {
-  if (isNavigating) {
-    console.warn('正在跳转中，忽略重复跳转请求:', url)
-    return
+  const now = Date.now()
+  
+  // 防抖：如果正在跳转，且是同一个 URL，则忽略
+  if (isNavigating && lastNavigateUrl === url) {
+    return Promise.resolve()
+  }
+  
+  // 防抖：如果距离上次跳转时间太短，且是同一个URL，则忽略
+  if (now - lastNavigateTime < NAVIGATE_DEBOUNCE_TIME && lastNavigateUrl === url) {
+    return Promise.resolve()
   }
 
   if (navigateTimer) {
@@ -87,6 +114,8 @@ export const safeSwitchTab = (url: string, options?: UniApp.SwitchTabOptions) =>
   }
 
   isNavigating = true
+  lastNavigateUrl = url
+  lastNavigateTime = now
 
   return new Promise<void>((resolve, reject) => {
     uni.switchTab({
@@ -96,15 +125,15 @@ export const safeSwitchTab = (url: string, options?: UniApp.SwitchTabOptions) =>
         navigateTimer = setTimeout(() => {
           isNavigating = false
           navigateTimer = null
-        }, 300)
+          lastNavigateUrl = ''
+        }, 200) // Tab切换更快
         options?.success?.(res)
         resolve()
       },
       fail: (err) => {
         isNavigating = false
-        console.error('Tab 切换失败:', err)
+        lastNavigateUrl = ''
         if (err.errMsg?.includes('webview') || err.errMsg?.includes('route')) {
-          console.warn('检测到路由错误，延迟重试...')
           setTimeout(() => {
             safeSwitchTab(url, options).then(resolve).catch(reject)
           }, 500)
@@ -127,7 +156,6 @@ export const safeSwitchTab = (url: string, options?: UniApp.SwitchTabOptions) =>
  */
 export const safeRedirectTo = (url: string, options?: UniApp.RedirectToOptions) => {
   if (isNavigating) {
-    console.warn('正在跳转中，忽略重复跳转请求:', url)
     return
   }
 
@@ -151,9 +179,7 @@ export const safeRedirectTo = (url: string, options?: UniApp.RedirectToOptions) 
       },
       fail: (err) => {
         isNavigating = false
-        console.error('页面重定向失败:', err)
         if (err.errMsg?.includes('webview') || err.errMsg?.includes('route')) {
-          console.warn('检测到路由错误，延迟重试...')
           setTimeout(() => {
             safeRedirectTo(url, options).then(resolve).catch(reject)
           }, 500)
@@ -174,6 +200,8 @@ export const safeRedirectTo = (url: string, options?: UniApp.RedirectToOptions) 
  */
 export const resetNavigationState = () => {
   isNavigating = false
+  lastNavigateUrl = ''
+  lastNavigateTime = 0
   if (navigateTimer) {
     clearTimeout(navigateTimer)
     navigateTimer = null

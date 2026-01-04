@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var api_user = require("../../api/user.js");
 var store_user = require("../../store/user.js");
 var utils_storage = require("../../utils/storage.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
@@ -115,11 +116,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               isFollowing.value = followingList.some((u) => u.id === userId);
             }
           } catch (error) {
-            console.error("\u68C0\u67E5\u5173\u6CE8\u72B6\u6001\u5931\u8D25", error);
           }
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u7528\u6237\u4FE1\u606F\u5931\u8D25", error);
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
       } finally {
         loading.value = false;
@@ -145,18 +144,28 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         }
       });
     };
+    let lastClickTime = 0;
+    const CLICK_DEBOUNCE_TIME = 300;
     const editProfile = () => {
-      common_vendor.index.navigateTo({ url: "/pages/profile/edit-profile" });
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
+      utils_router.safeNavigateTo("/pages/profile/edit-profile").catch(() => {
+      });
     };
     const openChat = () => {
       var _a;
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       const targetId = targetUserId.value || ((_a = userInfo.value) == null ? void 0 : _a.id);
       if (!targetId) {
         common_vendor.index.showToast({ title: "\u7528\u6237\u4E0D\u5B58\u5728", icon: "none" });
         return;
       }
-      common_vendor.index.navigateTo({
-        url: `/pages/profile/chat?userId=${targetId}&nickname=${encodeURIComponent(userInfo.value.nickname || "")}&avatar=${encodeURIComponent(userInfo.value.avatar || "")}`
+      utils_router.safeNavigateTo(`/pages/profile/chat?userId=${targetId}&nickname=${encodeURIComponent(userInfo.value.nickname || "")}&avatar=${encodeURIComponent(userInfo.value.avatar || "")}`).catch(() => {
       });
     };
     const checkTodayCheckInStatus = () => {
@@ -191,7 +200,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           common_vendor.index.showToast({ title: res.data.msg || "\u7B7E\u5230\u5931\u8D25", icon: "none" });
         }
       } catch (error) {
-        console.error("\u7B7E\u5230\u5931\u8D25", error);
         if (((_b = error == null ? void 0 : error.data) == null ? void 0 : _b.code) === 400 && ((_d = (_c = error == null ? void 0 : error.data) == null ? void 0 : _c.msg) == null ? void 0 : _d.includes("\u5DF2\u7B7E\u5230"))) {
           utils_storage.setCache("lastCheckInDate", today, 24 * 60);
           hasCheckedInToday.value = true;
@@ -203,68 +211,27 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const followUser = async () => {
-      var _a, _b, _c, _d, _e, _f;
-      console.log("=== \u5173\u6CE8\u529F\u80FD\u8C03\u8BD5\u4FE1\u606F ===");
-      console.log("1. Store\u72B6\u6001:", {
-        store,
-        state: store.state,
-        profile: store.state.profile,
-        currentUserValue: currentUser.value,
-        currentUserId: (_a = currentUser.value) == null ? void 0 : _a.id
-      });
-      let currentUserId = (_b = currentUser.value) == null ? void 0 : _b.id;
-      console.log("2. \u4ECEStore\u83B7\u53D6\u7684userId:", currentUserId);
+      var _a, _b;
+      let currentUserId = (_a = currentUser.value) == null ? void 0 : _a.id;
       if (!currentUserId) {
         const cachedUser = utils_storage.getCache("user");
-        console.log("3. \u4ECE\u7F13\u5B58\u83B7\u53D6\u7684user:", cachedUser);
         if (cachedUser == null ? void 0 : cachedUser.id) {
           currentUserId = cachedUser.id;
-          console.log("4. \u4F7F\u7528\u7F13\u5B58\u4E2D\u7684userId:", currentUserId);
-          if (cachedUser) {
-            store.setUser(cachedUser);
-            console.log("5. \u5DF2\u66F4\u65B0Store\u4E2D\u7684\u7528\u6237\u4FE1\u606F");
-          }
-        } else {
-          console.log("4. \u7F13\u5B58\u4E2D\u4E5F\u6CA1\u6709\u7528\u6237\u4FE1\u606F");
+          store.setUser(cachedUser);
         }
       }
-      const targetId = targetUserId.value || ((_c = userInfo.value) == null ? void 0 : _c.id);
-      console.log("6. \u76EE\u6807\u7528\u6237ID:", {
-        targetUserId: targetUserId.value,
-        userInfoId: (_d = userInfo.value) == null ? void 0 : _d.id,
-        finalTargetId: targetId
-      });
-      const token = utils_storage.getCache("token");
-      console.log("7. Token\u4FE1\u606F:", {
-        hasToken: !!token,
-        tokenLength: token == null ? void 0 : token.length,
-        tokenPreview: token ? token.substring(0, 20) + "..." : null
-      });
+      const targetId = targetUserId.value || ((_b = userInfo.value) == null ? void 0 : _b.id);
       if (!currentUserId) {
-        console.error("\u274C \u65E0\u6CD5\u83B7\u53D6\u5F53\u524D\u7528\u6237ID:", {
-          storeProfile: currentUser.value,
-          cachedUser: utils_storage.getCache("user"),
-          token
-        });
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         return;
       }
       if (!targetId) {
-        console.error("\u274C \u65E0\u6CD5\u83B7\u53D6\u76EE\u6807\u7528\u6237ID");
         common_vendor.index.showToast({ title: "\u7528\u6237\u4E0D\u5B58\u5728", icon: "none" });
         return;
       }
-      console.log("8. \u51C6\u5907\u8C03\u7528\u5173\u6CE8API:", {
-        currentUserId,
-        targetId,
-        currentUserIdType: typeof currentUserId,
-        targetIdType: typeof targetId
-      });
       try {
         const res = await api_user.userApi.toggleFollow(Number(currentUserId), Number(targetId));
-        console.log("9. API\u54CD\u5E94:", res);
         if (res.statusCode === 200 && res.data.code === 200) {
-          console.log("\u2705 \u5173\u6CE8\u64CD\u4F5C\u6210\u529F");
           isFollowing.value = !isFollowing.value;
           if (isFollowing.value) {
             userStats.value.followers = (userStats.value.followers || 0) + 1;
@@ -276,48 +243,54 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             icon: "success"
           });
         } else {
-          console.error("\u274C API\u8FD4\u56DE\u9519\u8BEF:", {
-            statusCode: res.statusCode,
-            code: (_e = res.data) == null ? void 0 : _e.code,
-            msg: (_f = res.data) == null ? void 0 : _f.msg,
-            data: res.data
-          });
           common_vendor.index.showToast({ title: res.data.msg || "\u64CD\u4F5C\u5931\u8D25", icon: "none" });
         }
       } catch (error) {
-        console.error("\u274C \u5173\u6CE8\u64CD\u4F5C\u5F02\u5E38:", {
-          error,
-          message: error == null ? void 0 : error.message,
-          data: error == null ? void 0 : error.data,
-          response: error == null ? void 0 : error.response,
-          statusCode: error == null ? void 0 : error.statusCode
-        });
         common_vendor.index.showToast({ title: "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5", icon: "none" });
       }
-      console.log("=== \u5173\u6CE8\u529F\u80FD\u8C03\u8BD5\u4FE1\u606F\u7ED3\u675F ===");
     };
     const viewNotes = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       if (isOwnProfile.value) {
-        common_vendor.index.navigateTo({ url: "/pages/travel-note/list?my=true" });
+        utils_router.safeNavigateTo("/pages/travel-note/list?my=true").catch(() => {
+        });
       }
     };
     const viewCheckins = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       if (isOwnProfile.value) {
-        common_vendor.index.navigateTo({ url: "/pages/footprint/footprint" });
+        utils_router.safeNavigateTo("/pages/footprint/footprint").catch(() => {
+        });
       }
     };
     const viewFollowers = () => {
       var _a;
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       const userId = targetUserId.value || ((_a = currentUser.value) == null ? void 0 : _a.id);
       if (userId) {
-        common_vendor.index.navigateTo({ url: `/pages/profile/followers?userId=${userId}` });
+        utils_router.safeNavigateTo(`/pages/profile/followers?userId=${userId}`).catch(() => {
+        });
       }
     };
     const viewFollowing = () => {
       var _a;
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       const userId = targetUserId.value || ((_a = currentUser.value) == null ? void 0 : _a.id);
       if (userId) {
-        common_vendor.index.navigateTo({ url: `/pages/profile/following?userId=${userId}` });
+        utils_router.safeNavigateTo(`/pages/profile/following?userId=${userId}`).catch(() => {
+        });
       }
     };
     const loadUnreadMessageCount = () => {
@@ -325,25 +298,43 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       unreadMessageCount.value = count || 0;
     };
     const viewMessages = () => {
-      common_vendor.index.navigateTo({ url: "/pages/profile/messages" });
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
+      utils_router.safeNavigateTo("/pages/profile/messages").catch(() => {
+      });
     };
     const viewAllInteractions = () => {
-      common_vendor.index.navigateTo({ url: "/pages/profile/my-interaction" });
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
+      utils_router.safeNavigateTo("/pages/profile/my-interaction").catch(() => {
+      });
     };
     const handleInteractionClick = (item) => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME)
+        return;
+      lastClickTime = now;
       if (item.type === "like" || item.type === "comment") {
         if (item.contentId) {
-          common_vendor.index.navigateTo({ url: `/pages/travel-note/detail?id=${item.contentId}` });
+          utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${item.contentId}`).catch(() => {
+          });
         }
       } else if (item.type === "follow") {
         if (item.userId) {
-          common_vendor.index.navigateTo({ url: `/pages/profile/user-home?userId=${item.userId}` });
+          utils_router.safeNavigateTo(`/pages/profile/user-home?userId=${item.userId}`).catch(() => {
+          });
         }
       } else if (item.type === "newNote") {
         if (item.noteId) {
-          common_vendor.index.navigateTo({ url: `/pages/travel-note/detail?id=${item.noteId}` });
+          utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${item.noteId}`).catch(() => {
+          });
         } else if (item.userId) {
-          common_vendor.index.navigateTo({ url: `/pages/profile/user-home?userId=${item.userId}` });
+          utils_router.safeNavigateTo(`/pages/profile/user-home?userId=${item.userId}`).catch(() => {
+          });
         }
       }
     };
@@ -418,7 +409,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         ];
         interactionList.value = mockInteractions.slice(0, 5);
       } catch (error) {
-        console.error("\u52A0\u8F7D\u4E92\u52A8\u52A8\u6001\u5931\u8D25", error);
       }
     };
     const formatTime = (time) => {
@@ -438,73 +428,39 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     common_vendor.onMounted(() => {
       var _a;
-      console.log("=== \u7528\u6237\u4E3B\u9875\u9875\u9762\u52A0\u8F7D ===");
-      console.log("1. \u9875\u9762\u52A0\u8F7D\u65F6\u7684Store\u72B6\u6001:", {
-        store,
-        state: store.state,
-        profile: store.state.profile,
-        currentUser: currentUser.value
-      });
+      utils_router.resetNavigationState();
       const pages = getCurrentPages();
       if (pages && pages.length > 0) {
         const currentPage = pages[pages.length - 1];
         const options = currentPage.options || {};
-        console.log("2. \u9875\u9762\u53C2\u6570:", options);
         if (options.userId) {
-          targetUserId.value = Number(options.userId);
-          console.log("3. \u76EE\u6807\u7528\u6237ID:", targetUserId.value);
+          const userId = Number(options.userId);
+          if (!isNaN(userId) && userId > 0) {
+            targetUserId.value = userId;
+          }
         }
       }
-      const cachedUser = utils_storage.getCache("user");
-      const cachedToken = utils_storage.getCache("token");
-      console.log("4. \u7F13\u5B58\u4FE1\u606F:", {
-        cachedUser,
-        cachedToken: cachedToken ? cachedToken.substring(0, 20) + "..." : null,
-        hasCachedUser: !!cachedUser,
-        hasCachedToken: !!cachedToken
-      });
       if (!((_a = currentUser.value) == null ? void 0 : _a.id)) {
-        console.log("5. Store\u4E2D\u6CA1\u6709\u7528\u6237\u4FE1\u606F\uFF0C\u5C1D\u8BD5\u4ECE\u7F13\u5B58\u6062\u590D");
+        const cachedUser = utils_storage.getCache("user");
         if (cachedUser == null ? void 0 : cachedUser.id) {
           store.setUser(cachedUser);
-          console.log("6. \u5DF2\u4ECE\u7F13\u5B58\u6062\u590D\u7528\u6237\u4FE1\u606F\u5230Store:", cachedUser);
-        } else {
-          console.warn("7. \u26A0\uFE0F \u7F13\u5B58\u4E2D\u4E5F\u6CA1\u6709\u7528\u6237\u4FE1\u606F\uFF0C\u7528\u6237\u53EF\u80FD\u672A\u767B\u5F55");
         }
-      } else {
-        console.log("5. Store\u4E2D\u5DF2\u6709\u7528\u6237\u4FE1\u606F:", currentUser.value);
       }
-      console.log("8. \u6700\u7EC8Store\u72B6\u6001:", {
-        profile: store.state.profile,
-        currentUser: currentUser.value
-      });
       loadUserInfo();
       loadInteractions();
       checkTodayCheckInStatus();
       loadUnreadMessageCount();
-      console.log("=== \u7528\u6237\u4E3B\u9875\u9875\u9762\u52A0\u8F7D\u5B8C\u6210 ===");
     });
     common_vendor.onShow(() => {
-      var _a, _b;
-      console.log("=== \u7528\u6237\u4E3B\u9875\u9875\u9762\u663E\u793A (onShow) ===");
-      console.log("1. Store\u72B6\u6001:", {
-        profile: store.state.profile,
-        currentUser: currentUser.value,
-        currentUserId: (_a = currentUser.value) == null ? void 0 : _a.id
-      });
-      if (!((_b = currentUser.value) == null ? void 0 : _b.id)) {
+      var _a;
+      if (!((_a = currentUser.value) == null ? void 0 : _a.id)) {
         const cachedUser = utils_storage.getCache("user");
-        console.log("2. Store\u4E2D\u6CA1\u6709\u7528\u6237\u4FE1\u606F\uFF0C\u4ECE\u7F13\u5B58\u83B7\u53D6:", cachedUser);
         if (cachedUser == null ? void 0 : cachedUser.id) {
           store.setUser(cachedUser);
-          console.log("3. \u5DF2\u4ECE\u7F13\u5B58\u6062\u590D\u7528\u6237\u4FE1\u606F\u5230Store");
         }
-      } else {
-        console.log("2. Store\u4E2D\u5DF2\u6709\u7528\u6237\u4FE1\u606F");
       }
       loadUserInfo();
       checkTodayCheckInStatus();
-      console.log("=== \u7528\u6237\u4E3B\u9875\u9875\u9762\u663E\u793A\u5B8C\u6210 ===");
     });
     return (_ctx, _cache) => {
       return common_vendor.e({

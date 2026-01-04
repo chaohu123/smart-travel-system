@@ -1,1 +1,1 @@
-<block/>
+<view wx:if="{{a}}" class="guide-mask data-v-4e0f27e4" bindtap="{{e}}"><view class="guide-card data-v-4e0f27e4" catchtap="{{d}}"><text class="guide-title data-v-4e0f27e4">功能快速引导</text><view wx:for="{{b}}" wx:for-item="step" wx:key="c" class="guide-step data-v-4e0f27e4"><view class="dot data-v-4e0f27e4"/><view class="step-body data-v-4e0f27e4"><text class="step-title data-v-4e0f27e4">{{step.a}}</text><text class="step-desc data-v-4e0f27e4">{{step.b}}</text></view></view><button class="guide-btn data-v-4e0f27e4" bindtap="{{c}}">我知道了</button></view></view>

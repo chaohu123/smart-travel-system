@@ -28,7 +28,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           return info;
         }
       } catch (error) {
-        console.error("\u83B7\u53D6\u7528\u6237\u4FE1\u606F\u5931\u8D25", error);
       }
       return { nickname: "\u672A\u77E5\u7528\u6237", avatar: defaultAvatar };
     };
@@ -178,7 +177,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         hasMore.value = false;
         updateUnreadCount();
       } catch (error) {
-        console.error("\u52A0\u8F7D\u6D88\u606F\u5931\u8D25", error);
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
       } finally {
         loading.value = false;

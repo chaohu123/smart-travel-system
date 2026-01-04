@@ -204,7 +204,6 @@ const loadHistory = async (reset = false) => {
       }
     }
   } catch (error) {
-    console.error('加载规划历史失败', error)
     // 如果API不存在，使用本地存储的模拟数据
     loadLocalHistory()
   } finally {

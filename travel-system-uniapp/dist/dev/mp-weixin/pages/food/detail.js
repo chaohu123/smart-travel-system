@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
 var utils_storage = require("../../utils/storage.js");
 var store_user = require("../../store/user.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
@@ -15,6 +16,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const isInPendingList = common_vendor.ref(false);
     const store = store_user.useUserStore();
     const user = common_vendor.computed(() => store.state.profile);
+    let lastClickTime = 0;
+    const CLICK_DEBOUNCE_TIME = 300;
+    const CACHE_KEY_PREFIX = "food_detail_";
+    const CACHE_EXPIRE = 5 * 60;
+    let nearbyScenicsTimer = null;
+    let isPageActive = true;
     const FAVORITE_KEY = "food_favorites";
     const loadFavoriteStatus = () => {
       if (!foodId.value)
@@ -28,9 +35,28 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       const pendingAdditions = utils_storage.getCache("route_pending_additions") || [];
       isInPendingList.value = pendingAdditions.some((item) => item.type === "food" && item.id === foodId.value);
     };
-    const loadDetail = async () => {
+    const loadDetail = async (useCache = true) => {
       if (!foodId.value)
         return;
+      if (useCache) {
+        const cacheKey = `${CACHE_KEY_PREFIX}${foodId.value}`;
+        const cached = utils_storage.getCache(cacheKey);
+        if (cached) {
+          detail.value = cached;
+          loadFavoriteStatus();
+          checkPendingStatus();
+          if (nearbyScenicsTimer) {
+            clearTimeout(nearbyScenicsTimer);
+          }
+          nearbyScenicsTimer = setTimeout(() => {
+            if (isPageActive) {
+              loadNearbyScenics();
+            }
+            nearbyScenicsTimer = null;
+          }, 300);
+          return;
+        }
+      }
       loading.value = true;
       try {
         const res = await api_content.foodApi.getDetail(foodId.value);
@@ -41,45 +67,73 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           } else {
             detail.value = data;
           }
-          console.log("\u7F8E\u98DF\u8BE6\u60C5\u6570\u636E:", detail.value);
+          if (foodId.value) {
+            const cacheKey = `${CACHE_KEY_PREFIX}${foodId.value}`;
+            utils_storage.setCache(cacheKey, detail.value, CACHE_EXPIRE);
+          }
           loadFavoriteStatus();
           checkPendingStatus();
-          loadNearbyScenics();
+          if (nearbyScenicsTimer) {
+            clearTimeout(nearbyScenicsTimer);
+          }
+          nearbyScenicsTimer = setTimeout(() => {
+            if (isPageActive) {
+              loadNearbyScenics();
+            }
+            nearbyScenicsTimer = null;
+          }, 300);
         } else {
           common_vendor.index.showToast({ title: res.data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
         }
       } catch (e) {
-        console.error("\u52A0\u8F7D\u7F8E\u98DF\u8BE6\u60C5\u5931\u8D25:", e);
         common_vendor.index.showToast({ title: "\u7F51\u7EDC\u9519\u8BEF", icon: "none" });
       } finally {
         loading.value = false;
       }
     };
     const loadNearbyScenics = async () => {
-      if (!detail.value)
+      var _a;
+      if (!isPageActive || !((_a = detail.value) == null ? void 0 : _a.cityId))
         return;
       try {
-        const cityId = detail.value.cityId;
-        if (!cityId)
-          return;
-        const res = await api_content.scenicSpotApi.getHot(cityId, 3);
-        if (res.statusCode === 200 && res.data.code === 200) {
+        const res = await api_content.scenicSpotApi.getHot(detail.value.cityId, 3);
+        if (isPageActive && res.statusCode === 200 && res.data.code === 200) {
           nearbyScenics.value = res.data.data || [];
         }
       } catch (e) {
-        console.error("\u52A0\u8F7D\u9644\u8FD1\u666F\u70B9\u5931\u8D25:", e);
+        console.warn("\u52A0\u8F7D\u9644\u8FD1\u666F\u70B9\u5931\u8D25:", e);
       }
     };
     const onViewScenic = (scenicId) => {
-      common_vendor.index.navigateTo({
-        url: `/pages/scenic/detail?id=${scenicId}`
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
+      if (!scenicId)
+        return;
+      utils_router.safeNavigateTo(`/pages/scenic/detail?id=${scenicId}`).catch((err) => {
+        if (isPageActive) {
+          console.error("\u9875\u9762\u8DF3\u8F6C\u5931\u8D25:", err);
+          common_vendor.index.showToast({ title: "\u9875\u9762\u8DF3\u8F6C\u5931\u8D25", icon: "none" });
+        }
       });
     };
     const toggleFavorite = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       if (!user.value) {
-        common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
+        if (isPageActive) {
+          common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
+        }
         setTimeout(() => {
-          common_vendor.index.switchTab({ url: "/pages/profile/profile" });
+          if (isPageActive) {
+            utils_router.safeSwitchTab("/pages/profile/profile").catch(() => {
+            });
+          }
         }, 1500);
         return;
       }
@@ -99,11 +153,26 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       utils_storage.setCache(FAVORITE_KEY, favorites, 365 * 24 * 60);
     };
     const goCheckin = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       if (!foodId.value)
         return;
-      common_vendor.index.switchTab({ url: "/pages/checkin/checkin" });
+      utils_router.safeSwitchTab("/pages/checkin/checkin").catch((err) => {
+        if (isPageActive) {
+          console.error("\u9875\u9762\u8DF3\u8F6C\u5931\u8D25:", err);
+          common_vendor.index.showToast({ title: "\u9875\u9762\u8DF3\u8F6C\u5931\u8D25", icon: "none" });
+        }
+      });
     };
     const addToRoute = () => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
       if (!foodId.value || !detail.value)
         return;
       const pendingAdditions = utils_storage.getCache("route_pending_additions") || [];
@@ -136,17 +205,36 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
       }
     };
+    common_vendor.onLoad(() => {
+      utils_router.resetNavigationState();
+      isPageActive = true;
+    });
     common_vendor.onMounted(() => {
       const pages = getCurrentPages();
+      if (!pages || pages.length === 0)
+        return;
       const currentPage = pages[pages.length - 1];
-      const options = currentPage.options || {};
-      if (options.id) {
-        foodId.value = Number(options.id);
-        loadDetail();
+      const options = (currentPage == null ? void 0 : currentPage.options) || {};
+      const id = options == null ? void 0 : options.id;
+      if (id) {
+        const numId = Number(id);
+        if (!isNaN(numId) && numId > 0) {
+          foodId.value = numId;
+          loadDetail();
+        }
       }
     });
     common_vendor.onShow(() => {
+      isPageActive = true;
       checkPendingStatus();
+    });
+    common_vendor.onUnmounted(() => {
+      isPageActive = false;
+      if (nearbyScenicsTimer) {
+        clearTimeout(nearbyScenicsTimer);
+        nearbyScenicsTimer = null;
+      }
+      utils_router.resetNavigationState();
     });
     return (_ctx, _cache) => {
       var _a, _b;

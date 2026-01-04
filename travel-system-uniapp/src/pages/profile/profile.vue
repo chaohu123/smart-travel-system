@@ -143,6 +143,7 @@ import { computed, reactive, ref, watch, onMounted } from 'vue'
 import { userApi } from '@/api/user'
 import { tagApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
+import { safeNavigateTo, resetNavigationState } from '@/utils/router'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -180,7 +181,7 @@ const loadUserStats = async () => {
       }
     }
   } catch (e) {
-    console.error('加载用户统计失败', e)
+    // 静默处理错误，不影响用户体验
   }
 }
 
@@ -193,65 +194,118 @@ watch(user, (newUser) => {
 }, { immediate: true })
 
 onMounted(() => {
+  resetNavigationState()
   if (user.value) {
     loadUserStats()
   }
 })
 
+// 点击防抖
+let lastClickTime = 0
+const CLICK_DEBOUNCE_TIME = 300
+
 const navigateToMyNotes = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (!user.value) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
-  uni.navigateTo({ url: '/pages/profile/my-article' })
+  safeNavigateTo('/pages/profile/my-article').catch(() => {
+    // 静默处理错误
+  })
 }
 
 const navigateToMyCheckins = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (!user.value) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
-  uni.navigateTo({ url: '/pages/footprint/footprint' })
+  safeNavigateTo('/pages/footprint/footprint').catch(() => {
+    // 静默处理错误
+  })
 }
 
 const navigateToMyInteraction = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (!user.value) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
-  uni.navigateTo({ url: '/pages/profile/my-interaction' })
+  safeNavigateTo('/pages/profile/my-interaction').catch(() => {
+    // 静默处理错误
+  })
 }
 
 const navigateToFeedback = () => {
-  uni.navigateTo({ url: '/pages/profile/feedback' })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
+  safeNavigateTo('/pages/profile/feedback').catch(() => {
+    // 静默处理错误
+  })
 }
 
 const navigateToAbout = () => {
-  uni.navigateTo({ url: '/pages/profile/about' })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
+  safeNavigateTo('/pages/profile/about').catch(() => {
+    // 静默处理错误
+  })
 }
 
 const navigateToPreference = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (!user.value) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
-  uni.navigateTo({ url: '/pages/profile/preference' })
+  safeNavigateTo('/pages/profile/preference').catch(() => {
+    // 静默处理错误
+  })
 }
 
 const navigateToHistory = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (!user.value) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
-  uni.navigateTo({ url: '/pages/profile/history' })
+  safeNavigateTo('/pages/profile/history').catch(() => {
+    // 静默处理错误
+  })
 }
 
 const navigateToUserHome = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (!user.value) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
-  uni.navigateTo({ url: `/pages/profile/user-home?userId=${user.value.id}` })
+  safeNavigateTo(`/pages/profile/user-home?userId=${user.value.id}`).catch(() => {
+    // 静默处理错误
+  })
 }
 
 const openLogin = () => {

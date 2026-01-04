@@ -171,6 +171,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { userApi } from '@/api/user'
 import { useUserStore } from '@/store/user'
 import { getCache, setCache } from '@/utils/storage'
+import { safeNavigateTo, resetNavigationState } from '@/utils/router'
 
 const store = useUserStore()
 const currentUser = computed(() => store.state.profile)
@@ -324,11 +325,10 @@ const loadUserInfo = async () => {
           isFollowing.value = followingList.some((u: any) => u.id === userId)
         }
       } catch (error) {
-        console.error('检查关注状态失败', error)
+        // 静默处理错误
       }
     }
   } catch (error) {
-    console.error('加载用户信息失败', error)
     uni.showToast({ title: '加载失败', icon: 'none' })
   } finally {
     loading.value = false
@@ -371,21 +371,35 @@ const changeAvatar = () => {
   })
 }
 
+// 点击防抖
+let lastClickTime = 0
+const CLICK_DEBOUNCE_TIME = 300
+
 // 编辑资料
 const editProfile = () => {
-  uni.navigateTo({ url: '/pages/profile/edit-profile' })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
+  safeNavigateTo('/pages/profile/edit-profile').catch(() => {
+    // 静默处理错误
+  })
 }
 
 // 打开私信
 const openChat = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   const targetId = targetUserId.value || userInfo.value?.id
   if (!targetId) {
     uni.showToast({ title: '用户不存在', icon: 'none' })
     return
   }
   
-  uni.navigateTo({
-    url: `/pages/profile/chat?userId=${targetId}&nickname=${encodeURIComponent(userInfo.value.nickname || '')}&avatar=${encodeURIComponent(userInfo.value.avatar || '')}`
+  safeNavigateTo(`/pages/profile/chat?userId=${targetId}&nickname=${encodeURIComponent(userInfo.value.nickname || '')}&avatar=${encodeURIComponent(userInfo.value.avatar || '')}`).catch(() => {
+    // 静默处理错误
   })
 }
 
@@ -430,7 +444,6 @@ const checkIn = async () => {
       uni.showToast({ title: res.data.msg || '签到失败', icon: 'none' })
     }
   } catch (error: any) {
-    console.error('签到失败', error)
     // 如果后端返回已签到错误，也更新本地缓存
     if (error?.data?.code === 400 && error?.data?.msg?.includes('已签到')) {
       setCache('lastCheckInDate', today, 24 * 60)
@@ -445,82 +458,32 @@ const checkIn = async () => {
 
 // 关注用户
 const followUser = async () => {
-  console.log('=== 关注功能调试信息 ===')
-  console.log('1. Store状态:', {
-    store: store,
-    state: store.state,
-    profile: store.state.profile,
-    currentUserValue: currentUser.value,
-    currentUserId: currentUser.value?.id
-  })
-  
-  // 尝试从多个来源获取当前用户ID
   let currentUserId = currentUser.value?.id
-  console.log('2. 从Store获取的userId:', currentUserId)
   
   if (!currentUserId) {
-    // 尝试从本地缓存获取
     const cachedUser = getCache<any>('user')
-    console.log('3. 从缓存获取的user:', cachedUser)
-    
     if (cachedUser?.id) {
       currentUserId = cachedUser.id
-      console.log('4. 使用缓存中的userId:', currentUserId)
-      // 更新store
-      if (cachedUser) {
-        store.setUser(cachedUser)
-        console.log('5. 已更新Store中的用户信息')
-      }
-    } else {
-      console.log('4. 缓存中也没有用户信息')
+      store.setUser(cachedUser)
     }
   }
   
   const targetId = targetUserId.value || userInfo.value?.id
-  console.log('6. 目标用户ID:', {
-    targetUserId: targetUserId.value,
-    userInfoId: userInfo.value?.id,
-    finalTargetId: targetId
-  })
-  
-  // 检查token
-  const token = getCache<string>('token')
-  console.log('7. Token信息:', {
-    hasToken: !!token,
-    tokenLength: token?.length,
-    tokenPreview: token ? token.substring(0, 20) + '...' : null
-  })
   
   if (!currentUserId) {
-    console.error('❌ 无法获取当前用户ID:', {
-      storeProfile: currentUser.value,
-      cachedUser: getCache<any>('user'),
-      token: token
-    })
     uni.showToast({ title: '请先登录', icon: 'none' })
     return
   }
   
   if (!targetId) {
-    console.error('❌ 无法获取目标用户ID')
     uni.showToast({ title: '用户不存在', icon: 'none' })
     return
   }
 
-  console.log('8. 准备调用关注API:', {
-    currentUserId: currentUserId,
-    targetId: targetId,
-    currentUserIdType: typeof currentUserId,
-    targetIdType: typeof targetId
-  })
-
   try {
     const res = await userApi.toggleFollow(Number(currentUserId), Number(targetId))
-    console.log('9. API响应:', res)
     if (res.statusCode === 200 && res.data.code === 200) {
-      console.log('✅ 关注操作成功')
       isFollowing.value = !isFollowing.value
-      // 更新粉丝数和关注数
       if (isFollowing.value) {
         userStats.value.followers = (userStats.value.followers || 0) + 1
       } else {
@@ -531,61 +494,77 @@ const followUser = async () => {
         icon: 'success'
       })
     } else {
-      console.error('❌ API返回错误:', {
-        statusCode: res.statusCode,
-        code: res.data?.code,
-        msg: res.data?.msg,
-        data: res.data
-      })
       uni.showToast({ title: res.data.msg || '操作失败', icon: 'none' })
     }
   } catch (error: any) {
-    console.error('❌ 关注操作异常:', {
-      error: error,
-      message: error?.message,
-      data: error?.data,
-      response: error?.response,
-      statusCode: error?.statusCode
-    })
     uni.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
   }
-  console.log('=== 关注功能调试信息结束 ===')
 }
 
 // 查看游记
 const viewNotes = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (isOwnProfile.value) {
-    uni.navigateTo({ url: '/pages/travel-note/list?my=true' })
+    safeNavigateTo('/pages/travel-note/list?my=true').catch(() => {
+      // 静默处理错误
+    })
   }
 }
 
 // 查看互动
 const viewInteractions = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (isOwnProfile.value) {
-    uni.navigateTo({ url: '/pages/profile/my-interaction' })
+    safeNavigateTo('/pages/profile/my-interaction').catch(() => {
+      // 静默处理错误
+    })
   }
 }
 
 // 查看足迹
 const viewCheckins = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (isOwnProfile.value) {
-    uni.navigateTo({ url: '/pages/footprint/footprint' })
+    safeNavigateTo('/pages/footprint/footprint').catch(() => {
+      // 静默处理错误
+    })
   }
 }
 
 // 查看粉丝
 const viewFollowers = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   const userId = targetUserId.value || currentUser.value?.id
   if (userId) {
-    uni.navigateTo({ url: `/pages/profile/followers?userId=${userId}` })
+    safeNavigateTo(`/pages/profile/followers?userId=${userId}`).catch(() => {
+      // 静默处理错误
+    })
   }
 }
 
 // 查看关注
 const viewFollowing = () => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   const userId = targetUserId.value || currentUser.value?.id
   if (userId) {
-    uni.navigateTo({ url: `/pages/profile/following?userId=${userId}` })
+    safeNavigateTo(`/pages/profile/following?userId=${userId}`).catch(() => {
+      // 静默处理错误
+    })
   }
 }
 
@@ -598,29 +577,53 @@ const loadUnreadMessageCount = () => {
 }
 
 const viewMessages = () => {
-  uni.navigateTo({ url: '/pages/profile/messages' })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
+  safeNavigateTo('/pages/profile/messages').catch(() => {
+    // 静默处理错误
+  })
 }
 
 // 查看全部互动
 const viewAllInteractions = () => {
-  uni.navigateTo({ url: '/pages/profile/my-interaction' })
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
+  safeNavigateTo('/pages/profile/my-interaction').catch(() => {
+    // 静默处理错误
+  })
 }
 
 // 处理互动项点击
 const handleInteractionClick = (item: any) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) return
+  lastClickTime = now
+  
   if (item.type === 'like' || item.type === 'comment') {
     if (item.contentId) {
-      uni.navigateTo({ url: `/pages/travel-note/detail?id=${item.contentId}` })
+      safeNavigateTo(`/pages/travel-note/detail?id=${item.contentId}`).catch(() => {
+        // 静默处理错误
+      })
     }
   } else if (item.type === 'follow') {
     if (item.userId) {
-      uni.navigateTo({ url: `/pages/profile/user-home?userId=${item.userId}` })
+      safeNavigateTo(`/pages/profile/user-home?userId=${item.userId}`).catch(() => {
+        // 静默处理错误
+      })
     }
   } else if (item.type === 'newNote') {
     if (item.noteId) {
-      uni.navigateTo({ url: `/pages/travel-note/detail?id=${item.noteId}` })
+      safeNavigateTo(`/pages/travel-note/detail?id=${item.noteId}`).catch(() => {
+        // 静默处理错误
+      })
     } else if (item.userId) {
-      uni.navigateTo({ url: `/pages/profile/user-home?userId=${item.userId}` })
+      safeNavigateTo(`/pages/profile/user-home?userId=${item.userId}`).catch(() => {
+        // 静默处理错误
+      })
     }
   }
 }
@@ -699,7 +702,7 @@ const loadInteractions = async () => {
     ]
     interactionList.value = mockInteractions.slice(0, 5)
   } catch (error) {
-    console.error('加载互动动态失败', error)
+    // 静默处理错误
   }
 }
 
@@ -726,85 +729,43 @@ const getImageUrl = (url: string) => {
 
 
 onMounted(() => {
-  console.log('=== 用户主页页面加载 ===')
-  console.log('1. 页面加载时的Store状态:', {
-    store: store,
-    state: store.state,
-    profile: store.state.profile,
-    currentUser: currentUser.value
-  })
-  
-  // 在 onMounted 中获取页面参数
+  resetNavigationState()
   const pages = getCurrentPages()
   if (pages && pages.length > 0) {
     const currentPage = pages[pages.length - 1]
     const options = (currentPage as any).options || {}
-    console.log('2. 页面参数:', options)
     if (options.userId) {
-      targetUserId.value = Number(options.userId)
-      console.log('3. 目标用户ID:', targetUserId.value)
+      const userId = Number(options.userId)
+      if (!isNaN(userId) && userId > 0) {
+        targetUserId.value = userId
+      }
     }
   }
-  
-  // 确保用户信息已加载到store中
-  const cachedUser = getCache<any>('user')
-  const cachedToken = getCache<string>('token')
-  console.log('4. 缓存信息:', {
-    cachedUser: cachedUser,
-    cachedToken: cachedToken ? cachedToken.substring(0, 20) + '...' : null,
-    hasCachedUser: !!cachedUser,
-    hasCachedToken: !!cachedToken
-  })
   
   if (!currentUser.value?.id) {
-    console.log('5. Store中没有用户信息，尝试从缓存恢复')
+    const cachedUser = getCache<any>('user')
     if (cachedUser?.id) {
       store.setUser(cachedUser)
-      console.log('6. 已从缓存恢复用户信息到Store:', cachedUser)
-    } else {
-      console.warn('7. ⚠️ 缓存中也没有用户信息，用户可能未登录')
     }
-  } else {
-    console.log('5. Store中已有用户信息:', currentUser.value)
   }
-  
-  console.log('8. 最终Store状态:', {
-    profile: store.state.profile,
-    currentUser: currentUser.value
-  })
   
   loadUserInfo()
   loadInteractions()
   checkTodayCheckInStatus()
-  loadUnreadMessageCount() // 加载未读消息数量
-  console.log('=== 用户主页页面加载完成 ===')
+  loadUnreadMessageCount()
 })
 
 // 页面显示时刷新数据（从其他页面返回时）
 onShow(() => {
-  console.log('=== 用户主页页面显示 (onShow) ===')
-  console.log('1. Store状态:', {
-    profile: store.state.profile,
-    currentUser: currentUser.value,
-    currentUserId: currentUser.value?.id
-  })
-  
-  // 确保用户信息已加载到store中
   if (!currentUser.value?.id) {
     const cachedUser = getCache<any>('user')
-    console.log('2. Store中没有用户信息，从缓存获取:', cachedUser)
     if (cachedUser?.id) {
       store.setUser(cachedUser)
-      console.log('3. 已从缓存恢复用户信息到Store')
     }
-  } else {
-    console.log('2. Store中已有用户信息')
   }
   
-  // 重新加载用户信息，确保显示最新数据
   loadUserInfo()
   checkTodayCheckInStatus()
-  console.log('=== 用户主页页面显示完成 ===')
 })
 </script>
 

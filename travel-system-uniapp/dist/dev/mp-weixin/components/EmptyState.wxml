@@ -1,1 +1,1 @@
-<block/>
+<view class="empty data-v-b2b92118"><image wx:if="{{a}}" class="empty-icon data-v-b2b92118" src="{{b}}" mode="aspectFit"/><text class="empty-text data-v-b2b92118">{{c}}</text><button wx:if="{{d}}" class="empty-btn data-v-b2b92118" size="mini" bindtap="{{f}}">{{e}}</button></view>

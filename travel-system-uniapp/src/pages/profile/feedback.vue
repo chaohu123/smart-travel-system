@@ -122,7 +122,6 @@ const chooseImage = () => {
       form.images.push(...res.tempFilePaths)
     },
     fail: (err) => {
-      console.error('选择图片失败', err)
       uni.showToast({ title: '选择图片失败', icon: 'none' })
     }
   })
@@ -164,7 +163,6 @@ const submitFeedback = async () => {
       uni.navigateBack()
     }, 1500)
   } catch (error) {
-    console.error('提交反馈失败', error)
     uni.showToast({ title: '提交失败，请稍后重试', icon: 'none' })
   } finally {
     submitting.value = false
