@@ -232,6 +232,15 @@ const foodApi = {
   }
 };
 const checkinApi = {
+  addCheckin: (data) => {
+    return utils_http.request({
+      url: "/checkin/add",
+      method: "POST",
+      data,
+      showLoading: true,
+      needAuth: true
+    });
+  },
   getMyCheckins: (userId, pageNum = 1, pageSize = 100) => {
     return utils_http.request({
       url: "/checkin/my",
@@ -239,6 +248,15 @@ const checkinApi = {
       data: { userId, pageNum, pageSize },
       showLoading: false,
       needAuth: true
+    });
+  },
+  getTargetCheckins: (targetType, targetId, pageNum = 1, pageSize = 10) => {
+    return utils_http.request({
+      url: "/checkin/target",
+      method: "GET",
+      data: { targetType, targetId, pageNum, pageSize },
+      showLoading: false,
+      needAuth: false
     });
   },
   getFootprintStats: (userId) => {

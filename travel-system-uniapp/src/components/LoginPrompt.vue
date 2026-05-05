@@ -29,9 +29,8 @@ const props = withDefaults(defineProps<Props>(), {
   message: '请先登录',
 })
 
-// 监听 visible 变化，用于调试
-watch(() => props.visible, (newVal) => {
-  console.log('LoginPrompt visible changed:', newVal)
+// 可按需在此扩展对 visible 变化的处理逻辑
+watch(() => props.visible, () => {
 }, { immediate: true })
 
 const emit = defineEmits<{

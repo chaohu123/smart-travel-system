@@ -90,6 +90,50 @@
   font-size: 22rpx;
   color: #999999;
 }
+.search-loading.data-v-087d42bb,
+.search-empty.data-v-087d42bb {
+  padding: 36rpx 16rpx;
+  text-align: center;
+  color: #93a0ac;
+  font-size: 24rpx;
+}
+.search-group-list.data-v-087d42bb {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+.search-group.data-v-087d42bb {
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  padding: 20rpx;
+  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.05);
+}
+.search-group-title.data-v-087d42bb {
+  font-size: 28rpx;
+  color: #314b43;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+  display: block;
+}
+.search-result-item.data-v-087d42bb {
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid #eef1f3;
+}
+.search-result-item.data-v-087d42bb:last-child {
+  border-bottom-width: 0;
+}
+.search-result-name.data-v-087d42bb {
+  display: block;
+  font-size: 26rpx;
+  color: #2f3c45;
+  font-weight: 500;
+}
+.search-result-meta.data-v-087d42bb {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #8b97a1;
+}
 
 /* 智能入口区样式 */
 .smart-entry-section.data-v-087d42bb {

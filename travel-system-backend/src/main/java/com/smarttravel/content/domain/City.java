@@ -11,6 +11,7 @@ public class City {
     private String cityName;
     private String province;
     private String country;
+    private String imageUrl;
     private BigDecimal latitude;
     private BigDecimal longitude;
     private Integer status;
@@ -49,6 +50,14 @@ public class City {
 
     public void setCountry(String country) {
         this.country = country;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public BigDecimal getLatitude() {

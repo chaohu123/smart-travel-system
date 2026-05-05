@@ -5,14 +5,42 @@
   padding-bottom: 50rpx;
 }
 
-/* 顶部卡片 */
+/* 顶部卡片：底图用 image 组件，WXSS 的 background url 在小程序端常无效 */
 .user-header-card.data-v-c010c622 {
-  height: 380rpx;
-  background: linear-gradient(160deg, #3ba272 0%, #2bb673 100%);
+  position: relative;
+  overflow: hidden;
+  height: 400rpx;
   padding: 100rpx 40rpx 0;
   border-radius: 0 0 60rpx 60rpx;
+  background-color: #3ba272;
+  box-sizing: border-box;
+}
+.user-header-bg-img.data-v-c010c622 {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+.user-header-bg-mask.data-v-c010c622 {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    160deg,
+    rgba(45, 100, 80, 0.55) 0%,
+    rgba(59, 162, 114, 0.45) 100%
+  );
 }
 .login-prompt.data-v-c010c622 {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -58,6 +86,8 @@
   justify-content: center;
 }
 .user-info-box.data-v-c010c622 {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -111,9 +141,11 @@
   text-align: center;
 }
 
-/* 行程状态条 */
+/* 行程状态条：原生 image 易盖住后续节点，需 z-index；负边距略减小使整块下移、少压在头图上 */
 .trip-status-bar.data-v-c010c622 {
-  margin: -60rpx 40rpx 40rpx;
+  position: relative;
+  z-index: 10;
+  margin: 0 40rpx 40rpx;
   background: #fff;
   border-radius: 30rpx;
   display: flex;

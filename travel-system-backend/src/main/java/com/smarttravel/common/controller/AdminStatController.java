@@ -84,6 +84,38 @@ public class AdminStatController {
         return success(rows);
     }
 
+    /** 按日新增用户，用于管理端趋势图 */
+    @GetMapping("/user/trend")
+    public Map<String, Object> userTrend(@org.springframework.web.bind.annotation.RequestParam(required = false, defaultValue = "14") Integer days) {
+        int limit = days != null && days > 0 ? days : 14;
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT DATE(create_time) AS day, COUNT(*) AS count FROM user WHERE del_flag = 0 GROUP BY DATE(create_time) ORDER BY day DESC LIMIT " + limit);
+        Long todayCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user WHERE del_flag = 0 AND DATE(create_time) = CURDATE()", Long.class);
+        Long yesterdayCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM user WHERE del_flag = 0 AND DATE(create_time) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)", Long.class);
+        Map<String, Object> result = new HashMap<>();
+        result.put("trend", rows);
+        result.put("todayCount", todayCount != null ? todayCount : 0L);
+        result.put("yesterdayCount", yesterdayCount != null ? yesterdayCount : 0L);
+        return success(result);
+    }
+
+    /** 打卡地点（打卡点）热度 TOP */
+    @GetMapping("/checkin/point/top")
+    public Map<String, Object> checkinPointTop() {
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(
+                "SELECT x.point_name AS name, x.cnt AS count FROM ( "
+                        + "SELECT COALESCE(NULLIF(TRIM(cp.name), ''), NULLIF(TRIM(cp.target_name), ''), CONCAT(cr.target_type, '#', cr.target_id)) AS point_name, "
+                        + "COUNT(*) AS cnt "
+                        + "FROM checkin_record cr "
+                        + "LEFT JOIN checkin_point cp ON cr.target_type = cp.target_type AND cr.target_id = cp.target_id AND cp.del_flag = 0 "
+                        + "WHERE cr.del_flag = 0 "
+                        + "GROUP BY COALESCE(NULLIF(TRIM(cp.name), ''), NULLIF(TRIM(cp.target_name), ''), CONCAT(cr.target_type, '#', cr.target_id)) "
+                        + ") x ORDER BY x.cnt DESC LIMIT 10");
+        return success(rows);
+    }
+
     private Map<String, Object> success(Object data) {
         Map<String, Object> result = new HashMap<>();
         result.put("code", 200);

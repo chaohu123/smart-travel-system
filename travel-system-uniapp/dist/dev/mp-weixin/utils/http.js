@@ -2,6 +2,7 @@
 var common_vendor = require("../common/vendor.js");
 var utils_storage = require("./storage.js");
 var utils_config = require("./config.js");
+var utils_image = require("./image.js");
 const BASE_URL = utils_config.API_BASE_URL;
 const getToken = () => utils_storage.getCache("token");
 const pendingRequests = /* @__PURE__ */ new Map();
@@ -34,6 +35,28 @@ const cleanParams = (params) => {
     }
   }
   return cleaned;
+};
+const normalizeUploadUrlInData = (value) => {
+  if (value === null || value === void 0)
+    return value;
+  if (typeof value === "string") {
+    const raw = value.trim();
+    if (raw.startsWith("/uploads/") || raw.startsWith("uploads/")) {
+      return utils_image.getImageUrl(raw, false);
+    }
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeUploadUrlInData(item));
+  }
+  if (typeof value === "object") {
+    const out = {};
+    Object.keys(value).forEach((key) => {
+      out[key] = normalizeUploadUrlInData(value[key]);
+    });
+    return out;
+  }
+  return value;
 };
 const request = (options) => {
   const {
@@ -91,12 +114,26 @@ const request = (options) => {
           reject(res);
           return;
         }
+        if (res && res.data) {
+          res.data = normalizeUploadUrlInData(res.data);
+        }
         if (enableCache && method === "GET" && res.statusCode === 200 && res.data) {
           utils_storage.setCache(cacheKey, res.data, cacheTime);
         }
         resolve(res);
       },
       fail: (err) => {
+        const errMsg = String((err == null ? void 0 : err.errMsg) || "");
+        if (errMsg.includes("timeout")) {
+          resolve({
+            statusCode: 408,
+            data: {
+              code: 408,
+              msg: "\u8BF7\u6C42\u8D85\u65F6\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5"
+            }
+          });
+          return;
+        }
         reject(err);
       },
       complete: () => {
@@ -108,18 +145,54 @@ const request = (options) => {
     });
   });
   const requestPromise = needRetry ? run().catch((err) => {
+    const errMsg = String((err == null ? void 0 : err.errMsg) || "");
+    if (errMsg.includes("timeout")) {
+      return Promise.resolve({
+        statusCode: 408,
+        data: { code: 408, msg: "\u8BF7\u6C42\u8D85\u65F6\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5" }
+      });
+    }
     return run().catch(() => Promise.reject(err));
   }) : run();
   pendingRequests.set(requestKey, requestPromise);
   return requestPromise;
 };
-const uploadFile = (url, filePath) => {
+const uploadFile = (url, filePath, timeout = 6e4) => {
   const token = getToken();
-  return common_vendor.index.uploadFile({
-    url: url.startsWith("http") ? url : `${BASE_URL}${url}`,
-    filePath,
-    name: "file",
-    header: token ? { Authorization: `Bearer ${token}` } : {}
+  const fullUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`;
+  return new Promise((resolve, reject) => {
+    common_vendor.index.uploadFile({
+      url: fullUrl,
+      filePath,
+      name: "file",
+      header: token ? { Authorization: `Bearer ${token}` } : {},
+      timeout,
+      success: (res) => {
+        let normalizedData = res.data;
+        try {
+          if (typeof res.data === "string") {
+            normalizedData = JSON.parse(res.data);
+          }
+        } catch (e) {
+          normalizedData = res.data;
+        }
+        resolve({
+          ...res,
+          data: normalizeUploadUrlInData(normalizedData)
+        });
+      },
+      fail: (err) => {
+        const errMsg = String((err == null ? void 0 : err.errMsg) || "");
+        if (errMsg.includes("timeout")) {
+          resolve({
+            statusCode: 408,
+            data: { code: 408, msg: "\u4E0A\u4F20\u8D85\u65F6\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5" }
+          });
+          return;
+        }
+        reject(err);
+      }
+    });
   });
 };
 exports.request = request;

@@ -1,0 +1,98 @@
+@startuml system-functional-modules
+' 布局：左（用户端）— 中（系统名称）— 右（管理端）
+' 导出：PlantUML 预览 / java -jar plantuml.jar docs/system-functional-modules.puml
+
+skinparam shadowing false
+skinparam rectangleBorderThickness 1.2
+skinparam rectangleFontSize 10
+skinparam packageFontSize 12
+skinparam wrapWidth 200
+
+left to right direction
+
+package "用户端\n（微信小程序）" as PKG_U #E3F2FD {
+  rectangle "城市与文旅资源\n————————————\n• 城市列表与检索\n• 景点/美食筛选与详情\n• 地图与坐标展示" as U1 #FFFFFF
+  rectangle "游记与互动\n————————————\n• 游记发布/编辑/删除\n• 图文上传\n• 评论/点赞/收藏" as U2 #FFFFFF
+  rectangle "智能路线与推荐\n————————————\n• 条件化路线规划\n• 路线与日程浏览\n• 推荐内容浏览" as U3 #FFFFFF
+  rectangle "打卡与活动\n————————————\n• 打卡与个人足迹\n• 活动浏览与报名参与" as U4 #FFFFFF
+  rectangle "认证与个人中心\n————————————\n• 登录与会话保持\n• 资料/标签/收藏\n• 关注与粉丝" as U5 #FFFFFF
+
+  U1 -[hidden]down- U2
+  U2 -[hidden]down- U3
+  U3 -[hidden]down- U4
+  U4 -[hidden]down- U5
+}
+
+rectangle "智能旅游平台" as CORE #FFF9C4 {
+}
+
+package "管理端" as PKG_A #E8F5E9 {
+  rectangle "资源治理\n————————————\n• 城市/景点/美食维护\n• 推荐位与上下线\n• 封面图上传" as A1 #FFFFFF
+  rectangle "内容审核\n————————————\n• 游记审核\n• 评论管理与审核" as A2 #FFFFFF
+  rectangle "路线与推荐运营\n————————————\n• 路线与日程序列\n• 推荐策略与运营位" as A3 #FFFFFF
+  rectangle "打卡与活动运营\n————————————\n• 打卡点维护\n• 活动与关联资源" as A4 #FFFFFF
+  rectangle "用户与等级\n————————————\n• 用户列表与状态\n• 等级体系\n• 用户数据导出" as A5 #FFFFFF
+  rectangle "数据统计分析\n————————————\n• Dashboard 总览\n• 趋势/排行/TOP\n• 图表可视化" as A6 #FFFFFF
+  rectangle "系统与安全审计\n————————————\n• 系统参数配置\n• 管理端/用户端上传\n• 操作日志与接口校验" as A7 #FFFFFF
+
+  A1 -[hidden]down- A2
+  A2 -[hidden]down- A3
+  A3 -[hidden]down- A4
+  A4 -[hidden]down- A5
+  A5 -[hidden]down- A6
+  A6 -[hidden]down- A7
+}
+
+PKG_U -[hidden]right- CORE
+CORE -[hidden]right- PKG_A
+
+newpage
+' —————— 备选：上（用户端）— 中（系统名称）— 下（管理端）——————
+
+skinparam shadowing false
+skinparam rectangleBorderThickness 1.2
+skinparam rectangleFontSize 10
+skinparam packageFontSize 12
+skinparam wrapWidth 220
+
+top to bottom direction
+
+package "用户端（微信小程序）" as PKG_U2 #E3F2FD {
+  together {
+    rectangle "城市与文旅资源\n• 城市检索 • 景点美食 • 地图" as UA1 #FFFFFF
+    rectangle "游记与互动\n• 发布编辑 • 评论点赞收藏 • 上传" as UA2 #FFFFFF
+    rectangle "路线与推荐\n• 智能规划 • 日程浏览 • 推荐流" as UA3 #FFFFFF
+    rectangle "打卡与活动\n• 打卡足迹 • 活动报名" as UA4 #FFFFFF
+    rectangle "认证与个人中心\n• 登录 • 资料标签收藏 • 关注粉丝" as UA5 #FFFFFF
+  }
+  UA1 -[hidden]right- UA2
+  UA2 -[hidden]right- UA3
+  UA3 -[hidden]right- UA4
+  UA4 -[hidden]right- UA5
+}
+
+rectangle "智能旅游平台" as CORE2 #FFF9C4 {
+}
+
+package "管理端" as PKG_A2 #E8F5E9 {
+  together {
+    rectangle "资源治理\n• 城市/景点/美食 • 上下线推荐 • 封面" as BA1 #FFFFFF
+    rectangle "内容审核\n• 游记 • 评论" as BA2 #FFFFFF
+    rectangle "路线与推荐\n• 路线日程 • 策略运营位" as BA3 #FFFFFF
+    rectangle "打卡与活动\n• 打卡点 • 活动" as BA4 #FFFFFF
+    rectangle "用户与等级\n• 用户状态 • 等级 • 导出" as BA5 #FFFFFF
+    rectangle "数据统计\n• Dashboard • 趋势排行" as BA6 #FFFFFF
+    rectangle "系统与安全\n• 参数 • 上传 • 日志" as BA7 #FFFFFF
+  }
+  BA1 -[hidden]right- BA2
+  BA2 -[hidden]right- BA3
+  BA3 -[hidden]right- BA4
+  BA4 -[hidden]right- BA5
+  BA5 -[hidden]right- BA6
+  BA6 -[hidden]right- BA7
+}
+
+PKG_U2 -[hidden]down- CORE2
+CORE2 -[hidden]down- PKG_A2
+
+@enduml

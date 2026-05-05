@@ -2,7 +2,30 @@
   <slot />
 </template>
 
-<script setup lang="ts">
+<script lang="ts">
+const isTimeoutError = (msg: unknown): boolean => {
+  const text = String(msg || '').toLowerCase()
+  return text.includes('timeout') || text.includes('timedout')
+}
+
+export default {
+  // 小程序全局 Promise 未处理拒绝
+  onUnhandledRejection(e: any) {
+    const message = e?.reason?.errMsg || e?.reason?.message || e?.reason || ''
+    if (isTimeoutError(message)) {
+      // 已在业务层做提示，这里吞掉全局噪音日志
+      return
+    }
+    console.error('UnhandledRejection:', e)
+  },
+  // 小程序全局脚本错误
+  onError(err: any) {
+    if (isTimeoutError(err)) {
+      return
+    }
+    console.error('GlobalError:', err)
+  },
+}
 </script>
 
 <style>

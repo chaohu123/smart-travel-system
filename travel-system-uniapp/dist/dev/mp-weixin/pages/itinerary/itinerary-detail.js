@@ -3,8 +3,9 @@ var common_vendor = require("../../common/vendor.js");
 var api_route = require("../../api/route.js");
 var store_user = require("../../store/user.js");
 var utils_storage = require("../../utils/storage.js");
+var utils_config = require("../../utils/config.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/http.js");
-require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const routeId = common_vendor.ref(null);
@@ -22,6 +23,121 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return null;
       return routeData.value.days[selectedDayIndex.value] || routeData.value.days[0];
     });
+    const safeText = (value) => {
+      if (value == null)
+        return "";
+      if (typeof value === "string")
+        return value;
+      if (typeof value === "number" || typeof value === "boolean")
+        return String(value);
+      try {
+        return JSON.stringify(value);
+      } catch (e) {
+        return "";
+      }
+    };
+    const parseDayIntro = (dayData) => {
+      var _a;
+      const intro = (_a = dayData == null ? void 0 : dayData.day) == null ? void 0 : _a.intro;
+      const empty = { morning: "", noon: "", afternoon: "", evening: "" };
+      if (!intro)
+        return empty;
+      const introText = safeText(intro).trim();
+      if (!introText)
+        return empty;
+      try {
+        if (introText.startsWith("{") && introText.endsWith("}")) {
+          const parsed = JSON.parse(introText);
+          return {
+            morning: safeText(parsed == null ? void 0 : parsed.morning),
+            noon: safeText((parsed == null ? void 0 : parsed.noon) || (parsed == null ? void 0 : parsed.lunch)),
+            afternoon: safeText(parsed == null ? void 0 : parsed.afternoon),
+            evening: safeText(parsed == null ? void 0 : parsed.evening)
+          };
+        }
+      } catch (e) {
+      }
+      return {
+        morning: introText,
+        noon: "",
+        afternoon: "",
+        evening: ""
+      };
+    };
+    const parseAiBlockFields = (text) => {
+      const raw = safeText(text).trim();
+      const empty = { title: "", timeSchedule: "", detail: "", transport: "", rawFallback: "" };
+      if (!raw)
+        return empty;
+      const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+      const timeRe = /^\*?\s*时间安排[：:]\s*(.+)$/;
+      const detailRe = /^\*?\s*详细行程[：:]\s*(.+)$/;
+      const transRe = /^\*?\s*交通方式[：:]\s*(.+)$/;
+      const isFieldLine = (line) => timeRe.test(line) || detailRe.test(line) || transRe.test(line);
+      const firstFieldIdx = lines.findIndex((l) => isFieldLine(l));
+      if (firstFieldIdx === -1) {
+        return { title: "", timeSchedule: "", detail: "", transport: "", rawFallback: raw };
+      }
+      const title = firstFieldIdx > 0 ? lines.slice(0, firstFieldIdx).join("\n").trim() : "";
+      let timeSchedule = "";
+      let detail = "";
+      let transport = "";
+      let pendingDetail = false;
+      for (let i = firstFieldIdx; i < lines.length; i++) {
+        const line = lines[i];
+        const tm = line.match(timeRe);
+        if (tm) {
+          timeSchedule = tm[1].trim();
+          pendingDetail = false;
+          continue;
+        }
+        const dm = line.match(detailRe);
+        if (dm) {
+          detail = dm[1].trim();
+          pendingDetail = true;
+          continue;
+        }
+        const trm = line.match(transRe);
+        if (trm) {
+          transport = trm[1].trim();
+          pendingDetail = false;
+          continue;
+        }
+        if (pendingDetail) {
+          detail += (detail ? "\n" : "") + line;
+        }
+      }
+      const hasStruct = !!(timeSchedule || detail || transport);
+      if (!hasStruct) {
+        return { title: "", timeSchedule: "", detail: "", transport: "", rawFallback: raw };
+      }
+      return { title, timeSchedule, detail, transport, rawFallback: "" };
+    };
+    const aiTimelineBlocks = common_vendor.computed(() => {
+      const day = currentDayData.value;
+      if (!day)
+        return [];
+      const intro = parseDayIntro(day);
+      const rawBlocks = [
+        { key: "morning", label: "\u4E0A\u5348", text: safeText(intro.morning).trim() },
+        { key: "noon", label: "\u4E2D\u5348", text: safeText(intro.noon).trim() },
+        { key: "afternoon", label: "\u4E0B\u5348", text: safeText(intro.afternoon).trim() },
+        { key: "evening", label: "\u665A\u4E0A", text: safeText(intro.evening).trim() }
+      ];
+      return rawBlocks.filter((b) => b.text.length > 0).map((b) => ({
+        label: b.label,
+        fields: parseAiBlockFields(b.text)
+      }));
+    });
+    const useAiTimelineOnly = common_vendor.computed(() => aiTimelineBlocks.value.length > 0);
+    const isNarrativeRelevant = (text, names) => {
+      const content = safeText(text).trim();
+      if (!content)
+        return false;
+      if (!names || names.length === 0)
+        return false;
+      return names.some((name) => !!name && content.includes(name));
+    };
     const currentDayScenics = common_vendor.computed(() => {
       var _a;
       if (!((_a = currentDayData.value) == null ? void 0 : _a.pois))
@@ -80,69 +196,93 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     });
     const mapMarkers = common_vendor.ref([]);
     const mapPolyline = common_vendor.ref([]);
+    const routeMapMode = common_vendor.ref("day");
+    const markerIconCache = common_vendor.ref({});
+    let mapUpdateGen = 0;
+    const DAY_LINE_COLORS = ["#3BA272", "#2F7DDB", "#F59E0B", "#EF4444", "#8B5CF6", "#14B8A6", "#EC4899"];
+    const getDayLineColor = (dayNo) => DAY_LINE_COLORS[(Math.max(1, dayNo) - 1) % DAY_LINE_COLORS.length];
+    const fullMapLegends = common_vendor.computed(() => {
+      var _a, _b;
+      if (activeTab.value !== "map" || routeMapMode.value !== "full" || !((_b = (_a = routeData.value) == null ? void 0 : _a.days) == null ? void 0 : _b.length))
+        return [];
+      return routeData.value.days.map((day, idx) => {
+        var _a2;
+        const dayNo = Number(((_a2 = day == null ? void 0 : day.day) == null ? void 0 : _a2.dayNo) || idx + 1);
+        return {
+          dayNo,
+          color: getDayLineColor(dayNo)
+        };
+      });
+    });
+    const createPoiMarkerIcon = (type) => {
+      if (markerIconCache.value[type]) {
+        return Promise.resolve(markerIconCache.value[type]);
+      }
+      return new Promise((resolve) => {
+        try {
+          const ctx = common_vendor.index.createCanvasContext("poi-marker-canvas");
+          const size = 64;
+          const r = 22;
+          const cx = size / 2;
+          const cy = 28;
+          ctx.clearRect(0, 0, size, size);
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+          ctx.closePath();
+          const fill = type === "food" ? "#3BA272" : "#5D92B0";
+          ctx.setFillStyle(fill);
+          ctx.fill();
+          ctx.setStrokeStyle("#FFFFFF");
+          ctx.setLineWidth(4);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx, cy + r + 2);
+          ctx.lineTo(cx - 10, cy + r + 18);
+          ctx.lineTo(cx + 10, cy + r + 18);
+          ctx.closePath();
+          ctx.setFillStyle(fill);
+          ctx.fill();
+          ctx.setStrokeStyle("#FFFFFF");
+          ctx.setLineWidth(3);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(cx, cy, 7, 0, 2 * Math.PI);
+          ctx.closePath();
+          ctx.setFillStyle("#FFFFFF");
+          ctx.fill();
+          ctx.draw(false, () => {
+            setTimeout(() => {
+              common_vendor.index.canvasToTempFilePath({
+                canvasId: "poi-marker-canvas",
+                success: (res) => {
+                  markerIconCache.value[type] = res.tempFilePath;
+                  resolve(res.tempFilePath);
+                },
+                fail: () => {
+                  resolve("");
+                }
+              });
+            }, 60);
+          });
+        } catch {
+          resolve("");
+        }
+      });
+    };
     const loadRouteDetail = async () => {
-      var _a, _b, _c, _d, _e;
       if (!routeId.value)
         return;
       loading.value = true;
       try {
         const res = await api_route.routeApi.getDetail(routeId.value);
-        console.log("========== \u8DEF\u7EBF\u8BE6\u60C5API\u8FD4\u56DE\u6570\u636E ==========");
-        console.log("\u5B8C\u6574\u54CD\u5E94:", JSON.stringify(res, null, 2));
         if (res.statusCode === 200 && res.data.code === 200) {
           routeData.value = res.data.data;
-          console.log("\u8DEF\u7EBF\u6570\u636E:", routeData.value);
-          console.log("\u8DEF\u7EBF\u540D\u79F0:", (_b = (_a = routeData.value) == null ? void 0 : _a.route) == null ? void 0 : _b.routeName);
-          console.log("\u5929\u6570:", (_d = (_c = routeData.value) == null ? void 0 : _c.days) == null ? void 0 : _d.length);
-          if ((_e = routeData.value) == null ? void 0 : _e.days) {
-            routeData.value.days.forEach((dayItem, dayIndex) => {
-              var _a2, _b2;
-              const dayNo = ((_a2 = dayItem.day) == null ? void 0 : _a2.dayNo) || dayIndex + 1;
-              console.log(`
-========== Day ${dayNo} \u6570\u636E ==========`);
-              console.log("Day\u5BF9\u8C61:", dayItem.day);
-              console.log("POI\u6570\u91CF:", ((_b2 = dayItem.pois) == null ? void 0 : _b2.length) || 0);
-              if (dayItem.pois && dayItem.pois.length > 0) {
-                const sortedPois = [...dayItem.pois].sort((a, b) => {
-                  var _a3, _b3;
-                  const sortA = ((_a3 = a.poi) == null ? void 0 : _a3.sort) || 0;
-                  const sortB = ((_b3 = b.poi) == null ? void 0 : _b3.sort) || 0;
-                  return sortA - sortB;
-                });
-                sortedPois.forEach((poi, poiIndex) => {
-                  var _a3, _b3, _c2, _d2;
-                  const poiType = ((_a3 = poi.poi) == null ? void 0 : _a3.poiType) || "unknown";
-                  const poiId = (_b3 = poi.poi) == null ? void 0 : _b3.poiId;
-                  const sort = ((_c2 = poi.poi) == null ? void 0 : _c2.sort) || 0;
-                  const detail = poi.detail;
-                  const name = (detail == null ? void 0 : detail.name) || "\u672A\u77E5";
-                  const timeSlot = ((_d2 = poi.poi) == null ? void 0 : _d2.timeSlot) || "";
-                  console.log(`  POI[${poiIndex}] (sort=${sort}):`);
-                  console.log(`    \u7C7B\u578B: ${poiType}`);
-                  console.log(`    POI ID: ${poiId}`);
-                  console.log(`    \u540D\u79F0: ${name}`);
-                  console.log(`    \u65F6\u95F4\u6BB5: ${timeSlot || "\u65E0"}`);
-                  if (detail == null ? void 0 : detail.address) {
-                    console.log(`    \u5730\u5740: ${detail.address}`);
-                  }
-                  if (poiType === "scenic" && (detail == null ? void 0 : detail.suggestedVisitTime)) {
-                    console.log(`    \u5EFA\u8BAE\u6E38\u73A9\u65F6\u95F4: ${detail.suggestedVisitTime}`);
-                  }
-                });
-              } else {
-                console.log("  \u8BE5\u5929\u6CA1\u6709POI\u6570\u636E");
-              }
-            });
-          }
-          console.log("========================================\n");
           loadFavoriteStatus();
           updateMapData();
         } else {
-          console.error("API\u8FD4\u56DE\u9519\u8BEF:", res.data);
           common_vendor.index.showToast({ title: res.data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
         }
       } catch (e) {
-        console.error("\u52A0\u8F7D\u8DEF\u7EBF\u8BE6\u60C5\u5931\u8D25:", e);
         common_vendor.index.showToast({ title: "\u7F51\u7EDC\u9519\u8BEF", icon: "none" });
       } finally {
         loading.value = false;
@@ -184,19 +324,38 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           icon: "success"
         });
       } catch (e) {
-        console.error("\u5207\u6362\u6536\u85CF\u5931\u8D25:", e);
         common_vendor.index.showToast({ title: "\u64CD\u4F5C\u5931\u8D25", icon: "none" });
       }
     };
+    const toCoordNumber = (v) => {
+      const n = typeof v === "number" ? v : parseFloat(String(v));
+      return Number.isFinite(n) ? n : null;
+    };
+    const isChinaCoord = (lat, lng) => lat >= 3 && lat <= 54.5 && lng >= 73 && lng <= 135.5;
+    const extractPoiCoord = (detail) => {
+      var _a, _b, _c;
+      if (!detail)
+        return null;
+      const latRaw = (_a = detail.latitude) != null ? _a : detail.lat;
+      const lngRaw = (_c = (_b = detail.longitude) != null ? _b : detail.lng) != null ? _c : detail.lon;
+      const lat = toCoordNumber(latRaw);
+      const lng = toCoordNumber(lngRaw);
+      if (lat == null || lng == null)
+        return null;
+      if (!isChinaCoord(lat, lng))
+        return null;
+      return { latitude: lat, longitude: lng };
+    };
     const updateMapData = () => {
       var _a, _b;
+      routeMapMode.value = "day";
+      const gen = ++mapUpdateGen;
       mapMarkers.value = [];
       mapPolyline.value = [];
       if (!((_a = routeData.value) == null ? void 0 : _a.days) || routeData.value.days.length === 0)
         return;
       const dayItem = routeData.value.days[selectedDayIndex.value];
       if (!dayItem || !dayItem.pois || dayItem.pois.length === 0) {
-        console.log("\u5F53\u524D\u5929\u6CA1\u6709POI\u6570\u636E");
         return;
       }
       const markers = [];
@@ -207,120 +366,207 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const sortB = ((_b2 = b.poi) == null ? void 0 : _b2.sort) || 0;
         return sortA - sortB;
       });
-      console.log(`\u66F4\u65B0\u5730\u56FE\u6570\u636E - Day ${selectedDayIndex.value + 1}, POI\u6570\u91CF: ${sortedPois.length}`);
       const dayCoordinates = [];
       const dayNo = ((_b = dayItem.day) == null ? void 0 : _b.dayNo) || selectedDayIndex.value + 1;
       let poiOrder = 1;
-      sortedPois.forEach((poiItem, poiIndex) => {
-        var _a2, _b2;
-        const detail = poiItem.detail;
-        if (!detail) {
-          console.warn(`POI ${poiIndex} \u6CA1\u6709detail\u6570\u636E`);
+      Promise.all([createPoiMarkerIcon("scenic"), createPoiMarkerIcon("food")]).then(([scenicIcon, foodIcon]) => {
+        if (gen !== mapUpdateGen)
           return;
-        }
-        if (detail && (detail.latitude || detail.lat) && (detail.longitude || detail.lng || detail.lon)) {
-          const lat = detail.latitude || detail.lat;
-          const lng = detail.longitude || detail.lng || detail.lon;
-          const isScenic = ((_a2 = poiItem.poi) == null ? void 0 : _a2.poiType) === "scenic";
-          const orderLabel = isScenic ? `D${dayNo}-${poiOrder}` : "";
-          const poiName = getPoiName(poiItem);
-          const markerTitle = orderLabel ? `${orderLabel} ${poiName}` : poiName;
-          const marker = {
-            id: `day${selectedDayIndex.value}_poi${poiIndex}`,
-            latitude: lat,
-            longitude: lng,
-            title: markerTitle,
-            width: 40,
-            height: 40,
-            iconPath: ((_b2 = poiItem.poi) == null ? void 0 : _b2.poiType) === "food" ? "/static/food-marker.png" : "/static/scenic-marker.png",
-            callout: {
-              content: markerTitle,
-              color: "#333",
-              fontSize: 14,
-              borderRadius: 4,
-              bgColor: "#fff",
-              padding: 8,
-              display: "BYCLICK",
-              textAlign: "center"
-            }
-          };
-          markers.push(marker);
-          dayCoordinates.push({
-            latitude: lat,
-            longitude: lng
-          });
-          if (isScenic) {
-            poiOrder++;
+        sortedPois.forEach((poiItem, poiIndex) => {
+          var _a2, _b2;
+          const detail = poiItem.detail;
+          if (!detail) {
+            return;
           }
-        } else {
-          console.warn(`POI ${poiIndex} (${getPoiName(poiItem)}) \u6CA1\u6709\u6709\u6548\u7684\u5750\u6807\u4FE1\u606F`);
+          const coord = extractPoiCoord(detail);
+          if (coord) {
+            const lat = coord.latitude;
+            const lng = coord.longitude;
+            const isScenic = ((_a2 = poiItem.poi) == null ? void 0 : _a2.poiType) === "scenic";
+            const orderLabel = isScenic ? `D${dayNo}-${poiOrder}` : "";
+            const poiName = getPoiName(poiItem);
+            const markerTitle = orderLabel ? `${orderLabel} ${poiName}` : poiName;
+            const markerId = (dayNo || 1) * 1e3 + (poiIndex + 1);
+            const isFood = ((_b2 = poiItem.poi) == null ? void 0 : _b2.poiType) === "food";
+            const marker = {
+              id: markerId,
+              latitude: lat,
+              longitude: lng,
+              title: markerTitle,
+              width: 40,
+              height: 40,
+              callout: {
+                content: markerTitle,
+                color: "#333",
+                fontSize: 14,
+                borderRadius: 4,
+                bgColor: "#fff",
+                padding: 8,
+                display: "BYCLICK",
+                textAlign: "center"
+              }
+            };
+            const icon = isFood ? foodIcon : scenicIcon;
+            if (icon)
+              marker.iconPath = icon;
+            markers.push(marker);
+            dayCoordinates.push({
+              latitude: lat,
+              longitude: lng
+            });
+            if (isScenic) {
+              poiOrder++;
+            }
+          }
+        });
+        if (dayCoordinates.length > 1) {
+          polylines.push({
+            points: dayCoordinates,
+            color: "#3BA272",
+            width: 4,
+            arrowLine: true,
+            borderColor: "#2d8f5f",
+            borderWidth: 1
+          });
         }
+        if (dayCoordinates.length > 0) {
+          let sumLat = 0;
+          let sumLng = 0;
+          dayCoordinates.forEach((coord) => {
+            sumLat += coord.latitude;
+            sumLng += coord.longitude;
+          });
+          mapCenter.value = {
+            latitude: sumLat / dayCoordinates.length,
+            longitude: sumLng / dayCoordinates.length
+          };
+        }
+        if (gen === mapUpdateGen) {
+          mapMarkers.value = markers;
+          mapPolyline.value = polylines;
+        }
+      }).catch(() => {
       });
-      console.log(`\u5730\u56FE\u6807\u8BB0\u6570\u91CF: ${markers.length}, \u5750\u6807\u70B9\u6570\u91CF: ${dayCoordinates.length}`);
-      if (dayCoordinates.length > 1) {
-        polylines.push({
-          points: dayCoordinates,
-          color: "#3BA272",
-          width: 4,
-          arrowLine: true,
-          borderColor: "#2d8f5f",
-          borderWidth: 1
+    };
+    const updateFullMapData = () => {
+      var _a;
+      routeMapMode.value = "full";
+      const gen = ++mapUpdateGen;
+      mapMarkers.value = [];
+      mapPolyline.value = [];
+      const days = ((_a = routeData.value) == null ? void 0 : _a.days) || [];
+      if (!days.length)
+        return;
+      Promise.all([createPoiMarkerIcon("scenic"), createPoiMarkerIcon("food")]).then(([scenicIcon, foodIcon]) => {
+        if (gen !== mapUpdateGen)
+          return;
+        const markers = [];
+        const polylines = [];
+        const allCoords = [];
+        days.forEach((dayItem, dayIdx) => {
+          var _a2;
+          const sortedPois = [...(dayItem == null ? void 0 : dayItem.pois) || []].sort((a, b) => {
+            var _a3, _b;
+            const sortA = ((_a3 = a.poi) == null ? void 0 : _a3.sort) || 0;
+            const sortB = ((_b = b.poi) == null ? void 0 : _b.sort) || 0;
+            return sortA - sortB;
+          });
+          const dayNo = Number(((_a2 = dayItem == null ? void 0 : dayItem.day) == null ? void 0 : _a2.dayNo) || dayIdx + 1);
+          const dayCoords = [];
+          let scenicSeq = 1;
+          sortedPois.forEach((poiItem, poiIdx) => {
+            var _a3;
+            const detail = poiItem == null ? void 0 : poiItem.detail;
+            const coord = extractPoiCoord(detail);
+            if (!coord)
+              return;
+            const isFood = ((_a3 = poiItem.poi) == null ? void 0 : _a3.poiType) === "food";
+            const markerTitle = `${isFood ? "\u98DF" : "\u666F"} Day${dayNo}-${isFood ? poiIdx + 1 : scenicSeq} ${getPoiName(poiItem)}`;
+            if (!isFood)
+              scenicSeq++;
+            const marker = {
+              id: dayNo * 1e4 + poiIdx + 1,
+              latitude: coord.latitude,
+              longitude: coord.longitude,
+              title: markerTitle,
+              width: 34,
+              height: 34,
+              callout: {
+                content: markerTitle,
+                color: "#2d2d2d",
+                fontSize: 12,
+                borderRadius: 6,
+                bgColor: "#ffffff",
+                padding: 6,
+                display: "BYCLICK",
+                textAlign: "center"
+              }
+            };
+            const icon = isFood ? foodIcon : scenicIcon;
+            if (icon)
+              marker.iconPath = icon;
+            markers.push(marker);
+            dayCoords.push(coord);
+            allCoords.push(coord);
+          });
+          if (dayCoords.length > 1) {
+            polylines.push({
+              points: dayCoords,
+              color: getDayLineColor(dayNo),
+              width: 5,
+              arrowLine: true,
+              dottedLine: false
+            });
+          }
         });
-      }
-      if (dayCoordinates.length > 0) {
-        let sumLat = 0;
-        let sumLng = 0;
-        dayCoordinates.forEach((coord) => {
-          sumLat += coord.latitude;
-          sumLng += coord.longitude;
-        });
-        mapCenter.value = {
-          latitude: sumLat / dayCoordinates.length,
-          longitude: sumLng / dayCoordinates.length
-        };
-      }
-      mapMarkers.value = markers;
-      mapPolyline.value = polylines;
+        if (allCoords.length) {
+          let sumLat = 0;
+          let sumLng = 0;
+          allCoords.forEach((p) => {
+            sumLat += p.latitude;
+            sumLng += p.longitude;
+          });
+          mapCenter.value = {
+            latitude: sumLat / allCoords.length,
+            longitude: sumLng / allCoords.length
+          };
+        }
+        if (gen === mapUpdateGen) {
+          mapMarkers.value = markers;
+          mapPolyline.value = polylines;
+        }
+      }).catch(() => {
+      });
     };
     const formatDayContent = (dayData) => {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t;
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q;
       if (!dayData || !dayData.pois || dayData.pois.length === 0)
         return [];
+      const dayIntro = parseDayIntro(dayData);
+      const poiNames = (dayData.pois || []).map((p) => {
+        var _a2;
+        return safeText((_a2 = p == null ? void 0 : p.detail) == null ? void 0 : _a2.name).trim();
+      }).filter((name) => !!name);
       const sortedPois = [...dayData.pois].sort((a, b) => {
         var _a2, _b2;
         const sortA = ((_a2 = a.poi) == null ? void 0 : _a2.sort) || 0;
         const sortB = ((_b2 = b.poi) == null ? void 0 : _b2.sort) || 0;
         return sortA - sortB;
       });
-      const dayNo = ((_a = dayData.day) == null ? void 0 : _a.dayNo) || selectedDayIndex.value + 1;
-      console.log(`
-========== formatDayContent - Day ${dayNo} ==========`);
-      console.log("\u6392\u5E8F\u540E\u7684POI\u5217\u8868:");
-      sortedPois.forEach((poi, index) => {
-        var _a2, _b2, _c2, _d2;
-        const poiType = ((_a2 = poi.poi) == null ? void 0 : _a2.poiType) || "unknown";
-        const sort = ((_b2 = poi.poi) == null ? void 0 : _b2.sort) || 0;
-        const name = ((_c2 = poi.detail) == null ? void 0 : _c2.name) || "\u672A\u77E5";
-        const timeSlot = ((_d2 = poi.poi) == null ? void 0 : _d2.timeSlot) || "";
-        console.log(`  [${index}] sort=${sort}, type=${poiType}, name=${name}, timeSlot=${timeSlot}`);
-      });
       const scenicPois = sortedPois.filter((p) => {
         var _a2;
         return ((_a2 = p.poi) == null ? void 0 : _a2.poiType) === "scenic";
       });
-      const foodPois = sortedPois.filter((p) => {
+      sortedPois.filter((p) => {
         var _a2;
         return ((_a2 = p.poi) == null ? void 0 : _a2.poiType) === "food";
       });
-      console.log(`\u666F\u70B9\u6570\u91CF: ${scenicPois.length}, \u7F8E\u98DF\u6570\u91CF: ${foodPois.length}`);
       const firstScenic = scenicPois[0];
-      const isFullDay = ((_b = firstScenic == null ? void 0 : firstScenic.detail) == null ? void 0 : _b.suggestedVisitTime) && (firstScenic.detail.suggestedVisitTime.includes("\u5168\u5929") || firstScenic.detail.suggestedVisitTime.includes("\u4E00\u5929"));
-      if (firstScenic) {
-        console.log(`\u7B2C\u4E00\u4E2A\u666F\u70B9: ${(_c = firstScenic.detail) == null ? void 0 : _c.name}, \u6E38\u73A9\u65F6\u95F4: ${(_d = firstScenic.detail) == null ? void 0 : _d.suggestedVisitTime}, \u662F\u5426\u5168\u5929: ${isFullDay}`);
-      }
+      const isFullDay = ((_a = firstScenic == null ? void 0 : firstScenic.detail) == null ? void 0 : _a.suggestedVisitTime) && (firstScenic.detail.suggestedVisitTime.includes("\u5168\u5929") || firstScenic.detail.suggestedVisitTime.includes("\u4E00\u5929"));
       if (isFullDay && scenicPois.length === 1) {
         const morningGroup2 = {
           timeLabel: "\u4E0A\u5348",
+          description: dayIntro.morning,
           items: []
         };
         const breakfastPoi = sortedPois.find((p) => {
@@ -346,7 +592,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             let routeInfo = null;
             if (firstScenic.route) {
               routeInfo = firstScenic.route;
-            } else if ((_e = firstScenic.poi) == null ? void 0 : _e.note) {
+            } else if ((_b = firstScenic.poi) == null ? void 0 : _b.note) {
               try {
                 const noteJson = JSON.parse(firstScenic.poi.note);
                 if (noteJson.from && noteJson.to) {
@@ -373,7 +619,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             morningGroup2.items.push({ route: routeInfo });
           }
           let suggestedVisitTime = scenic.suggestedVisitTime;
-          if (!suggestedVisitTime && ((_f = firstScenic.poi) == null ? void 0 : _f.stayTime)) {
+          if (!suggestedVisitTime && ((_c = firstScenic.poi) == null ? void 0 : _c.stayTime)) {
             const stayMinutes = firstScenic.poi.stayTime;
             if (stayMinutes >= 60) {
               const hours = Math.floor(stayMinutes / 60);
@@ -383,7 +629,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               suggestedVisitTime = `\u7EA6${stayMinutes}\u5206\u949F`;
             }
           }
-          let notes = ((_g = firstScenic.poi) == null ? void 0 : _g.note) || scenic.notes || scenic.ticketInfo;
+          let notes = ((_d = firstScenic.poi) == null ? void 0 : _d.note) || scenic.notes || scenic.ticketInfo;
           if (notes && typeof notes === "string" && notes.startsWith("{") && notes.includes("from")) {
             notes = scenic.notes || scenic.ticketInfo;
           }
@@ -395,7 +641,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               notes,
               address: scenic.address,
               stationLabel: getStationLabel(1),
-              sort: (_h = firstScenic.poi) == null ? void 0 : _h.sort
+              sort: (_e = firstScenic.poi) == null ? void 0 : _e.sort
             }
           });
         }
@@ -404,18 +650,22 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       const groups = [];
       const morningGroup = {
         timeLabel: "\u4E0A\u5348",
+        description: isNarrativeRelevant(dayIntro.morning, poiNames) ? dayIntro.morning : "",
         items: []
       };
       const noonGroup = {
         timeLabel: "\u4E2D\u5348",
+        description: isNarrativeRelevant(dayIntro.noon, poiNames) ? dayIntro.noon : "",
         items: []
       };
       const afternoonGroup = {
         timeLabel: "\u4E0B\u5348",
+        description: isNarrativeRelevant(dayIntro.afternoon, poiNames) ? dayIntro.afternoon : "",
         items: []
       };
       const eveningGroup = {
         timeLabel: "\u665A\u4E0A",
+        description: isNarrativeRelevant(dayIntro.evening, poiNames) ? dayIntro.evening : "",
         items: []
       };
       let lastLocation = "";
@@ -431,9 +681,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       const totalScenics = scenicPois.length;
       const lunchInsertAfterScenic = totalScenics > 0 ? Math.max(1, Math.min(totalScenics, Math.ceil(totalScenics * 0.4))) : 0;
       for (const poi of sortedPois) {
-        const poiType = (_i = poi.poi) == null ? void 0 : _i.poiType;
-        const timeSlot = ((_j = poi.poi) == null ? void 0 : _j.timeSlot) || "";
-        if (poiType === "food" && timeSlot === "breakfast" && !consumedFoodIds.includes((_k = poi.detail) == null ? void 0 : _k.id)) {
+        const poiType = (_f = poi.poi) == null ? void 0 : _f.poiType;
+        const timeSlot = ((_g = poi.poi) == null ? void 0 : _g.timeSlot) || "";
+        if (poiType === "food" && timeSlot === "breakfast" && !consumedFoodIds.includes((_h = poi.detail) == null ? void 0 : _h.id)) {
           if (poi.detail) {
             morningGroup.breakfast = {
               name: poi.detail.name || "\u65E9\u9910",
@@ -452,7 +702,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               let routeInfo = null;
               if (lunchPoi.route) {
                 routeInfo = lunchPoi.route;
-              } else if ((_l = lunchPoi.poi) == null ? void 0 : _l.note) {
+              } else if ((_i = lunchPoi.poi) == null ? void 0 : _i.note) {
                 try {
                   const noteJson = JSON.parse(lunchPoi.poi.note);
                   if (noteJson.from && noteJson.to) {
@@ -506,7 +756,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             let routeInfo = null;
             if (poi.route) {
               routeInfo = poi.route;
-            } else if ((_m = poi.poi) == null ? void 0 : _m.note) {
+            } else if ((_j = poi.poi) == null ? void 0 : _j.note) {
               try {
                 const noteJson = JSON.parse(poi.poi.note);
                 if (noteJson.from && noteJson.to) {
@@ -533,7 +783,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             targetGroup.items.push({ route: routeInfo });
           }
           let suggestedVisitTime = scenic.suggestedVisitTime;
-          if (!suggestedVisitTime && ((_n = poi.poi) == null ? void 0 : _n.stayTime)) {
+          if (!suggestedVisitTime && ((_k = poi.poi) == null ? void 0 : _k.stayTime)) {
             const stayMinutes = poi.poi.stayTime;
             if (stayMinutes >= 60) {
               const hours = Math.floor(stayMinutes / 60);
@@ -543,7 +793,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               suggestedVisitTime = `\u7EA6${stayMinutes}\u5206\u949F`;
             }
           }
-          let notes = ((_o = poi.poi) == null ? void 0 : _o.note) || scenic.notes || scenic.ticketInfo;
+          let notes = ((_l = poi.poi) == null ? void 0 : _l.note) || scenic.notes || scenic.ticketInfo;
           if (notes && typeof notes === "string" && notes.startsWith("{") && notes.includes("from")) {
             notes = scenic.notes || scenic.ticketInfo;
           }
@@ -555,17 +805,17 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               notes,
               address: scenic.address,
               stationLabel: getStationLabel(stationIndex++),
-              sort: (_p = poi.poi) == null ? void 0 : _p.sort
+              sort: (_m = poi.poi) == null ? void 0 : _m.sort
             }
           });
           lastLocation = scenic.name;
-        } else if (poiType === "food" && timeSlot === "lunch" && !consumedFoodIds.includes((_q = poi.detail) == null ? void 0 : _q.id)) {
+        } else if (poiType === "food" && timeSlot === "lunch" && !consumedFoodIds.includes((_n = poi.detail) == null ? void 0 : _n.id)) {
           if (poi.detail && !lunchInserted) {
             if (lastLocation) {
               let routeInfo = null;
               if (poi.route) {
                 routeInfo = poi.route;
-              } else if ((_r = poi.poi) == null ? void 0 : _r.note) {
+              } else if ((_o = poi.poi) == null ? void 0 : _o.note) {
                 try {
                   const noteJson = JSON.parse(poi.poi.note);
                   if (noteJson.from && noteJson.to) {
@@ -601,13 +851,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             consumedFoodIds.push(poi.detail.id);
             lunchInserted = true;
           }
-        } else if (poiType === "food" && timeSlot === "dinner" && !consumedFoodIds.includes((_s = poi.detail) == null ? void 0 : _s.id)) {
+        } else if (poiType === "food" && timeSlot === "dinner" && !consumedFoodIds.includes((_p = poi.detail) == null ? void 0 : _p.id)) {
           if (poi.detail) {
             if (lastLocation) {
               let routeInfo = null;
               if (poi.route) {
                 routeInfo = poi.route;
-              } else if ((_t = poi.poi) == null ? void 0 : _t.note) {
+              } else if ((_q = poi.poi) == null ? void 0 : _q.note) {
                 try {
                   const noteJson = JSON.parse(poi.poi.note);
                   if (noteJson.from && noteJson.to) {
@@ -656,18 +906,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       if (eveningGroup.items.length > 0 || eveningGroup.dinner) {
         groups.push(eveningGroup);
       }
-      console.log(`\u683C\u5F0F\u5316\u5B8C\u6210\uFF0C\u751F\u6210 ${groups.length} \u4E2A\u65F6\u95F4\u6BB5\u7EC4`);
-      groups.forEach((group, index) => {
-        console.log(`  \u65F6\u95F4\u6BB5\u7EC4[${index}]: ${group.timeLabel}`);
-        if (group.breakfast)
-          console.log(`    \u65E9\u9910: ${group.breakfast.name}`);
-        if (group.lunch)
-          console.log(`    \u5348\u9910: ${group.lunch.name}`);
-        if (group.dinner)
-          console.log(`    \u665A\u9910: ${group.dinner.name}`);
-        console.log(`    \u666F\u70B9\u6570\u91CF: ${group.items.filter((item) => item.scenic).length}`);
-      });
-      console.log("========================================\n");
       return groups;
     };
     const getStationLabel = (index) => {
@@ -704,7 +942,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const viewFullMap = () => {
       activeTab.value = "map";
-      updateMapData();
+      updateFullMapData();
     };
     const startNavigation = () => {
       var _a;
@@ -759,6 +997,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     common_vendor.onLoad((options) => {
       if (options.id) {
         routeId.value = Number(options.id);
+        api_route.routeApi.recordView(routeId.value).then(() => {
+          var _a;
+          const r = (_a = routeData.value) == null ? void 0 : _a.route;
+          if (r)
+            r.viewCount = Number(r.viewCount || 0) + 1;
+        }).catch(() => {
+        });
         loadRouteDetail();
       }
     });
@@ -768,7 +1013,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     });
     common_vendor.watch(selectedDayIndex, () => {
-      if (routeData.value) {
+      if (routeData.value && activeTab.value !== "map") {
+        updateMapData();
+      }
+    });
+    common_vendor.watch(activeTab, (tab) => {
+      if (!routeData.value)
+        return;
+      if (tab === "map") {
+        updateFullMapData();
+      } else {
         updateMapData();
       }
     });
@@ -825,55 +1079,88 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }, common_vendor.unref(currentDayData) ? common_vendor.e({
         A: common_vendor.t(((_d = common_vendor.unref(currentDayData).day) == null ? void 0 : _d.dayNo) || selectedDayIndex.value + 1),
         B: common_vendor.t(getDayDate(selectedDayIndex.value, (_e = common_vendor.unref(currentDayData).day) == null ? void 0 : _e.dayNo)),
-        C: common_vendor.f(formatDayContent(common_vendor.unref(currentDayData)), (timeGroup, timeIndex, i0) => {
+        C: common_vendor.unref(useAiTimelineOnly)
+      }, common_vendor.unref(useAiTimelineOnly) ? {
+        D: common_vendor.f(common_vendor.unref(aiTimelineBlocks), (block, blockIndex, i0) => {
+          return common_vendor.e({
+            a: common_vendor.t(block.label),
+            b: block.fields.rawFallback
+          }, block.fields.rawFallback ? {
+            c: common_vendor.t(block.fields.rawFallback)
+          } : common_vendor.e({
+            d: block.fields.title
+          }, block.fields.title ? {
+            e: common_vendor.t(block.fields.title)
+          } : {}, {
+            f: block.fields.timeSchedule
+          }, block.fields.timeSchedule ? {
+            g: common_vendor.t(block.fields.timeSchedule)
+          } : {}, {
+            h: block.fields.detail
+          }, block.fields.detail ? {
+            i: common_vendor.t(block.fields.detail)
+          } : {}, {
+            j: block.fields.transport
+          }, block.fields.transport ? {
+            k: common_vendor.t(block.fields.transport)
+          } : {}), {
+            l: `ai-${blockIndex}`
+          });
+        })
+      } : {
+        E: common_vendor.f(formatDayContent(common_vendor.unref(currentDayData)), (timeGroup, timeIndex, i0) => {
           return common_vendor.e({
             a: common_vendor.t(timeGroup.timeLabel),
-            b: timeGroup.breakfast
+            b: timeGroup.description
+          }, timeGroup.description ? {
+            c: common_vendor.t(timeGroup.description)
+          } : {}, {
+            d: timeGroup.breakfast
           }, timeGroup.breakfast ? common_vendor.e({
-            c: common_vendor.t(timeGroup.breakfast.name),
-            d: timeGroup.breakfast.address
+            e: common_vendor.t(timeGroup.breakfast.name),
+            f: timeGroup.breakfast.address
           }, timeGroup.breakfast.address ? {
-            e: common_vendor.t(timeGroup.breakfast.address)
+            g: common_vendor.t(timeGroup.breakfast.address)
           } : {}, {
-            f: timeGroup.breakfast.specialty
+            h: timeGroup.breakfast.specialty
           }, timeGroup.breakfast.specialty ? {
-            g: common_vendor.t(timeGroup.breakfast.specialty)
+            i: common_vendor.t(timeGroup.breakfast.specialty)
           } : {}, {
-            h: timeGroup.breakfast.price
+            j: timeGroup.breakfast.price
           }, timeGroup.breakfast.price ? {
-            i: common_vendor.t(timeGroup.breakfast.price)
+            k: common_vendor.t(timeGroup.breakfast.price)
           } : {}) : {}, {
-            j: timeGroup.lunch
+            l: timeGroup.lunch
           }, timeGroup.lunch ? common_vendor.e({
-            k: common_vendor.t(timeGroup.lunch.name),
-            l: timeGroup.lunch.address
+            m: common_vendor.t(timeGroup.lunch.name),
+            n: timeGroup.lunch.address
           }, timeGroup.lunch.address ? {
-            m: common_vendor.t(timeGroup.lunch.address)
+            o: common_vendor.t(timeGroup.lunch.address)
           } : {}, {
-            n: timeGroup.lunch.specialty
+            p: timeGroup.lunch.specialty
           }, timeGroup.lunch.specialty ? {
-            o: common_vendor.t(timeGroup.lunch.specialty)
+            q: common_vendor.t(timeGroup.lunch.specialty)
           } : {}, {
-            p: timeGroup.lunch.price
+            r: timeGroup.lunch.price
           }, timeGroup.lunch.price ? {
-            q: common_vendor.t(timeGroup.lunch.price)
+            s: common_vendor.t(timeGroup.lunch.price)
           } : {}) : {}, {
-            r: timeGroup.dinner
+            t: timeGroup.dinner
           }, timeGroup.dinner ? common_vendor.e({
-            s: common_vendor.t(timeGroup.dinner.name),
-            t: timeGroup.dinner.address
+            v: common_vendor.t(timeGroup.dinner.name),
+            w: timeGroup.dinner.address
           }, timeGroup.dinner.address ? {
-            v: common_vendor.t(timeGroup.dinner.address)
+            x: common_vendor.t(timeGroup.dinner.address)
           } : {}, {
-            w: timeGroup.dinner.specialty
+            y: timeGroup.dinner.specialty
           }, timeGroup.dinner.specialty ? {
-            x: common_vendor.t(timeGroup.dinner.specialty)
+            z: common_vendor.t(timeGroup.dinner.specialty)
           } : {}, {
-            y: timeGroup.dinner.price
+            A: timeGroup.dinner.price
           }, timeGroup.dinner.price ? {
-            z: common_vendor.t(timeGroup.dinner.price)
+            B: common_vendor.t(timeGroup.dinner.price)
           } : {}) : {}, {
-            A: common_vendor.f(timeGroup.items, (item, itemIndex, i1) => {
+            C: common_vendor.f(timeGroup.items, (item, itemIndex, i1) => {
               return common_vendor.e({
                 a: item.route
               }, item.route ? common_vendor.e({
@@ -914,75 +1201,79 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
                 v: itemIndex
               });
             }),
-            B: timeIndex
+            D: timeIndex
           });
-        }),
-        D: common_vendor.unref(currentDayScenics).length > 0
-      }, common_vendor.unref(currentDayScenics).length > 0 ? {
-        E: common_vendor.f(common_vendor.unref(currentDayScenics), (scenic, k0, i0) => {
+        })
+      }, {
+        F: !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayScenics).length > 0
+      }, !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayScenics).length > 0 ? {
+        G: common_vendor.f(common_vendor.unref(currentDayScenics), (scenic, k0, i0) => {
           return common_vendor.e({
-            a: scenic.imageUrl
-          }, scenic.imageUrl ? {
-            b: scenic.imageUrl
-          } : {}, {
-            c: common_vendor.t(scenic.name),
-            d: scenic.address
+            a: scenic.imageUrl ? common_vendor.unref(utils_image.getImageUrl)(scenic.imageUrl) : common_vendor.unref(utils_config.defaultScenicImage),
+            b: common_vendor.t(scenic.name),
+            c: scenic.address
           }, scenic.address ? {
-            e: common_vendor.t(scenic.address)
+            d: common_vendor.t(scenic.address)
           } : {}, {
-            f: scenic.price && scenic.price > 0
+            e: scenic.price && scenic.price > 0
           }, scenic.price && scenic.price > 0 ? {
-            g: common_vendor.t(scenic.price)
+            f: common_vendor.t(scenic.price)
           } : {}, {
-            h: scenic.score
+            g: scenic.score
           }, scenic.score ? {
-            i: common_vendor.t(scenic.score)
+            h: common_vendor.t(scenic.score)
           } : {}, {
-            j: scenic.id,
-            k: common_vendor.o(($event) => onViewScenic(scenic))
+            i: scenic.id,
+            j: common_vendor.o(($event) => onViewScenic(scenic))
           });
         })
       } : {}, {
-        F: common_vendor.unref(currentDayFoods).length > 0
-      }, common_vendor.unref(currentDayFoods).length > 0 ? {
-        G: common_vendor.f(common_vendor.unref(currentDayFoods), (food, k0, i0) => {
+        H: !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayFoods).length > 0
+      }, !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayFoods).length > 0 ? {
+        I: common_vendor.f(common_vendor.unref(currentDayFoods), (food, k0, i0) => {
           return common_vendor.e({
-            a: food.imageUrl
-          }, food.imageUrl ? {
-            b: food.imageUrl
-          } : {}, {
-            c: common_vendor.t(food.name),
-            d: food.address
+            a: food.imageUrl ? common_vendor.unref(utils_image.getImageUrl)(food.imageUrl) : common_vendor.unref(utils_config.defaultFoodImage),
+            b: common_vendor.t(food.name),
+            c: food.address
           }, food.address ? {
-            e: common_vendor.t(food.address)
+            d: common_vendor.t(food.address)
           } : {}, {
-            f: food.avgPrice
+            e: food.avgPrice
           }, food.avgPrice ? {
-            g: common_vendor.t(food.avgPrice)
+            f: common_vendor.t(food.avgPrice)
           } : {}, {
-            h: food.score
+            g: food.score
           }, food.score ? {
-            i: common_vendor.t(food.score)
+            h: common_vendor.t(food.score)
           } : {}, {
-            j: food.id,
-            k: common_vendor.o(($event) => onViewFood(food))
+            i: food.id,
+            j: common_vendor.o(($event) => onViewFood(food))
           });
         })
       } : {}) : {}) : {}, {
-        H: activeTab.value === "map"
-      }, activeTab.value === "map" ? {
-        I: mapCenter.value.latitude,
-        J: mapCenter.value.longitude,
-        K: mapMarkers.value,
-        L: mapPolyline.value
-      } : {}) : {}, {
-        M: loading.value
+        J: activeTab.value === "map"
+      }, activeTab.value === "map" ? common_vendor.e({
+        K: mapCenter.value.latitude,
+        L: mapCenter.value.longitude,
+        M: mapMarkers.value,
+        N: mapPolyline.value,
+        O: common_vendor.unref(fullMapLegends).length > 0
+      }, common_vendor.unref(fullMapLegends).length > 0 ? {
+        P: common_vendor.f(common_vendor.unref(fullMapLegends), (item, k0, i0) => {
+          return {
+            a: item.color,
+            b: common_vendor.t(item.dayNo),
+            c: item.dayNo
+          };
+        })
+      } : {}) : {}) : {}, {
+        Q: loading.value
       }, loading.value ? {} : {}, {
-        N: common_vendor.t(isFavorite.value ? "\u2665" : "\u2661"),
-        O: isFavorite.value ? 1 : "",
-        P: common_vendor.o(toggleFavorite),
-        Q: common_vendor.o(startNavigation),
-        R: common_vendor.o(enableItinerary)
+        R: common_vendor.t(isFavorite.value ? "\u2665" : "\u2661"),
+        S: isFavorite.value ? 1 : "",
+        T: common_vendor.o(toggleFavorite),
+        U: common_vendor.o(startNavigation),
+        V: common_vendor.o(enableItinerary)
       });
     };
   }

@@ -37,7 +37,8 @@
     {
       "path": "pages/recommend/interest",
       "style": {
-        "navigationBarTitleText": "兴趣推荐",
+        "navigationBarTitleText": "门票预订",
+        "navigationStyle": "custom",
         "navigationBarBackgroundColor": "#3BA272",
         "navigationBarTextStyle": "white"
       }
@@ -103,7 +104,8 @@
       "path": "pages/profile/feedback",
       "style": {
         "navigationBarTitleText": "意见反馈",
-        "navigationBarBackgroundColor": "#3BA272",
+        "navigationStyle": "custom",
+        "navigationBarBackgroundColor": "#98CFC0",
         "navigationBarTextStyle": "white"
       }
     },
@@ -119,7 +121,8 @@
       "path": "pages/profile/preference",
       "style": {
         "navigationBarTitleText": "AI偏好设置",
-        "navigationBarBackgroundColor": "#3BA272",
+        "navigationStyle": "custom",
+        "navigationBarBackgroundColor": "#98CFC0",
         "navigationBarTextStyle": "white"
       }
     },
@@ -185,7 +188,9 @@
         "navigationBarTitleText": "我的足迹",
         "navigationStyle": "custom",
         "navigationBarBackgroundColor": "#FFFFFF",
-        "navigationBarTextStyle": "black"
+        "navigationBarTextStyle": "black",
+        "enablePullDownRefresh": true,
+        "backgroundTextStyle": "dark"
       }
     },
     {
@@ -205,17 +210,17 @@
       }
     },
     {
-      "path": "pages/search/search",
+      "path": "pages/activity/detail",
       "style": {
-        "navigationBarTitleText": "搜索",
+        "navigationBarTitleText": "活动详情",
         "navigationBarBackgroundColor": "#3BA272",
         "navigationBarTextStyle": "white"
       }
     },
     {
-      "path": "pages/activity/detail",
+      "path": "pages/city/select",
       "style": {
-        "navigationBarTitleText": "活动详情",
+        "navigationBarTitleText": "选择城市",
         "navigationBarBackgroundColor": "#3BA272",
         "navigationBarTextStyle": "white"
       }

@@ -5,6 +5,9 @@
   display: flex;
   flex-direction: column;
 }
+.title-safe-space.data-v-44e281b9 {
+  height: 12rpx;
+}
 
 /* 顶部图片 */
 .header-image.data-v-44e281b9 {
@@ -27,6 +30,8 @@
 }
 .scroll.data-v-44e281b9 {
   flex: 1;
+  box-sizing: border-box;
+  padding-top: 12rpx;
 }
 .content.data-v-44e281b9 {
   padding: 0 24rpx 240rpx;
@@ -37,7 +42,7 @@
   background-color: #ffffff;
   border-radius: 24rpx;
   padding: 32rpx;
-  margin-top: 24rpx;
+  margin-top: 32rpx;
   position: relative;
   z-index: 10;
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
@@ -296,6 +301,80 @@
   line-height: 1.4;
   margin-top: 4rpx;
 }
+
+/* 打卡评价样式（列表 + 自己打卡按钮） */
+.checkin-list.data-v-44e281b9 {
+  margin-top: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+.checkin-item.data-v-44e281b9 {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.checkin-item.data-v-44e281b9:last-child {
+  border-bottom-width: 0;
+}
+.checkin-user-row.data-v-44e281b9 {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.checkin-avatar.data-v-44e281b9 {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background-color: #e5e5e5;
+  flex-shrink: 0;
+}
+.checkin-user-info.data-v-44e281b9 {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.checkin-nickname.data-v-44e281b9 {
+  font-size: 26rpx;
+  color: #333333;
+  font-weight: 500;
+}
+.checkin-time.data-v-44e281b9 {
+  font-size: 22rpx;
+  color: #999999;
+}
+.checkin-content-text.data-v-44e281b9 {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #555555;
+  line-height: 1.6;
+}
+.checkin-photo-row.data-v-44e281b9 {
+  margin-top: 10rpx;
+}
+.checkin-photo.data-v-44e281b9 {
+  width: 100%;
+  height: 260rpx;
+  border-radius: 16rpx;
+  background-color: #f5f5f5;
+}
+.checkin-empty.data-v-44e281b9 {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #999999;
+}
+.checkin-self-row.data-v-44e281b9 {
+  margin-top: 16rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+.checkin-self-btn.data-v-44e281b9 {
+  padding: 16rpx 32rpx;
+  background-color: #3ba272;
+  color: #ffffff;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  border: none;
+}
 .loading.data-v-44e281b9 {
   padding: 80rpx 32rpx;
   text-align: center;
@@ -369,6 +448,18 @@
   color: #ffffff;
   box-shadow: 0 8rpx 24rpx rgba(64, 158, 255, 0.3);
 }
+.ticket-btn.data-v-44e281b9 {
+  background: linear-gradient(135deg, #50b999, #72cfb2);
+  color: #ffffff;
+  box-shadow: 0 8rpx 24rpx rgba(80, 185, 153, 0.3);
+}
+.ticket-btn-disabled.data-v-44e281b9 {
+  background: #dfe9e5;
+  box-shadow: none;
+}
+.ticket-btn-disabled .btn-text.data-v-44e281b9 {
+  color: #6f827c;
+}
 .route-btn.added.data-v-44e281b9 {
   background: linear-gradient(135deg, #3ba272, #6fd3a5);
   box-shadow: 0 8rpx 24rpx rgba(59, 162, 114, 0.3);
@@ -379,4 +470,213 @@
 }
 .btn-text.data-v-44e281b9 {
   font-size: 28rpx;
+  color: #ffffff;
+  display: inline-block;
+}
+
+/* 打卡弹窗（景点详情内直接打卡） */
+.modal-overlay.data-v-44e281b9 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content.data-v-44e281b9 {
+  width: 90%;
+  max-height: 80vh;
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-header.data-v-44e281b9 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 32rpx;
+  border-bottom: 1rpx solid #eeeeee;
+}
+.modal-title.data-v-44e281b9 {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+}
+.modal-close.data-v-44e281b9 {
+  font-size: 44rpx;
+  color: #999999;
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-body.data-v-44e281b9 {
+  flex: 1;
+  padding: 32rpx;
+  overflow-y: auto;
+}
+.upload-section.data-v-44e281b9 {
+  margin-bottom: 28rpx;
+}
+.section-label.data-v-44e281b9 {
+  font-size: 28rpx;
+  color: #333333;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 16rpx;
+}
+.location-warning.data-v-44e281b9 {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #f59e0b;
+}
+.upload-area.data-v-44e281b9 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.upload-item.data-v-44e281b9 {
+  position: relative;
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+.upload-image.data-v-44e281b9 {
+  width: 100%;
+  height: 100%;
+}
+.upload-delete.data-v-44e281b9 {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 999rpx;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+}
+.upload-add.data-v-44e281b9 {
+  width: 160rpx;
+  height: 160rpx;
+  border: 2rpx dashed #cccccc;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f6f7;
+}
+.upload-text.data-v-44e281b9 {
+  font-size: 24rpx;
+  color: #3ba272;
+  font-weight: 600;
+}
+.comment-section.data-v-44e281b9 {
+  position: relative;
+}
+.comment-input.data-v-44e281b9 {
+  width: 100%;
+  min-height: 200rpx;
+  padding: 20rpx;
+  background-color: #f5f6f7;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+  color: #333333;
+  box-sizing: border-box;
+}
+.char-count.data-v-44e281b9 {
+  position: absolute;
+  bottom: 12rpx;
+  right: 20rpx;
+  font-size: 22rpx;
+  color: #999999;
+}
+.modal-footer.data-v-44e281b9 {
+  padding: 24rpx 32rpx 32rpx;
+  border-top: 1rpx solid #eeeeee;
+}
+.submit-btn.data-v-44e281b9 {
+  width: 100%;
+  padding: 24rpx;
+  background-color: #2fa66a;
+  color: #ffffff;
+  border-radius: 48rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  border: none;
+}
+.ticket-block.data-v-44e281b9 {
+  margin-bottom: 22rpx;
+}
+.ticket-option.data-v-44e281b9 {
+  border: 2rpx solid #e7ecea;
+  border-radius: 16rpx;
+  padding: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10rpx;
+}
+.ticket-option.active.data-v-44e281b9 {
+  border-color: #3ba272;
+  background: #eef9f4;
+}
+.ticket-option-name.data-v-44e281b9 {
+  font-size: 26rpx;
+  color: #33413d;
+}
+.ticket-option-price.data-v-44e281b9 {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+}
+.ticket-origin.data-v-44e281b9 {
+  font-size: 22rpx;
+  color: #9aa8a3;
+  text-decoration: line-through;
+}
+.ticket-discount.data-v-44e281b9 {
+  font-size: 28rpx;
+  color: #e05050;
+  font-weight: 700;
+}
+.ticket-input.data-v-44e281b9 {
+  margin-top: 12rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 12rpx;
+  background: #f5f7f6;
+  padding: 0 20rpx;
+  font-size: 26rpx;
+  color: #495c56;
+}
+.ticket-counter.data-v-44e281b9 {
+  margin-top: 12rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.counter-num.data-v-44e281b9 {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #2f3c38;
+}
+.ticket-total.data-v-44e281b9 {
+  margin-top: 8rpx;
+  text-align: right;
+  font-size: 30rpx;
+  color: #e05050;
+  font-weight: 700;
 }

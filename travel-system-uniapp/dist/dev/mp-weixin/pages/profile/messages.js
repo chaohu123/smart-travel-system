@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var store_user = require("../../store/user.js");
 var api_user = require("../../api/user.js");
 var utils_storage = require("../../utils/storage.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/http.js");
 require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
@@ -20,9 +21,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const res = await api_user.userApi.getProfile(userId);
         if (res.statusCode === 200 && res.data.code === 200) {
           const userInfo = ((_a = res.data.data) == null ? void 0 : _a.userInfo) || res.data.data || {};
+          const rawAvatar = userInfo.avatar;
           const info = {
             nickname: userInfo.nickname || "\u672A\u77E5\u7528\u6237",
-            avatar: userInfo.avatar || defaultAvatar
+            avatar: rawAvatar ? utils_image.getImageUrl(rawAvatar) : defaultAvatar
           };
           userInfoCache.value[userId] = info;
           return info;
@@ -33,6 +35,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const fillUserInfo = async (messages) => {
       for (const message of messages) {
+        if (message.senderAvatar) {
+          message.senderAvatar = utils_image.getImageUrl(message.senderAvatar);
+        }
+        if (message.avatar) {
+          message.avatar = utils_image.getImageUrl(message.avatar);
+        }
         if (message.senderId && (!message.senderAvatar || !message.senderName)) {
           const userInfo = await getUserInfo(message.senderId);
           if (!message.senderAvatar)
@@ -277,16 +285,19 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         saveReadStatusCache();
         updateUnreadCount();
       }
+      const avatarUrl = chat.avatar ? utils_image.getImageUrl(chat.avatar) : defaultAvatar;
       common_vendor.index.navigateTo({
-        url: `/pages/profile/chat?userId=${chat.userId}&nickname=${encodeURIComponent(chat.nickname || "")}&avatar=${encodeURIComponent(chat.avatar || "")}`
+        url: `/pages/profile/chat?userId=${chat.userId}&nickname=${encodeURIComponent(
+          chat.nickname || ""
+        )}&avatar=${encodeURIComponent(avatarUrl)}`
       });
     };
     const getEmptyIcon = () => {
       if (activeTab.value === "like")
-        return "\u{1F44D}";
+        return "\u8D5E";
       if (activeTab.value === "comment")
-        return "\u{1F4AC}";
-      return "\u{1F48C}";
+        return "\u8BC4";
+      return "\u4FE1";
     };
     const getEmptyText = () => {
       if (activeTab.value === "like")

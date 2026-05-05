@@ -1,0 +1,1 @@
+"use strict";var t=require("../utils/http.js");const e={getList:e=>t.request({url:"/activity/list",method:"GET",data:e}),getDetail:e=>t.request({url:`/activity/${e}`,method:"GET"})};exports.activityApi=e;

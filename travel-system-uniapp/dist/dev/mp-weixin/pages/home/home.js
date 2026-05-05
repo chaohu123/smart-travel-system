@@ -2,10 +2,12 @@
 var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
 var utils_http = require("../../utils/http.js");
+var api_activity = require("../../api/activity.js");
 var store_user = require("../../store/user.js");
 var utils_router = require("../../utils/router.js");
+var utils_config = require("../../utils/config.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/storage.js");
-require("../../utils/config.js");
 if (!Math) {
   (GuideOverlay + LoginPrompt + common_vendor.unref(common_vendor.Search) + SkeletonCards + EmptyState)();
 }
@@ -23,7 +25,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const featureEntries = common_vendor.ref([
       { id: 1, title: "\u667A\u80FD\u89C4\u5212", desc: "\u6839\u636E\u4F60\u7684\u5174\u8DA3\u667A\u80FD\u751F\u6210\u884C\u7A0B", icon: "Brain", text: "\u667A", type: "planner" },
       { id: 2, title: "\u70ED\u95E8\u7EBF\u8DEF", desc: "\u770B\u770B\u5927\u5BB6\u90FD\u5728\u8D70\u7684\u7206\u6B3E\u8DEF\u7EBF", icon: "Fire", text: "\u7EBF", type: "hot-routes" },
-      { id: 3, title: "\u5174\u8DA3\u63A8\u8350", desc: "\u7F8E\u98DF / \u5386\u53F2 / \u4EB2\u5B50\u4E00\u952E\u9009\u62E9", icon: "Magic", text: "\u8DA3", type: "interest" }
+      { id: 3, title: "\u95E8\u7968\u9884\u8BA2", desc: "\u6309\u6240\u5728\u5730\u533A\u7B5B\u9009\u666F\u70B9\u5E76\u9884\u8BA2", icon: "Magic", text: "\u7968", type: "interest" }
     ]);
     const routeList = common_vendor.ref([]);
     const noteList = common_vendor.ref([]);
@@ -37,6 +39,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const showLoginPrompt = common_vendor.ref(false);
     const isInitialLoad = common_vendor.ref(true);
     const lastRefreshTime = common_vendor.ref(0);
+    const searchLoading = common_vendor.ref(false);
+    const searchScenicResults = common_vendor.ref([]);
+    const searchFoodResults = common_vendor.ref([]);
+    const searchNoteResults = common_vendor.ref([]);
+    const searchActivityResults = common_vendor.ref([]);
+    let searchTimer = null;
+    const isSearching = common_vendor.computed(() => searchKeyword.value.trim().length > 0);
+    const hasSearchResult = common_vendor.computed(() => {
+      return searchScenicResults.value.length > 0 || searchFoodResults.value.length > 0 || searchNoteResults.value.length > 0 || searchActivityResults.value.length > 0;
+    });
+    const defaultRouteImage = "https://ts2.tc.mm.bing.net/th/id/OIP-C.D0FxyIfldS08x95YBJdFQAHaFj?rs=1&pid=ImgDetMain&o=7&rm=3";
+    const defaultNoteImage = "/static/default-note.jpg";
     const provinceList = common_vendor.ref([
       { name: "\u5168\u90E8\u7701\u4EFD", value: "" },
       { name: "\u5317\u4EAC", value: "\u5317\u4EAC" },
@@ -99,14 +113,72 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       fetchHomeData();
     };
     const onSearchClick = () => {
-      utils_router.safeNavigateTo("/pages/search/search");
     };
     const onSearchConfirm = () => {
-      if (!searchKeyword.value) {
-        onSearchClick();
+      runGlobalSearch();
+    };
+    const onSearchInput = () => {
+      if (searchTimer)
+        clearTimeout(searchTimer);
+      if (!searchKeyword.value.trim()) {
+        clearSearchResults();
         return;
       }
-      utils_router.safeNavigateTo(`/pages/search/search?keyword=${encodeURIComponent(searchKeyword.value)}`);
+      searchTimer = setTimeout(() => {
+        runGlobalSearch();
+      }, 300);
+    };
+    const clearSearchResults = () => {
+      searchScenicResults.value = [];
+      searchFoodResults.value = [];
+      searchNoteResults.value = [];
+      searchActivityResults.value = [];
+    };
+    const extractRows = (raw) => {
+      if (Array.isArray(raw == null ? void 0 : raw.rows))
+        return raw.rows;
+      if (Array.isArray(raw == null ? void 0 : raw.list))
+        return raw.list;
+      if (Array.isArray(raw))
+        return raw;
+      return [];
+    };
+    const fuzzyMatch = (keyword, ...fields) => {
+      const normalizedKeyword = keyword.trim().toLowerCase();
+      const text = fields.filter((field) => field !== void 0 && field !== null).map((field) => String(field).toLowerCase()).join(" ");
+      return text.includes(normalizedKeyword);
+    };
+    const runGlobalSearch = async () => {
+      const keyword = searchKeyword.value.trim();
+      if (!keyword) {
+        clearSearchResults();
+        return;
+      }
+      searchLoading.value = true;
+      try {
+        const [scenicRes, foodRes, noteRes, activityRes] = await Promise.all([
+          api_content.scenicSpotApi.list({ pageNum: 1, pageSize: 200 }),
+          api_content.foodApi.list({ pageNum: 1, pageSize: 200 }),
+          api_content.travelNoteApi.list({ pageNum: 1, pageSize: 200 }),
+          api_activity.activityApi.getList({ pageNum: 1, pageSize: 200 })
+        ]);
+        const scenicRows = scenicRes.statusCode === 200 && scenicRes.data.code === 200 ? extractRows(scenicRes.data.data) : [];
+        const foodRows = foodRes.statusCode === 200 && foodRes.data.code === 200 ? extractRows(foodRes.data.data) : [];
+        const noteRows = noteRes.statusCode === 200 && noteRes.data.code === 200 ? extractRows(noteRes.data.data) : [];
+        const activityRows = activityRes.statusCode === 200 && activityRes.data.code === 200 ? extractRows(activityRes.data.data) : [];
+        searchScenicResults.value = scenicRows.filter((item) => fuzzyMatch(keyword, item.name, item.address, item.city, item.intro)).slice(0, 8);
+        searchFoodResults.value = foodRows.filter((item) => fuzzyMatch(keyword, item.name, item.address, item.foodType)).slice(0, 8);
+        searchNoteResults.value = noteRows.filter((item) => fuzzyMatch(keyword, item.title, item.content, item.authorName, item.cityName)).slice(0, 8);
+        searchActivityResults.value = activityRows.filter((item) => fuzzyMatch(keyword, item.name, item.highlight, item.description)).slice(0, 8);
+      } catch (error) {
+        clearSearchResults();
+        common_vendor.index.showToast({
+          title: "\u641C\u7D22\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5",
+          icon: "none"
+        });
+      } finally {
+        searchLoading.value = false;
+      }
     };
     const onFeatureTouchStart = (id) => {
       activeFeatureId.value = id;
@@ -120,26 +192,22 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
       }
       lastClickTime = now;
-      console.log("\u70B9\u51FB\u667A\u80FD\u5165\u53E3:", item.type);
       if (item.type === "planner") {
-        utils_router.safeSwitchTab("/pages/route/plan").catch((err) => {
-          console.error("\u5207\u6362 Tab \u5931\u8D25:", err);
+        utils_router.safeSwitchTab("/pages/route/plan").catch(() => {
           common_vendor.index.showToast({
             title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
             icon: "none"
           });
         });
       } else if (item.type === "hot-routes") {
-        utils_router.safeNavigateTo("/pages/route/hot-routes").catch((err) => {
-          console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+        utils_router.safeNavigateTo("/pages/route/hot-routes").catch(() => {
           common_vendor.index.showToast({
             title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
             icon: "none"
           });
         });
       } else if (item.type === "interest") {
-        utils_router.safeNavigateTo("/pages/recommend/interest").catch((err) => {
-          console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+        utils_router.safeNavigateTo("/pages/recommend/interest").catch(() => {
           common_vendor.index.showToast({
             title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
             icon: "none"
@@ -155,13 +223,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
       }
       lastClickTime = now;
-      console.log("\u70B9\u51FB\u7EBF\u8DEF\u5361\u7247:", route.id);
       if (!route || !route.id) {
-        console.error("\u7EBF\u8DEF\u6570\u636E\u65E0\u6548:", route);
         return;
       }
-      utils_router.safeNavigateTo(`/pages/itinerary/itinerary-detail?id=${route.id}`).catch((err) => {
-        console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+      utils_router.safeNavigateTo(`/pages/itinerary/itinerary-detail?id=${route.id}`).catch(() => {
         common_vendor.index.showToast({
           title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
           icon: "none"
@@ -182,13 +247,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
       }
       lastClickTime = now;
-      console.log("\u70B9\u51FB\u6E38\u8BB0\u5361\u7247:", note.id);
       if (!note || !note.id) {
-        console.error("\u6E38\u8BB0\u6570\u636E\u65E0\u6548:", note);
         return;
       }
-      utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${note.id}`).catch((err) => {
-        console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+      utils_router.safeNavigateTo(`/pages/travel-note/detail?id=${note.id}`).catch(() => {
         common_vendor.index.showToast({
           title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
           icon: "none"
@@ -268,20 +330,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
       }
       lastClickTime = now;
-      console.log("\u70B9\u51FB\u666F\u70B9\u5361\u7247:", item.id);
       if (!item || !item.id) {
-        console.error("\u666F\u70B9\u6570\u636E\u65E0\u6548:", item);
         return;
       }
-      utils_router.safeNavigateTo(`/pages/scenic/detail?id=${item.id}`).catch((err) => {
-        console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+      utils_router.safeNavigateTo(`/pages/scenic/detail?id=${item.id}`).catch(() => {
         common_vendor.index.showToast({
           title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
           icon: "none"
         });
       });
-      api_content.scenicSpotApi.incrementHotScore(item.id).catch((error) => {
-        console.warn("\u589E\u52A0\u70ED\u5EA6\u5931\u8D25:", error);
+      api_content.scenicSpotApi.incrementHotScore(item.id).catch(() => {
       });
     };
     const onViewFood = (item) => {
@@ -290,13 +348,25 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
       }
       lastClickTime = now;
-      console.log("\u70B9\u51FB\u7F8E\u98DF\u5361\u7247:", item.id);
       if (!item || !item.id) {
-        console.error("\u7F8E\u98DF\u6570\u636E\u65E0\u6548:", item);
         return;
       }
-      utils_router.safeNavigateTo(`/pages/food/detail?id=${item.id}`).catch((err) => {
-        console.error("\u8DF3\u8F6C\u5931\u8D25:", err);
+      utils_router.safeNavigateTo(`/pages/food/detail?id=${item.id}`).catch(() => {
+        common_vendor.index.showToast({
+          title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
+          icon: "none"
+        });
+      });
+    };
+    const onViewActivity = (item) => {
+      const now = Date.now();
+      if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+        return;
+      }
+      lastClickTime = now;
+      if (!item || !item.id)
+        return;
+      utils_router.safeNavigateTo(`/pages/activity/detail?id=${item.id}`).catch(() => {
         common_vendor.index.showToast({
           title: "\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5",
           icon: "none"
@@ -389,7 +459,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           toastFail(((_a = foodRes.data) == null ? void 0 : _a.msg) || "\u63A8\u8350\u7F8E\u98DF\u52A0\u8F7D\u5931\u8D25");
         }
       } catch (error) {
-        console.warn("\u7F8E\u98DF\u6570\u636E\u52A0\u8F7D\u5931\u8D25:", error);
       }
     };
     const loadNotes = async (reset = false) => {
@@ -438,6 +507,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     });
     common_vendor.onUnmounted(() => {
       common_vendor.index.$off("noteCommentCountUpdated", handleNoteCommentCountUpdate);
+      if (searchTimer) {
+        clearTimeout(searchTimer);
+        searchTimer = null;
+      }
     });
     common_vendor.onShow(() => {
       const now = Date.now();
@@ -456,6 +529,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       common_vendor.index.stopPullDownRefresh();
     });
     common_vendor.onReachBottom(() => {
+      if (isSearching.value)
+        return;
       loadNotes();
     });
     return (_ctx, _cache) => {
@@ -471,11 +546,64 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           fill: "#5f6c7b"
         }),
         e: searchPlaceholder,
-        f: common_vendor.o(onSearchConfirm),
-        g: searchKeyword.value,
-        h: common_vendor.o(($event) => searchKeyword.value = $event.detail.value),
+        f: common_vendor.o([($event) => searchKeyword.value = $event.detail.value, onSearchInput]),
+        g: common_vendor.o(onSearchConfirm),
+        h: searchKeyword.value,
         i: common_vendor.o(onSearchClick),
-        j: common_vendor.f(featureEntries.value, (item, k0, i0) => {
+        j: common_vendor.unref(isSearching)
+      }, common_vendor.unref(isSearching) ? common_vendor.e({
+        k: common_vendor.t(searchKeyword.value.trim()),
+        l: searchLoading.value
+      }, searchLoading.value ? {} : !common_vendor.unref(hasSearchResult) ? {} : common_vendor.e({
+        n: searchScenicResults.value.length
+      }, searchScenicResults.value.length ? {
+        o: common_vendor.f(searchScenicResults.value, (item, k0, i0) => {
+          return {
+            a: common_vendor.t(item.name),
+            b: common_vendor.t(item.address || item.city || "\u666F\u70B9"),
+            c: `s-${item.id}`,
+            d: common_vendor.o(($event) => onViewScenic(item))
+          };
+        })
+      } : {}, {
+        p: searchFoodResults.value.length
+      }, searchFoodResults.value.length ? {
+        q: common_vendor.f(searchFoodResults.value, (item, k0, i0) => {
+          return {
+            a: common_vendor.t(item.name),
+            b: common_vendor.t(item.address || item.foodType || "\u7F8E\u98DF"),
+            c: `f-${item.id}`,
+            d: common_vendor.o(($event) => onViewFood(item))
+          };
+        })
+      } : {}, {
+        r: searchNoteResults.value.length
+      }, searchNoteResults.value.length ? {
+        s: common_vendor.f(searchNoteResults.value, (item, k0, i0) => {
+          return {
+            a: common_vendor.t(item.title),
+            b: common_vendor.t(item.authorName || "\u533F\u540D\u4F5C\u8005"),
+            c: `n-${item.id}`,
+            d: common_vendor.o(($event) => onViewNote(item))
+          };
+        })
+      } : {}, {
+        t: searchActivityResults.value.length
+      }, searchActivityResults.value.length ? {
+        v: common_vendor.f(searchActivityResults.value, (item, k0, i0) => {
+          return {
+            a: common_vendor.t(item.name),
+            b: common_vendor.t(item.highlight || "\u6D3B\u52A8\u8BE6\u60C5"),
+            c: `a-${item.id}`,
+            d: common_vendor.o(($event) => onViewActivity(item))
+          };
+        })
+      } : {}), {
+        m: !common_vendor.unref(hasSearchResult)
+      }) : {}, {
+        w: !common_vendor.unref(isSearching)
+      }, !common_vendor.unref(isSearching) ? {
+        x: common_vendor.f(featureEntries.value, (item, k0, i0) => {
           return {
             a: common_vendor.t(item.text),
             b: common_vendor.t(item.title),
@@ -485,14 +613,17 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             f: common_vendor.o(($event) => onFeatureClick(item))
           };
         }),
-        k: common_vendor.o(onFeatureTouchEnd),
-        l: common_vendor.t(common_vendor.unref(selectedProvince) || "\u5168\u90E8\u7701\u4EFD"),
-        m: provinceList.value,
-        n: selectedProvinceIndex.value,
-        o: common_vendor.o(onProvinceChange),
-        p: common_vendor.f(common_vendor.unref(filteredScenicList), (item, k0, i0) => {
+        y: common_vendor.o(onFeatureTouchEnd)
+      } : {}, {
+        z: !common_vendor.unref(isSearching)
+      }, !common_vendor.unref(isSearching) ? {
+        A: common_vendor.t(common_vendor.unref(selectedProvince) || "\u5168\u90E8\u7701\u4EFD"),
+        B: provinceList.value,
+        C: selectedProvinceIndex.value,
+        D: common_vendor.o(onProvinceChange),
+        E: common_vendor.f(common_vendor.unref(filteredScenicList), (item, k0, i0) => {
           return common_vendor.e({
-            a: item.imageUrl,
+            a: item.imageUrl ? common_vendor.unref(utils_image.getImageUrl)(item.imageUrl) : common_vendor.unref(utils_config.defaultScenicImage),
             b: common_vendor.t(item.name),
             c: common_vendor.t(item.address || item.city || "\u672A\u77E5\u5730\u70B9"),
             d: common_vendor.t(item.price && item.price > 0 ? `\xA5${item.price}` : "\u514D\u8D39"),
@@ -529,16 +660,19 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             r: item.id,
             s: common_vendor.o(($event) => onViewScenic(item))
           });
-        }),
-        q: loadingRecommend.value
+        })
+      } : {}, {
+        F: !common_vendor.unref(isSearching)
+      }, !common_vendor.unref(isSearching) ? common_vendor.e({
+        G: loadingRecommend.value
       }, loadingRecommend.value ? {
-        r: common_vendor.p({
+        H: common_vendor.p({
           count: 4
         })
       } : {
-        s: common_vendor.f(routeList.value.slice(0, 4), (route, k0, i0) => {
+        I: common_vendor.f(routeList.value.slice(0, 4), (route, k0, i0) => {
           return {
-            a: route.coverImage,
+            a: route.coverImage ? common_vendor.unref(utils_image.getImageUrl)(route.coverImage) : defaultRouteImage,
             b: common_vendor.t(route.days),
             c: common_vendor.t(route.routeName),
             d: common_vendor.t(route.summary || "\u70B9\u51FB\u67E5\u770B\u7EBF\u8DEF\u8BE6\u60C5"),
@@ -546,17 +680,19 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             f: common_vendor.o(($event) => onViewRoute(route))
           };
         })
-      }, {
-        t: loadingNotes.value
+      }) : {}, {
+        J: !common_vendor.unref(isSearching)
+      }, !common_vendor.unref(isSearching) ? common_vendor.e({
+        K: loadingNotes.value
       }, loadingNotes.value ? {
-        v: common_vendor.p({
+        L: common_vendor.p({
           count: 2
         })
       } : common_vendor.e({
-        w: common_vendor.f(noteList.value, (note, k0, i0) => {
+        M: common_vendor.f(noteList.value, (note, k0, i0) => {
           return {
-            a: note.coverImage,
-            b: note.authorAvatar,
+            a: note.coverImage ? common_vendor.unref(utils_image.getImageUrl)(note.coverImage) : defaultNoteImage,
+            b: common_vendor.unref(utils_image.getImageUrl)(note.authorAvatar),
             c: common_vendor.t(note.authorName || "\u533F\u540D\u7528\u6237"),
             d: common_vendor.o(($event) => viewAuthorProfile(note)),
             e: common_vendor.t(note.title),
@@ -573,38 +709,38 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             n: common_vendor.o(($event) => onViewNote(note))
           };
         }),
-        x: !noteList.value.length
+        N: !noteList.value.length
       }, !noteList.value.length ? {
-        y: common_vendor.o(onSearchClick),
-        z: common_vendor.p({
+        O: common_vendor.o(onSearchClick),
+        P: common_vendor.p({
           text: "\u6682\u65E0\u6E38\u8BB0",
           ["btn-text"]: "\u53BB\u641C\u7D22"
         })
-      } : {}), {
-        A: common_vendor.f(foodList.value, (item, k0, i0) => {
+      } : {})) : {}, {
+        Q: !common_vendor.unref(isSearching)
+      }, !common_vendor.unref(isSearching) ? {
+        R: common_vendor.f(foodList.value, (item, k0, i0) => {
           return common_vendor.e({
-            a: item.imageUrl
-          }, item.imageUrl ? {
-            b: item.imageUrl
-          } : {}, {
-            c: common_vendor.t(item.name),
-            d: item.avgPrice
+            a: item.imageUrl ? common_vendor.unref(utils_image.getImageUrl)(item.imageUrl) : common_vendor.unref(utils_config.defaultFoodImage),
+            b: common_vendor.t(item.name),
+            c: item.avgPrice
           }, item.avgPrice ? {
-            e: common_vendor.t(item.avgPrice)
+            d: common_vendor.t(item.avgPrice)
           } : {}, {
-            f: common_vendor.t(item.address || "\u5730\u5740\u672A\u77E5"),
-            g: item.score
+            e: common_vendor.t(item.address || "\u5730\u5740\u672A\u77E5"),
+            f: item.score
           }, item.score ? {
-            h: common_vendor.t(item.score)
+            g: common_vendor.t(item.score)
           } : {}, {
-            i: item.id,
-            j: common_vendor.o(($event) => onViewFood(item))
+            h: item.id,
+            i: common_vendor.o(($event) => onViewFood(item))
           });
-        }),
-        B: scrollTop.value,
-        C: common_vendor.o(onScroll),
-        D: showBackToTop.value ? 1 : "",
-        E: common_vendor.o(scrollToTop)
+        })
+      } : {}, {
+        S: scrollTop.value,
+        T: common_vendor.o(onScroll),
+        U: showBackToTop.value ? 1 : "",
+        V: common_vendor.o(scrollToTop)
       });
     };
   }

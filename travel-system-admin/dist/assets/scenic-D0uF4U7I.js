@@ -1,0 +1,1 @@
+import{h as t}from"./http-Qj-5aZ5K.js";function c(e){return t.get("/admin/scenic/list",{params:e})}function i(e){return t.post("/admin/scenic",e)}function r(e){return t.put("/admin/scenic",e)}function o(e){return e==null||isNaN(Number(e))?Promise.reject(new Error("景点ID不能为空")):t.delete("/admin/scenic/"+e)}export{i as c,o as d,c as f,r as u};

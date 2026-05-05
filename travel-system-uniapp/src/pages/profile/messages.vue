@@ -143,6 +143,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { userApi } from '@/api/user'
 import { getCache, setCache } from '@/utils/storage'
+import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -161,9 +162,10 @@ const getUserInfo = async (userId: number) => {
     const res = await userApi.getProfile(userId)
     if (res.statusCode === 200 && res.data.code === 200) {
       const userInfo = res.data.data?.userInfo || res.data.data || {}
+      const rawAvatar = userInfo.avatar as string | undefined
       const info = {
         nickname: userInfo.nickname || '未知用户',
-        avatar: userInfo.avatar || defaultAvatar
+        avatar: rawAvatar ? getImageUrl(rawAvatar) : defaultAvatar
       }
       userInfoCache.value[userId] = info
       return info
@@ -177,6 +179,14 @@ const getUserInfo = async (userId: number) => {
 // 填充用户信息
 const fillUserInfo = async (messages: any[]) => {
   for (const message of messages) {
+    // 先统一转换已有的头像字段，避免后端直接返回 /uploads/ 路径
+    if (message.senderAvatar) {
+      message.senderAvatar = getImageUrl(message.senderAvatar)
+    }
+    if (message.avatar) {
+      message.avatar = getImageUrl(message.avatar)
+    }
+
     if (message.senderId && (!message.senderAvatar || !message.senderName)) {
       const userInfo = await getUserInfo(message.senderId)
       if (!message.senderAvatar) message.senderAvatar = userInfo.avatar
@@ -483,16 +493,19 @@ const openChat = (chat: any) => {
     // TODO: 调用API标记私信为已读
   }
   
+  const avatarUrl = chat.avatar ? getImageUrl(chat.avatar) : defaultAvatar
   uni.navigateTo({
-    url: `/pages/profile/chat?userId=${chat.userId}&nickname=${encodeURIComponent(chat.nickname || '')}&avatar=${encodeURIComponent(chat.avatar || '')}`
+    url: `/pages/profile/chat?userId=${chat.userId}&nickname=${encodeURIComponent(
+      chat.nickname || ''
+    )}&avatar=${encodeURIComponent(avatarUrl)}`
   })
 }
 
 // 获取空状态图标
 const getEmptyIcon = () => {
-  if (activeTab.value === 'like') return '👍'
-  if (activeTab.value === 'comment') return '💬'
-  return '💌'
+  if (activeTab.value === 'like') return '赞'
+  if (activeTab.value === 'comment') return '评'
+  return '信'
 }
 
 // 获取空状态文本

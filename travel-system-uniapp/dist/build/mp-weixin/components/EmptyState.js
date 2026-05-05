@@ -1,0 +1,1 @@
+"use strict";var t=require("../common/vendor.js");const e=t.defineComponent({props:{text:null,icon:null,btnText:null},setup:e=>(n,o)=>t.e({a:e.icon},e.icon?{b:e.icon}:{},{c:t.t(e.text),d:e.btnText},e.btnText?{e:t.t(e.btnText),f:t.o((t=>n.$emit("retry")))}:{})});var n=t._export_sfc(e,[["__scopeId","data-v-4d7979ef"]]);wx.createComponent(n);

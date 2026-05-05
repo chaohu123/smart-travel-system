@@ -1,0 +1,13 @@
+{
+  "navigationBarTitleText": "智能旅游助手",
+  "navigationStyle": "custom",
+  "backgroundColor": "#F7F8FA",
+  "enablePullDownRefresh": true,
+  "onReachBottomDistance": 50,
+  "usingComponents": {
+    "empty-state": "../../components/EmptyState",
+    "skeleton-cards": "../../components/SkeletonCards",
+    "guide-overlay": "../../components/GuideOverlay",
+    "login-prompt": "../../components/LoginPrompt"
+  }
+}

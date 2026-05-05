@@ -91,6 +91,7 @@ public class UploadController {
             String relativeDir = year + File.separator + month + File.separator + day;
             String uploadBasePath = getUploadAbsolutePath();
             String absoluteDir = uploadBasePath + File.separator + relativeDir;
+
             Path dirPath = Paths.get(absoluteDir);
 
             // 创建目录（如果不存在）

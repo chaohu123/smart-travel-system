@@ -1,0 +1,1 @@
+import{h as t}from"./http-Qj-5aZ5K.js";function r(o){return t.get("/admin/food/list",{params:o})}function n(o){return t.post("/admin/food",o)}function d(o){return t.put("/admin/food",o)}function u(o){return o==null||isNaN(Number(o))?Promise.reject(new Error("美食ID不能为空")):t.delete("/admin/food/"+o)}export{n as c,u as d,r as f,d as u};

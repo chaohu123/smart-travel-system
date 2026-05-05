@@ -4,6 +4,7 @@ var api_content = require("../../api/content.js");
 var api_route = require("../../api/route.js");
 var store_user = require("../../store/user.js");
 var utils_router = require("../../utils/router.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
@@ -381,13 +382,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
       }
     };
-    const getImageUrl = (url) => {
-      if (!url)
-        return "";
-      if (url.startsWith("http"))
-        return url;
-      return `https://your-api-domain.com${url}`;
-    };
     const getNoteTag = (note) => {
       if (note.isFeatured)
         return "\u7CBE\u9009";
@@ -439,13 +433,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           return common_vendor.e({
             a: item.coverImage
           }, item.coverImage ? {
-            b: getImageUrl(item.coverImage)
+            b: common_vendor.unref(utils_image.getImageUrl)(item.coverImage)
           } : {}, {
             c: getNoteTag(item)
           }, getNoteTag(item) ? {
             d: common_vendor.t(getNoteTag(item))
           } : {}, {
-            e: item.authorAvatar || defaultAvatar,
+            e: common_vendor.unref(utils_image.getImageUrl)(item.authorAvatar) || defaultAvatar,
             f: common_vendor.t(item.authorName || "\u533F\u540D\u7528\u6237"),
             g: common_vendor.t(formatTime(item.createTime)),
             h: common_vendor.t(item.title),
@@ -468,7 +462,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           return common_vendor.e({
             a: item.imageUrl
           }, item.imageUrl ? {
-            b: getImageUrl(item.imageUrl)
+            b: common_vendor.unref(utils_image.getImageUrl)(item.imageUrl)
           } : {}, {
             c: common_vendor.t(item.name),
             d: common_vendor.t(item.address || "\u672A\u77E5\u5730\u5740"),
@@ -487,7 +481,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           return common_vendor.e({
             a: item.imageUrl
           }, item.imageUrl ? {
-            b: getImageUrl(item.imageUrl)
+            b: common_vendor.unref(utils_image.getImageUrl)(item.imageUrl)
           } : {}, {
             c: common_vendor.t(item.name),
             d: common_vendor.t(item.address || "\u672A\u77E5\u5730\u5740"),
@@ -510,7 +504,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           return common_vendor.e({
             a: item.coverImage
           }, item.coverImage ? {
-            b: getImageUrl(item.coverImage)
+            b: common_vendor.unref(utils_image.getImageUrl)(item.coverImage)
           } : {}, {
             c: common_vendor.t(item.routeName || item.name || "\u672A\u547D\u540D\u8DEF\u7EBF"),
             d: common_vendor.t(item.days || 0),
@@ -558,13 +552,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           return common_vendor.e({
             a: note.coverImage
           }, note.coverImage ? {
-            b: getImageUrl(note.coverImage)
+            b: common_vendor.unref(utils_image.getImageUrl)(note.coverImage)
           } : {}, {
             c: getNoteTag(note)
           }, getNoteTag(note) ? {
             d: common_vendor.t(getNoteTag(note))
           } : {}, {
-            e: note.authorAvatar || defaultAvatar,
+            e: common_vendor.unref(utils_image.getImageUrl)(note.authorAvatar) || defaultAvatar,
             f: common_vendor.t(note.authorName || "\u533F\u540D\u7528\u6237"),
             g: common_vendor.t(formatTime(note.createTime)),
             h: common_vendor.t(note.title),

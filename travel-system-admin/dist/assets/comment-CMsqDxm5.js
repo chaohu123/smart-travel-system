@@ -1,0 +1,1 @@
+import{h as e}from"./http-Qj-5aZ5K.js";function m(t){return e.get("/admin/comment/list",{params:t})}function o(t){return e.put("/admin/comment",t)}function r(t){return t==null||isNaN(Number(t))?Promise.reject(new Error("评论ID不能为空")):e.delete("/admin/comment/"+t)}function u(t){return e.post("/admin/comment/audit",t)}export{u as a,r as d,m as f,o as u};

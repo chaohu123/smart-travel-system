@@ -21,7 +21,7 @@
 
       <!-- 空状态 -->
       <view v-else-if="!loading && likeList.length === 0" class="empty-state">
-        <text class="empty-icon">👍</text>
+        <text class="empty-icon iconfont icon-icon"></text>
         <text class="empty-text">还没有点赞过任何内容</text>
         <text class="empty-tip">去发现精彩内容吧~</text>
       </view>
@@ -51,7 +51,7 @@
             <view class="note-meta-row">
               <image
                 class="note-author-avatar"
-                :src="note.authorAvatar || defaultAvatar"
+                :src="getImageUrl(note.authorAvatar) || defaultAvatar"
                 mode="aspectFill"
               />
               <text class="note-author-name">{{ note.authorName || '匿名用户' }}</text>
@@ -102,6 +102,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { travelNoteInteractionApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
 import { safeNavigateTo } from '@/utils/router'
+import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -220,13 +221,6 @@ const formatTime = (time: string) => {
   } else {
     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
   }
-}
-
-// 获取图片URL
-const getImageUrl = (url: string) => {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return `https://your-api-domain.com${url}`
 }
 
 // 获取标签

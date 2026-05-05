@@ -89,7 +89,7 @@
               :class="{ active: selectedQuickTags.includes(tag.id) }"
               @click="toggleQuickTag(tag.id)"
             >
-              <text class="quick-tag-icon">{{ tag.icon }}</text>
+              <text class="quick-tag-icon iconfont" :class="tag.iconClass"></text>
               <text class="quick-tag-text">{{ tag.name }}</text>
             </view>
           </view>
@@ -98,7 +98,7 @@
         <!-- 底部自然语言输入提示 -->
         <view class="nlp-trigger-section">
           <view class="nlp-trigger-btn" @tap="openNlpModal">
-            <text class="nlp-trigger-icon">💭</text>
+            <text class="nlp-trigger-icon iconfont icon-yijianfankui"></text>
             <text class="nlp-trigger-text">点击输入我的想法</text>
             <text class="nlp-trigger-arrow">›</text>
           </view>
@@ -136,7 +136,7 @@
 
           <!-- 日期提示信息 -->
           <view v-if="dateTips" class="date-tips">
-            <text class="date-tips-icon">ℹ️</text>
+            <text class="date-tips-icon iconfont icon-wentifankui"></text>
             <text class="date-tips-text">{{ dateTips }}</text>
           </view>
         </view>
@@ -153,7 +153,7 @@
               @click="selectCompanion(companion.id)"
             >
               <view class="companion-icon-wrapper">
-                <text class="companion-icon">{{ companion.icon }}</text>
+                <text class="companion-icon iconfont" :class="companion.iconClass"></text>
               </view>
               <text class="companion-name">{{ companion.name }}</text>
             </view>
@@ -193,8 +193,8 @@
           </view>
           <view class="slider-container">
             <view class="slider-labels">
-              <text class="slider-left">😴 睡到自然醒</text>
-              <text class="slider-right">⚡ 打卡狂魔</text>
+              <text class="slider-left">舒缓出行</text>
+              <text class="slider-right">紧凑打卡</text>
             </view>
             <slider
               class="preference-slider"
@@ -219,8 +219,8 @@
           </view>
           <view class="slider-container">
             <view class="slider-labels">
-              <text class="slider-left">💰 经济实惠</text>
-              <text class="slider-right">💎 奢华享受</text>
+              <text class="slider-left">经济实惠</text>
+              <text class="slider-right">高品质体验</text>
             </view>
             <slider
               class="preference-slider"
@@ -251,7 +251,7 @@
               class="schedule-item-card"
             >
               <view class="schedule-item-info">
-                <text class="schedule-item-name">📍 {{ scenic.name }}</text>
+                <text class="schedule-item-name"><text class="iconfont icon-weizhi"></text> {{ scenic.name }}</text>
                 <text v-if="getScenicSchedule(scenic.id)" class="schedule-item-time">
                   {{ getScenicScheduleText(scenic.id) }}
                 </text>
@@ -272,7 +272,7 @@
               class="schedule-item-card"
             >
               <view class="schedule-item-info">
-                <text class="schedule-item-name">🍜 {{ food.name }}</text>
+                <text class="schedule-item-name"><text class="iconfont icon-meishi"></text> {{ food.name }}</text>
                 <text v-if="getFoodSchedule(food.id)" class="schedule-item-time">
                   {{ getFoodScheduleText(food.id) }}
                 </text>
@@ -362,7 +362,7 @@
           <text class="schedule-modal-close" @tap.stop="closeScenicScheduleModal">×</text>
         </view>
         <view class="schedule-modal-body">
-          <text class="schedule-item-name-large">📍 {{ currentScheduleItem?.name }}</text>
+          <text class="schedule-item-name-large"><text class="iconfont icon-weizhi"></text> {{ currentScheduleItem?.name }}</text>
           
           <view class="schedule-day-selector">
             <text class="schedule-label">选择日期</text>
@@ -389,7 +389,7 @@
                 :class="{ active: scenicScheduleForm.timeSlot === slot.value }"
                 @tap="scenicScheduleForm.timeSlot = slot.value"
               >
-                <text class="schedule-time-icon">{{ slot.icon }}</text>
+                <text class="schedule-time-icon iconfont" :class="slot.iconClass"></text>
                 <text class="schedule-time-text">{{ slot.label }}</text>
               </view>
             </view>
@@ -410,7 +410,7 @@
           <text class="schedule-modal-close" @tap.stop="closeFoodScheduleModal">×</text>
         </view>
         <view class="schedule-modal-body">
-          <text class="schedule-item-name-large">🍜 {{ currentScheduleItem?.name }}</text>
+          <text class="schedule-item-name-large"><text class="iconfont icon-meishi"></text> {{ currentScheduleItem?.name }}</text>
           
           <view class="schedule-day-selector">
             <text class="schedule-label">选择日期</text>
@@ -437,7 +437,7 @@
                 :class="{ active: foodScheduleForm.timeSlot === slot.value }"
                 @tap="foodScheduleForm.timeSlot = slot.value"
               >
-                <text class="schedule-time-icon">{{ slot.icon }}</text>
+                <text class="schedule-time-icon iconfont" :class="slot.iconClass"></text>
                 <text class="schedule-time-text">{{ slot.label }}</text>
               </view>
             </view>
@@ -454,7 +454,7 @@
     <view v-if="showNlpInput" class="nlp-modal" @tap.stop="closeNlpModal">
       <view class="nlp-modal-content" @tap.stop>
         <view class="nlp-header">
-          <text class="nlp-title">💬 一句话生成行程</text>
+          <text class="nlp-title"><text class="iconfont icon-pinglun"></text> 一句话生成行程</text>
           <text class="nlp-close" @tap.stop="closeNlpModal">×</text>
         </view>
         <textarea
@@ -481,7 +481,7 @@
             <text class="earth-icon">🌍</text>
           </view>
           <view class="airplane-container">
-            <text class="airplane-icon">✈️</text>
+            <text class="airplane-icon iconfont icon-xianlu"></text>
           </view>
         </view>
         <view class="loading-steps">
@@ -549,6 +549,35 @@
         </view>
       </view>
     </view>
+
+    <!-- 生成后返回：保存 / 弃用 -->
+    <view v-if="postGenerateVisible" class="postgen-mask" @click="closePostGenerate(false)">
+      <view class="postgen-popup" @click.stop>
+        <view class="postgen-title">是否保存本次路线？</view>
+        <view class="postgen-desc">你可以为它起一个名字，或直接弃用删除。</view>
+
+        <view v-if="postGenerateStep === 'choice'" class="postgen-actions">
+          <view class="postgen-btn danger" @click="discardGeneratedRoute">弃用该路线</view>
+          <view class="postgen-btn primary" @click="postGenerateStep = 'name'">保存该路线</view>
+        </view>
+
+        <view v-else class="postgen-name">
+          <view class="name-label">路线名称</view>
+          <input
+            class="name-input"
+            v-model="postGenerateName"
+            type="text"
+            maxlength="50"
+            placeholder="例如：成都三日游经典路线"
+            placeholder-style="color:#b8c4bf;"
+          />
+          <view class="postgen-actions">
+            <view class="postgen-btn ghost" @click="postGenerateStep = 'choice'">返回</view>
+            <view class="postgen-btn primary" @click="saveGeneratedRoute">保存</view>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -559,6 +588,11 @@ import { routeApi } from '@/api/route'
 import { cityApi, tagApi, scenicSpotApi, foodApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
 import { getCache, setCache, removeCache } from '@/utils/storage'
+
+/** 从行程详情返回规划页时需清空表单并回到步骤一 */
+const ROUTE_PLAN_RESET_FORM_FLAG = 'route_plan_reset_form_on_show'
+/** 生成成功后返回：弹出保存/弃用 */
+const ROUTE_PLAN_POST_GENERATE_KEY = 'route_plan_post_generate_route_id'
 
 // API 响应类型定义
 interface ApiResponse<T = any> {
@@ -578,6 +612,12 @@ const currentStep = ref(0)
 const showNlpInput = ref(false)
 const nlpText = ref('')
 
+// 生成后返回处理
+const postGenerateVisible = ref(false)
+const postGenerateRouteId = ref<number | null>(null)
+const postGenerateName = ref('')
+const postGenerateStep = ref<'choice' | 'name'>('choice')
+
 // 城市相关
 const cityList = ref<{ id: number; name: string; image?: string; desc?: string }[]>([])
 const popularCities = ref<Array<{ id: number; name: string; image?: string; desc?: string }>>([])
@@ -593,12 +633,12 @@ const dateTips = ref('')
 // 成员相关
 const selectedCompanion = ref<number>(1)
 const companionList = ref([
-  { id: 1, name: '独行', icon: '🚶' },
-  { id: 2, name: '情侣', icon: '💑' },
-  { id: 3, name: '家庭', icon: '👨‍👩‍👧' },
-  { id: 4, name: '朋友', icon: '👥' },
-  { id: 5, name: '亲子', icon: '👨‍👩‍👦' },
-  { id: 6, name: '带老人', icon: '👴' },
+  { id: 1, name: '独行', iconClass: 'icon-wodedefuben' },
+  { id: 2, name: '情侣', iconClass: 'icon-aixin' },
+  { id: 3, name: '家庭', iconClass: 'icon-shouye1' },
+  { id: 4, name: '朋友', iconClass: 'icon-icon' },
+  { id: 5, name: '亲子', iconClass: 'icon-wodedefuben' },
+  { id: 6, name: '带老人', iconClass: 'icon-guanyuwomen' },
 ])
 
 // 偏好相关
@@ -609,12 +649,12 @@ const budgetValue = ref(50) // 0-100, 0=经济, 100=奢华
 
 // 快速标签
 const quickTags = ref([
-  { id: 1, name: '带娃出游', icon: '👶' },
-  { id: 2, name: '深度摄影', icon: '📷' },
-  { id: 3, name: '特种兵行程', icon: '⚡' },
-  { id: 4, name: '休闲度假', icon: '🏖️' },
-  { id: 5, name: '美食之旅', icon: '🍜' },
-  { id: 6, name: '文化探索', icon: '🏛️' },
+  { id: 1, name: '带娃出游', iconClass: 'icon-wodedefuben' },
+  { id: 2, name: '深度摄影', iconClass: 'icon-camera' },
+  { id: 3, name: '特种兵行程', iconClass: 'icon-richeng' },
+  { id: 4, name: '休闲度假', iconClass: 'icon-zuji' },
+  { id: 5, name: '美食之旅', iconClass: 'icon-meishi' },
+  { id: 6, name: '文化探索', iconClass: 'icon-jingdianjieshao' },
 ])
 const selectedQuickTags = ref<number[]>([])
 
@@ -644,6 +684,114 @@ interface DaySelection {
 }
 
 const dailySelections = ref<DaySelection[]>([])
+
+const savePlanHistory = (routeId: number, days: number) => {
+  const userId = user.value?.id
+  if (!userId) return
+  const storageKey = `plan_history_${userId}`
+  const history = (uni.getStorageSync(storageKey) || []) as any[]
+  const newItem = {
+    id: routeId,
+    routeName: `智能规划行程-${days}天`,
+    title: `智能规划行程-${days}天`,
+    destination: selectedCity.value?.name || destination.value || '未知目的地',
+    days,
+    createTime: new Date().toISOString(),
+    sourceType: 'system',
+    status: 'planned',
+  }
+  const deduped = history.filter(item => Number(item?.id) !== Number(routeId))
+  deduped.unshift(newItem)
+  uni.setStorageSync(storageKey, deduped.slice(0, 50))
+}
+
+const updateLocalPlanHistoryName = (routeId: number, routeName: string) => {
+  const userId = user.value?.id
+  if (!userId) return
+  const storageKey = `plan_history_${userId}`
+  const history = (uni.getStorageSync(storageKey) || []) as any[]
+  const next = history.map((item) => {
+    if (Number(item?.id) !== Number(routeId)) return item
+    return {
+      ...item,
+      routeName,
+      title: routeName,
+    }
+  })
+  uni.setStorageSync(storageKey, next)
+}
+
+const removeLocalPlanHistory = (routeId: number) => {
+  const userId = user.value?.id
+  if (!userId) return
+  const storageKey = `plan_history_${userId}`
+  const history = (uni.getStorageSync(storageKey) || []) as any[]
+  const next = history.filter((item) => Number(item?.id) !== Number(routeId))
+  uni.setStorageSync(storageKey, next)
+}
+
+const closePostGenerate = (shouldReset: boolean) => {
+  postGenerateVisible.value = false
+  postGenerateStep.value = 'choice'
+  postGenerateName.value = ''
+  postGenerateRouteId.value = null
+  if (shouldReset) {
+    resetPlanForm()
+  }
+}
+
+const openPostGenerate = (routeId: number) => {
+  postGenerateRouteId.value = Number(routeId)
+  postGenerateVisible.value = true
+  postGenerateStep.value = 'choice'
+  // 默认名（可改）
+  const days = travelDays.value
+  const dest = selectedCity.value?.name || destination.value || ''
+  postGenerateName.value = dest ? `${dest}${days ? `-${days}天` : ''}行程` : `我的行程`
+}
+
+const saveGeneratedRoute = async () => {
+  const routeId = postGenerateRouteId.value
+  if (!routeId) return
+  const name = postGenerateName.value.trim()
+  if (!name) {
+    uni.showToast({ title: '请输入路线名称', icon: 'none' })
+    return
+  }
+  try {
+    // 1) 更新后端名称
+    await routeApi.updateName(routeId, name)
+    // 2) 同步本地历史名称
+    updateLocalPlanHistoryName(routeId, name)
+    // 3) 可选：加入收藏，确保“我的行程”也能拉到（后端 myRoutes = favorites）
+    const uid = user.value?.id
+    if (uid) {
+      try {
+        await routeApi.toggleFavorite(Number(uid), Number(routeId))
+      } catch (e) {
+        // ignore
+      }
+    }
+    uni.showToast({ title: '已保存', icon: 'success' })
+    closePostGenerate(true)
+  } catch (e: any) {
+    uni.showToast({ title: e?.message || '保存失败', icon: 'none' })
+  }
+}
+
+const discardGeneratedRoute = async () => {
+  const routeId = postGenerateRouteId.value
+  if (!routeId) return
+  try {
+    // 1) 后端弃用（逻辑删除 + 清理明细）
+    await routeApi.discard(routeId)
+  } catch (e) {
+    // ignore：即使后端失败，也至少从本地历史移除
+  }
+  removeLocalPlanHistory(routeId)
+  uni.showToast({ title: '已弃用', icon: 'success' })
+  closePostGenerate(true)
+}
 
 // 日期选择弹窗
 const showDatePicker = ref(false)
@@ -706,18 +854,18 @@ const currentScheduleItem = ref<{ id: number, name: string } | null>(null)
 
 // 景点时间段选项
 const scenicTimeSlots = [
-  { value: 'morning', label: '上午', icon: '🌅' },
-  { value: 'afternoon', label: '下午', icon: '☀️' },
-  { value: 'evening', label: '傍晚', icon: '🌆' },
-  { value: 'night', label: '晚上', icon: '🌙' },
+  { value: 'morning', label: '上午', iconClass: 'icon-kaifangshijian' },
+  { value: 'afternoon', label: '下午', iconClass: 'icon-kaifangshijian' },
+  { value: 'evening', label: '傍晚', iconClass: 'icon-kaifangshijian' },
+  { value: 'night', label: '晚上', iconClass: 'icon-kaifangshijian' },
 ]
 
 // 美食时间段选项
 const foodTimeSlots = [
-  { value: 'breakfast', label: '早餐', icon: '🌅' },
-  { value: 'lunch', label: '午餐', icon: '☀️' },
-  { value: 'dinner', label: '晚餐', icon: '🌆' },
-  { value: 'snack', label: '小吃', icon: '🍡' },
+  { value: 'breakfast', label: '早餐', iconClass: 'icon-kaifangshijian' },
+  { value: 'lunch', label: '午餐', iconClass: 'icon-kaifangshijian' },
+  { value: 'dinner', label: '晚餐', iconClass: 'icon-kaifangshijian' },
+  { value: 'snack', label: '小吃', iconClass: 'icon-kaifangshijian' },
 ]
 
 // 时间段分配表单
@@ -1179,13 +1327,6 @@ const confirmScenicSchedule = () => {
     dailySelections.value[dayIndex].scenicTimeSlots[scenicId] = schedule
   }
   
-  console.log('景点时间段分配:', {
-    scenicId,
-    schedule,
-    allScenicSchedules: allScenicSchedules.value,
-    dailySelections: dailySelections.value[dayIndex]
-  })
-  
   closeScenicScheduleModal()
   uni.showToast({
     title: '安排成功',
@@ -1260,13 +1401,6 @@ const confirmFoodSchedule = () => {
     }
     dailySelections.value[dayIndex].foodTimeSlots[foodId] = schedule
   }
-  
-  console.log('美食时间段分配:', {
-    foodId,
-    schedule,
-    allFoodSchedules: allFoodSchedules.value,
-    dailySelections: dailySelections.value[dayIndex]
-  })
   
   closeFoodScheduleModal()
   uni.showToast({
@@ -1573,22 +1707,9 @@ const generateRoute = async () => {
         foodTimeSlots: foodTimeSlots.length > 0 ? foodTimeSlots : undefined,
       }
       
-      // 调试输出
-      if (scenicTimeSlots.length > 0 || foodTimeSlots.length > 0) {
-        console.log(`第${dayNum}天的时间段分配:`, {
-          scenicTimeSlots,
-          foodTimeSlots
-        })
-      }
-      
       return dayData
     })
     
-    // 调试输出，检查时间段信息
-    console.log('提交的dailySelections数据:', JSON.stringify(dailySelectionsData, null, 2))
-    console.log('allScenicSchedules:', allScenicSchedules.value)
-    console.log('allFoodSchedules:', allFoodSchedules.value)
-
     // 不显示黑色遮罩提示，只使用自定义加载动画
     // uni.showLoading 已移除
 
@@ -1624,25 +1745,27 @@ const generateRoute = async () => {
         icon: 'success',
         duration: 1500
       })
+      savePlanHistory(Number(routeId), selectedDays)
 
       loading.value = false
 
       await new Promise(resolve => setTimeout(resolve, 1500))
 
       const detailUrl = `/pages/itinerary/itinerary-detail?id=${encodeURIComponent(routeId)}`
-      console.log('[generateRoute] 准备跳转到详情页:', detailUrl)
+
+      const markResetOnReturn = () => {
+        setCache(ROUTE_PLAN_RESET_FORM_FLAG, true)
+        setCache(ROUTE_PLAN_POST_GENERATE_KEY, Number(routeId))
+      }
 
       uni.navigateTo({
         url: detailUrl,
-        success: () => {
-          console.log('[generateRoute] 跳转成功')
-        },
-        fail: (err) => {
-          console.error('[generateRoute] navigateTo 失败:', err)
+        success: markResetOnReturn,
+        fail: () => {
           uni.redirectTo({
             url: detailUrl,
-            fail: (redirectErr) => {
-              console.error('[generateRoute] redirectTo 也失败:', redirectErr)
+            success: markResetOnReturn,
+            fail: () => {
               uni.showToast({
                 title: '页面跳转失败，请手动刷新',
                 icon: 'none',
@@ -1660,8 +1783,6 @@ const generateRoute = async () => {
       loading.value = false
     }
   } catch (error: any) {
-    console.error('[generateRoute] 请求错误:', error)
-    
     // 检查是否是超时或服务器错误（可能是后端还在处理）
     if (error.statusCode === 504 || error.statusCode === 500 || error.statusCode === 502) {
       uni.showToast({
@@ -1704,7 +1825,6 @@ const loadCities = async () => {
       popularCities.value = cityList.value.slice(0, 6)
     }
   } catch (error) {
-    console.error('加载城市列表失败', error)
   }
 }
 
@@ -1721,7 +1841,6 @@ const loadTags = async () => {
       }))
     }
   } catch (error) {
-    console.error('加载标签列表失败', error)
     tagList.value = []
   }
 }
@@ -1809,7 +1928,6 @@ const loadSelectorList = async () => {
       }
     }
   } catch (error) {
-    console.error('加载选择器列表失败:', error)
     uni.showToast({ title: '加载失败', icon: 'none' })
   }
 }
@@ -1877,6 +1995,45 @@ const getFoodName = (id: number) => {
   return food?.name || `美食${id}`
 }
 
+const resetPlanForm = () => {
+  currentStep.value = 0
+  showNlpInput.value = false
+  nlpText.value = ''
+  selectedCity.value = null
+  destination.value = ''
+  startDate.value = ''
+  endDate.value = ''
+  dateTips.value = ''
+  selectedCompanion.value = 1
+  selectedTags.value = []
+  relaxationValue.value = 50
+  budgetValue.value = 50
+  selectedQuickTags.value = []
+  dailySelections.value = []
+  loading.value = false
+  currentLoadingStep.value = 0
+  showDatePicker.value = false
+  datePickerType.value = 'start'
+  datePickerValue.value = [0, 0, 0]
+  tempSelectedDate.value = ''
+  showScenicScheduleModal.value = false
+  showFoodScheduleModal.value = false
+  currentScheduleItem.value = null
+  scenicScheduleForm.value = { day: 1, timeSlot: 'morning' }
+  foodScheduleForm.value = { day: 1, timeSlot: 'breakfast' }
+  allScenicSchedules.value = {}
+  allFoodSchedules.value = {}
+  selectorVisible.value = false
+  selectorTab.value = 'pending'
+  selectorType.value = 'scenic'
+  selectorDayIndex.value = 0
+  selectorList.value = []
+  selectorTempSelected.value = []
+  removeCache('route_pending_additions')
+  pendingScenics.value = []
+  pendingFoods.value = []
+}
+
 const loadPendingAdditions = () => {
   const pendingAdditions = getCache<Array<{ type: 'scenic' | 'food', id: number, name: string }>>('route_pending_additions')
   pendingScenics.value = []
@@ -1909,6 +2066,17 @@ onMounted(() => {
 })
 
 onShow(() => {
+  if (getCache<boolean>(ROUTE_PLAN_RESET_FORM_FLAG)) {
+    removeCache(ROUTE_PLAN_RESET_FORM_FLAG)
+    const rid = getCache<number>(ROUTE_PLAN_POST_GENERATE_KEY)
+    if (rid) {
+      removeCache(ROUTE_PLAN_POST_GENERATE_KEY)
+      openPostGenerate(Number(rid))
+      // 先不重置，等用户“保存/弃用”后再 reset
+    } else {
+      resetPlanForm()
+    }
+  }
   loadPendingAdditions()
 })
 </script>
@@ -2231,6 +2399,7 @@ onShow(() => {
 
 /* 步骤内容 */
 .step-content {
+	margin-top: 24px;
   padding: 24rpx 24rpx 32rpx;
   min-height: calc(100vh - 200rpx);
 }
@@ -2983,6 +3152,97 @@ onShow(() => {
   font-size: 28rpx;
   font-weight: 600;
   border: none;
+}
+
+/* 生成后返回弹窗 */
+.postgen-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 32rpx;
+  box-sizing: border-box;
+}
+
+.postgen-popup {
+  width: 100%;
+  max-width: 660rpx;
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx 28rpx 24rpx;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.14);
+}
+
+.postgen-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+  margin-bottom: 10rpx;
+}
+
+.postgen-desc {
+  font-size: 24rpx;
+  color: #72807a;
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+
+.postgen-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.postgen-btn {
+  flex: 1;
+  text-align: center;
+  padding: 22rpx 0;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  user-select: none;
+}
+
+.postgen-btn.primary {
+  background: linear-gradient(135deg, #3ba272 0%, #57c18c 100%);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.postgen-btn.danger {
+  background: #fff4f4;
+  border: 1rpx solid #ffd6d6;
+  color: #d64545;
+  font-weight: 600;
+}
+
+.postgen-btn.ghost {
+  background: #f5f7f6;
+  border: 1rpx solid #e8eeea;
+  color: #5a6762;
+}
+
+.postgen-name .name-label {
+  font-size: 24rpx;
+  color: #72807a;
+  margin-bottom: 12rpx;
+}
+
+.postgen-name .name-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18rpx 20rpx;
+  background: #f7fbf9;
+  border-radius: 16rpx;
+  border: 1rpx solid #e5eee8;
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 18rpx;
 }
 
 .tab-badge {

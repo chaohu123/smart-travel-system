@@ -166,7 +166,7 @@
           <text>没有更多了</text>
         </view>
         <view v-else-if="!loading && noteList.length === 0 && !networkError" class="empty-state">
-          <text class="empty-icon">📝</text>
+          <text class="empty-icon iconfont icon-youji"></text>
           <text class="empty-text">还没有发布过游记</text>
           <view class="empty-action" @click="publishNote">
             <text>立即发布</text>

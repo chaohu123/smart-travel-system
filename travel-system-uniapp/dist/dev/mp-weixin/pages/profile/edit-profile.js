@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var api_user = require("../../api/user.js");
 var api_content = require("../../api/content.js");
 var store_user = require("../../store/user.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
@@ -18,6 +19,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     });
     const userInfo = common_vendor.ref({});
     const saving = common_vendor.ref(false);
+    const avatarPreviewSrc = common_vendor.computed(() => {
+      if (!formData.avatar) {
+        return "";
+      }
+      return utils_image.getImageUrl(formData.avatar);
+    });
     const loadUserInfo = async () => {
       var _a;
       if (!((_a = user.value) == null ? void 0 : _a.id)) {
@@ -137,7 +144,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         b: common_vendor.o(saveProfile),
         c: common_vendor.unref(formData).avatar
       }, common_vendor.unref(formData).avatar ? {
-        d: common_vendor.unref(formData).avatar
+        d: common_vendor.unref(avatarPreviewSrc)
       } : {}, {
         e: common_vendor.o(chooseAvatar),
         f: common_vendor.unref(formData).nickname,

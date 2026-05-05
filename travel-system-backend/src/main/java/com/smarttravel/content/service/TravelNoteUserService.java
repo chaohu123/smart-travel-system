@@ -39,6 +39,12 @@ public interface TravelNoteUserService {
     int deleteMyNote(Long userId, Long noteId);
 
     /**
+     * 设置游记是否仅自己可见（私人/公开）
+     * @param isPrivate true-私人（status=private）；false-公开（需重新审核，status=pending）
+     */
+    int setNotePrivate(Long userId, Long noteId, boolean isPrivate);
+
+    /**
      * 增加浏览量（异步）
      */
     void incrementViewCount(Long noteId);

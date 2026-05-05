@@ -16,8 +16,8 @@
             v-model="searchKeyword"
             :placeholder="searchPlaceholder"
             confirm-type="search"
+            @input="onSearchInput"
             @confirm="onSearchConfirm"
-            disabled
           />
         </view>
       </view>
@@ -31,8 +31,71 @@
       @scroll="onScroll"
       scroll-with-animation
     >
+      <!-- 综合搜索结果 -->
+      <view v-if="isSearching" class="section">
+        <view class="section-title-row">
+          <text class="section-title">搜索结果</text>
+          <text class="section-subtitle">关键词：{{ searchKeyword.trim() }}</text>
+        </view>
+        <view v-if="searchLoading" class="search-loading">搜索中...</view>
+        <view v-else-if="!hasSearchResult" class="search-empty">未找到相关内容</view>
+        <view v-else class="search-group-list">
+          <view v-if="searchScenicResults.length" class="search-group">
+            <text class="search-group-title">景点</text>
+            <view
+              v-for="item in searchScenicResults"
+              :key="`s-${item.id}`"
+              class="search-result-item"
+              @tap="onViewScenic(item)"
+            >
+              <text class="search-result-name">{{ item.name }}</text>
+              <text class="search-result-meta">{{ item.address || item.city || '景点' }}</text>
+            </view>
+          </view>
+
+          <view v-if="searchFoodResults.length" class="search-group">
+            <text class="search-group-title">美食</text>
+            <view
+              v-for="item in searchFoodResults"
+              :key="`f-${item.id}`"
+              class="search-result-item"
+              @tap="onViewFood(item)"
+            >
+              <text class="search-result-name">{{ item.name }}</text>
+              <text class="search-result-meta">{{ item.address || item.foodType || '美食' }}</text>
+            </view>
+          </view>
+
+          <view v-if="searchNoteResults.length" class="search-group">
+            <text class="search-group-title">游记</text>
+            <view
+              v-for="item in searchNoteResults"
+              :key="`n-${item.id}`"
+              class="search-result-item"
+              @tap="onViewNote(item)"
+            >
+              <text class="search-result-name">{{ item.title }}</text>
+              <text class="search-result-meta">{{ item.authorName || '匿名作者' }}</text>
+            </view>
+          </view>
+
+          <view v-if="searchActivityResults.length" class="search-group">
+            <text class="search-group-title">活动</text>
+            <view
+              v-for="item in searchActivityResults"
+              :key="`a-${item.id}`"
+              class="search-result-item"
+              @tap="onViewActivity(item)"
+            >
+              <text class="search-result-name">{{ item.name }}</text>
+              <text class="search-result-meta">{{ item.highlight || '活动详情' }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
       <!-- 智能入口区（核心卖点） -->
-      <view class="section smart-entry-section">
+      <view v-if="!isSearching" class="section smart-entry-section">
         <view class="feature-grid">
           <view
             v-for="item in featureEntries"
@@ -52,7 +115,7 @@
       </view>
 
       <!-- 热门景点 -->
-      <view class="section">
+      <view v-if="!isSearching" class="section">
         <view class="section-title-row">
           <view class="section-title-wrapper">
             <text class="section-title">热门景点</text>
@@ -82,7 +145,7 @@
             <view class="scenic-image-wrapper">
               <image
                 class="scenic-image"
-                :src="item.imageUrl"
+                :src="item.imageUrl ? getImageUrl(item.imageUrl) : defaultScenicImage"
                 mode="aspectFill"
                 :lazy-load="true"
               />
@@ -125,7 +188,7 @@
       </view>
 
       <!-- 推荐线路卡片（重点） -->
-      <view class="section">
+      <view v-if="!isSearching" class="section">
         <view class="section-title-row">
           <text class="section-title">推荐线路</text>
           <text class="section-subtitle">为你精选热门行程</text>
@@ -142,7 +205,7 @@
             <view class="route-cover-wrapper route-cover-wrapper--grid">
               <image
                 class="route-cover"
-                :src="route.coverImage"
+                :src="route.coverImage ? getImageUrl(route.coverImage) : defaultRouteImage"
                 mode="aspectFill"
                 :lazy-load="true"
               />
@@ -159,7 +222,7 @@
       </view>
 
       <!-- 推荐游记列表 -->
-      <view class="section">
+      <view v-if="!isSearching" class="section">
         <view class="section-title-row">
           <text class="section-title">热门游记</text>
           <text class="section-subtitle">看看大家都在怎么玩</text>
@@ -178,7 +241,7 @@
               <view class="note-cover-wrapper">
                 <image
                   class="note-cover"
-                  :src="note.coverImage "
+                  :src="note.coverImage ? getImageUrl(note.coverImage) : defaultNoteImage"
                   mode="aspectFill"
                   :lazy-load="true"
                 />
@@ -192,7 +255,7 @@
                     <view class="note-avatar-wrapper" @tap.stop="viewAuthorProfile(note)">
                       <image
                         class="note-author-avatar"
-                        :src="note.authorAvatar"
+                        :src="getImageUrl(note.authorAvatar)"
                         mode="aspectFill"
                         :lazy-load="true"
                       />
@@ -228,7 +291,7 @@
       </view>
 
       <!-- 人气美食 -->
-      <view class="section">
+      <view v-if="!isSearching" class="section">
         <view class="section-title-row">
           <text class="section-title">人气美食</text>
           <text class="section-subtitle">必吃榜单</text>
@@ -244,15 +307,11 @@
               <!-- 美食图片 -->
               <view class="food-image-wrapper">
                 <image
-                  v-if="item.imageUrl"
                   class="food-image"
-                  :src="item.imageUrl"
+                  :src="item.imageUrl ? getImageUrl(item.imageUrl) : defaultFoodImage"
                   mode="aspectFill"
                   :lazy-load="true"
                 />
-                <view v-else class="food-image-placeholder">
-                  <text class="food-icon">🍜</text>
-                </view>
               </view>
               <!-- 美食信息 -->
               <view class="food-content">
@@ -285,10 +344,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onPullDownRefresh, onReachBottom, onShow, onLoad } from '@dcloudio/uni-app'
-import { recommendApi, scenicSpotApi, type ApiResponse, travelNoteApi, travelNoteInteractionApi } from '@/api/content'
+import { recommendApi, scenicSpotApi, foodApi, type ApiResponse, travelNoteApi, travelNoteInteractionApi } from '@/api/content'
 import { request } from '@/utils/http'
+import { activityApi, type Activity } from '@/api/activity'
 import { useUserStore } from '@/store/user'
 import EmptyState from '@/components/EmptyState.vue'
 import SkeletonCards from '@/components/SkeletonCards.vue'
@@ -296,6 +356,8 @@ import GuideOverlay from '@/components/GuideOverlay.vue'
 import LoginPrompt from '@/components/LoginPrompt.vue'
 import { Search } from '@icon-park/vue-next'
 import { safeNavigateTo, safeSwitchTab, resetNavigationState } from '@/utils/router'
+import { defaultFoodImage, defaultScenicImage } from '@/utils/config'
+import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -309,7 +371,7 @@ const activeFeatureId = ref<number | null>(null)
 const featureEntries = ref([
   { id: 1, title: '智能规划', desc: '根据你的兴趣智能生成行程', icon: 'Brain', text: '智', type: 'planner' },
   { id: 2, title: '热门线路', desc: '看看大家都在走的爆款路线', icon: 'Fire', text: '线', type: 'hot-routes' },
-  { id: 3, title: '兴趣推荐', desc: '美食 / 历史 / 亲子一键选择', icon: 'Magic', text: '趣', type: 'interest' },
+  { id: 3, title: '门票预订', desc: '按所在地区筛选景点并预订', icon: 'Magic', text: '票', type: 'interest' },
 ])
 
 // 推荐数据类型
@@ -368,6 +430,8 @@ interface FoodItem {
   imageUrl?: string // 美食图片
 }
 
+type ActivityItem = Activity
+
 const routeList = ref<RouteItem[]>([])
 const noteList = ref<NoteItem[]>([])
 const scenicList = ref<ScenicItem[]>([])
@@ -380,6 +444,26 @@ const shouldAnimateMap = ref<Record<number, boolean>>({})
 const showLoginPrompt = ref(false)
 const isInitialLoad = ref(true) // 标记是否首次加载
 const lastRefreshTime = ref(0) // 上次刷新时间
+const searchLoading = ref(false)
+const searchScenicResults = ref<ScenicItem[]>([])
+const searchFoodResults = ref<FoodItem[]>([])
+const searchNoteResults = ref<NoteItem[]>([])
+const searchActivityResults = ref<ActivityItem[]>([])
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+const isSearching = computed(() => searchKeyword.value.trim().length > 0)
+const hasSearchResult = computed(() => {
+  return (
+    searchScenicResults.value.length > 0 ||
+    searchFoodResults.value.length > 0 ||
+    searchNoteResults.value.length > 0 ||
+    searchActivityResults.value.length > 0
+  )
+})
+
+// 首页默认图片（封面、路线）
+const defaultRouteImage = 'https://ts2.tc.mm.bing.net/th/id/OIP-C.D0FxyIfldS08x95YBJdFQAHaFj?rs=1&pid=ImgDetMain&o=7&rm=3'
+const defaultNoteImage = '/static/default-note.jpg'
 
 // 省份列表
 const provinceList = ref([
@@ -455,17 +539,96 @@ const onProvinceChange = (e: any) => {
 
 type ListResponse<T> = UniApp.RequestSuccessCallbackResult & { data: ApiResponse<T[]> }
 
-// 搜索事件
 const onSearchClick = () => {
-  safeNavigateTo('/pages/search/search')
 }
 
 const onSearchConfirm = () => {
-  if (!searchKeyword.value) {
-    onSearchClick()
+  runGlobalSearch()
+}
+
+const onSearchInput = () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  if (!searchKeyword.value.trim()) {
+    clearSearchResults()
     return
   }
-  safeNavigateTo(`/pages/search/search?keyword=${encodeURIComponent(searchKeyword.value)}`)
+  searchTimer = setTimeout(() => {
+    runGlobalSearch()
+  }, 300)
+}
+
+const clearSearchResults = () => {
+  searchScenicResults.value = []
+  searchFoodResults.value = []
+  searchNoteResults.value = []
+  searchActivityResults.value = []
+}
+
+const extractRows = (raw: any) => {
+  if (Array.isArray(raw?.rows)) return raw.rows
+  if (Array.isArray(raw?.list)) return raw.list
+  if (Array.isArray(raw)) return raw
+  return []
+}
+
+const fuzzyMatch = (keyword: string, ...fields: Array<string | number | undefined | null>) => {
+  const normalizedKeyword = keyword.trim().toLowerCase()
+  const text = fields
+    .filter((field) => field !== undefined && field !== null)
+    .map((field) => String(field).toLowerCase())
+    .join(' ')
+  return text.includes(normalizedKeyword)
+}
+
+const runGlobalSearch = async () => {
+  const keyword = searchKeyword.value.trim()
+  if (!keyword) {
+    clearSearchResults()
+    return
+  }
+  searchLoading.value = true
+  try {
+    const [scenicRes, foodRes, noteRes, activityRes] = await Promise.all([
+      scenicSpotApi.list({ pageNum: 1, pageSize: 200 }),
+      foodApi.list({ pageNum: 1, pageSize: 200 }),
+      travelNoteApi.list({ pageNum: 1, pageSize: 200 }),
+      activityApi.getList({ pageNum: 1, pageSize: 200 }),
+    ])
+
+    const scenicRows = scenicRes.statusCode === 200 && (scenicRes.data as any).code === 200
+      ? extractRows((scenicRes.data as any).data)
+      : []
+    const foodRows = foodRes.statusCode === 200 && (foodRes.data as any).code === 200
+      ? extractRows((foodRes.data as any).data)
+      : []
+    const noteRows = noteRes.statusCode === 200 && (noteRes.data as any).code === 200
+      ? extractRows((noteRes.data as any).data)
+      : []
+    const activityRows = activityRes.statusCode === 200 && (activityRes.data as any).code === 200
+      ? extractRows((activityRes.data as any).data)
+      : []
+
+    searchScenicResults.value = scenicRows
+      .filter((item: ScenicItem) => fuzzyMatch(keyword, item.name, item.address, item.city, item.intro))
+      .slice(0, 8)
+    searchFoodResults.value = foodRows
+      .filter((item: FoodItem) => fuzzyMatch(keyword, item.name, item.address, item.foodType))
+      .slice(0, 8)
+    searchNoteResults.value = noteRows
+      .filter((item: NoteItem) => fuzzyMatch(keyword, item.title, (item as any).content, item.authorName, item.cityName))
+      .slice(0, 8)
+    searchActivityResults.value = activityRows
+      .filter((item: ActivityItem) => fuzzyMatch(keyword, item.name, item.highlight, item.description))
+      .slice(0, 8)
+  } catch (error) {
+    clearSearchResults()
+    uni.showToast({
+      title: '搜索失败，请稍后重试',
+      icon: 'none',
+    })
+  } finally {
+    searchLoading.value = false
+  }
 }
 
 // 智能入口事件
@@ -484,26 +647,22 @@ const onFeatureClick = (item: (typeof featureEntries.value)[number]) => {
   }
   lastClickTime = now
   
-  console.log('点击智能入口:', item.type)
   if (item.type === 'planner') {
-    safeSwitchTab('/pages/route/plan').catch((err) => {
-      console.error('切换 Tab 失败:', err)
+    safeSwitchTab('/pages/route/plan').catch(() => {
       uni.showToast({
         title: '跳转失败，请重试',
         icon: 'none'
       })
     })
   } else if (item.type === 'hot-routes') {
-    safeNavigateTo('/pages/route/hot-routes').catch((err) => {
-      console.error('跳转失败:', err)
+    safeNavigateTo('/pages/route/hot-routes').catch(() => {
       uni.showToast({
         title: '跳转失败，请重试',
         icon: 'none'
       })
     })
   } else if (item.type === 'interest') {
-    safeNavigateTo('/pages/recommend/interest').catch((err) => {
-      console.error('跳转失败:', err)
+    safeNavigateTo('/pages/recommend/interest').catch(() => {
       uni.showToast({
         title: '跳转失败，请重试',
         icon: 'none'
@@ -524,13 +683,10 @@ const onViewRoute = (route: RouteItem) => {
   }
   lastClickTime = now
   
-  console.log('点击线路卡片:', route.id)
   if (!route || !route.id) {
-    console.error('线路数据无效:', route)
     return
   }
-  safeNavigateTo(`/pages/itinerary/itinerary-detail?id=${route.id}`).catch((err) => {
-    console.error('跳转失败:', err)
+  safeNavigateTo(`/pages/itinerary/itinerary-detail?id=${route.id}`).catch(() => {
     uni.showToast({
       title: '跳转失败，请重试',
       icon: 'none'
@@ -556,13 +712,10 @@ const onViewNote = (note: NoteItem) => {
   }
   lastClickTime = now
   
-  console.log('点击游记卡片:', note.id)
   if (!note || !note.id) {
-    console.error('游记数据无效:', note)
     return
   }
-  safeNavigateTo(`/pages/travel-note/detail?id=${note.id}`).catch((err) => {
-    console.error('跳转失败:', err)
+  safeNavigateTo(`/pages/travel-note/detail?id=${note.id}`).catch(() => {
     uni.showToast({
       title: '跳转失败，请重试',
       icon: 'none'
@@ -670,14 +823,11 @@ const onViewScenic = async (item: ScenicItem) => {
   }
   lastClickTime = now
   
-  console.log('点击景点卡片:', item.id)
   if (!item || !item.id) {
-    console.error('景点数据无效:', item)
     return
   }
   // 先跳转，热度增加异步处理，不阻塞跳转
-  safeNavigateTo(`/pages/scenic/detail?id=${item.id}`).catch((err) => {
-    console.error('跳转失败:', err)
+  safeNavigateTo(`/pages/scenic/detail?id=${item.id}`).catch(() => {
     uni.showToast({
       title: '跳转失败，请重试',
       icon: 'none'
@@ -685,9 +835,8 @@ const onViewScenic = async (item: ScenicItem) => {
   })
   
   // 异步增加热度，不阻塞跳转
-  scenicSpotApi.incrementHotScore(item.id).catch((error) => {
+  scenicSpotApi.incrementHotScore(item.id).catch(() => {
     // 静默失败，不影响页面跳转
-    console.warn('增加热度失败:', error)
   })
 }
 
@@ -698,16 +847,28 @@ const onViewFood = (item: FoodItem) => {
   }
   lastClickTime = now
   
-  console.log('点击美食卡片:', item.id)
   if (!item || !item.id) {
-    console.error('美食数据无效:', item)
     return
   }
-  safeNavigateTo(`/pages/food/detail?id=${item.id}`).catch((err) => {
-    console.error('跳转失败:', err)
+  safeNavigateTo(`/pages/food/detail?id=${item.id}`).catch(() => {
     uni.showToast({
       title: '跳转失败，请重试',
       icon: 'none'
+    })
+  })
+}
+
+const onViewActivity = (item: ActivityItem) => {
+  const now = Date.now()
+  if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
+    return
+  }
+  lastClickTime = now
+  if (!item || !item.id) return
+  safeNavigateTo(`/pages/activity/detail?id=${item.id}`).catch(() => {
+    uni.showToast({
+      title: '跳转失败，请重试',
+      icon: 'none',
     })
   })
 }
@@ -817,7 +978,6 @@ const fetchFoodData = async (foodParams: any, toastFail: (msg: string) => void) 
     }
   } catch (error) {
     // 静默失败，不影响主流程
-    console.warn('美食数据加载失败:', error)
   }
 }
 
@@ -875,6 +1035,10 @@ onMounted(() => {
 // 页面卸载时移除事件监听
 onUnmounted(() => {
   uni.$off('noteCommentCountUpdated', handleNoteCommentCountUpdate)
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = null
+  }
 })
 
 // 页面显示时刷新数据（从详情页返回时更新评论数量等）
@@ -904,6 +1068,7 @@ onPullDownRefresh(async () => {
 })
 
 onReachBottom(() => {
+  if (isSearching.value) return
   loadNotes()
 })
 </script>
@@ -1014,6 +1179,58 @@ onReachBottom(() => {
 .section-subtitle {
   font-size: 22rpx;
   color: #999999;
+}
+
+.search-loading,
+.search-empty {
+  padding: 36rpx 16rpx;
+  text-align: center;
+  color: #93a0ac;
+  font-size: 24rpx;
+}
+
+.search-group-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.search-group {
+  background-color: #ffffff;
+  border-radius: 20rpx;
+  padding: 20rpx;
+  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.05);
+}
+
+.search-group-title {
+  font-size: 28rpx;
+  color: #314b43;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+  display: block;
+}
+
+.search-result-item {
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid #eef1f3;
+}
+
+.search-result-item:last-child {
+  border-bottom-width: 0;
+}
+
+.search-result-name {
+  display: block;
+  font-size: 26rpx;
+  color: #2f3c45;
+  font-weight: 500;
+}
+
+.search-result-meta {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #8b97a1;
 }
 
 /* 智能入口区样式 */

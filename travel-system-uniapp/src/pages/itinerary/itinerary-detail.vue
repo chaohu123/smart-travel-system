@@ -18,6 +18,12 @@
       </view>
     </view>
 
+    <!-- 隐藏画布：用于动态生成 marker 图标（需常驻，否则在“行程”Tab内更新地图时回调不触发） -->
+    <canvas
+      canvas-id="poi-marker-canvas"
+      style="position: fixed; left: -9999px; top: -9999px; width: 64px; height: 64px;"
+    ></canvas>
+
     <scroll-view scroll-y class="scroll-content" v-if="!loading && routeData">
       <!-- 行程概览卡片 -->
       <view class="overview-card">
@@ -90,14 +96,45 @@
               <text class="day-date">{{ getDayDate(selectedDayIndex, currentDayData.day?.dayNo) }}</text>
             </view>
 
-            <!-- 按新格式显示：时间段 -> 早餐 -> 路线 -> 景点 -->
-            <view class="time-blocks">
+            <!-- 纯 AI 文案：结构化展示（上午/下午标题 + 时间安排/详细行程/交通方式） -->
+            <view v-if="useAiTimelineOnly" class="time-blocks">
+              <view
+                v-for="(block, blockIndex) in aiTimelineBlocks"
+                :key="`ai-${blockIndex}`"
+                class="time-block"
+              >
+                <view class="time-label">{{ block.label }}</view>
+                <view class="time-description">
+                  <template v-if="block.fields.rawFallback">
+                    <text class="time-description-text">{{ block.fields.rawFallback }}</text>
+                  </template>
+                  <template v-else>
+                    <view v-if="block.fields.title" class="ai-segment-title">{{ block.fields.title }}</view>
+                    <view v-if="block.fields.timeSchedule" class="ai-segment-row">
+                      <text class="ai-segment-text">* 时间安排：{{ block.fields.timeSchedule }}</text>
+                    </view>
+                    <view v-if="block.fields.detail" class="ai-segment-row">
+                      <text class="ai-segment-text">* 详细行程：{{ block.fields.detail }}</text>
+                    </view>
+                    <view v-if="block.fields.transport" class="ai-segment-row">
+                      <text class="ai-segment-text">* 交通方式：{{ block.fields.transport }}</text>
+                    </view>
+                  </template>
+                </view>
+              </view>
+            </view>
+
+            <!-- 回退：按 POI 结构化展示 -->
+            <view v-else class="time-blocks">
               <view
                 v-for="(timeGroup, timeIndex) in formatDayContent(currentDayData)"
                 :key="timeIndex"
                 class="time-block"
               >
                 <view class="time-label">{{ timeGroup.timeLabel }}</view>
+                <view v-if="timeGroup.description" class="time-description">
+                  <text class="time-description-text">{{ timeGroup.description }}</text>
+                </view>
 
                 <!-- 早餐信息 -->
                 <view v-if="timeGroup.breakfast" class="breakfast-section">
@@ -108,7 +145,7 @@
                     <view class="breakfast-content">
                       <view class="breakfast-name">{{ timeGroup.breakfast.name }}</view>
                       <view class="breakfast-info">
-                        <text v-if="timeGroup.breakfast.address" class="breakfast-address">📍 {{ timeGroup.breakfast.address }}</text>
+                        <text v-if="timeGroup.breakfast.address" class="breakfast-address"><text class="iconfont icon-weizhi"></text> {{ timeGroup.breakfast.address }}</text>
                         <text v-if="timeGroup.breakfast.specialty" class="breakfast-specialty">特色：{{ timeGroup.breakfast.specialty }}</text>
                         <text v-if="timeGroup.breakfast.price" class="breakfast-price">¥{{ timeGroup.breakfast.price }}</text>
                       </view>
@@ -125,7 +162,7 @@
                     <view class="breakfast-content">
                       <view class="breakfast-name">{{ timeGroup.lunch.name }}</view>
                       <view class="breakfast-info">
-                        <text v-if="timeGroup.lunch.address" class="breakfast-address">📍 {{ timeGroup.lunch.address }}</text>
+                        <text v-if="timeGroup.lunch.address" class="breakfast-address"><text class="iconfont icon-weizhi"></text> {{ timeGroup.lunch.address }}</text>
                         <text v-if="timeGroup.lunch.specialty" class="breakfast-specialty">特色：{{ timeGroup.lunch.specialty }}</text>
                         <text v-if="timeGroup.lunch.price" class="breakfast-price">¥{{ timeGroup.lunch.price }}</text>
                       </view>
@@ -142,7 +179,7 @@
                     <view class="breakfast-content">
                       <view class="breakfast-name">{{ timeGroup.dinner.name }}</view>
                       <view class="breakfast-info">
-                        <text v-if="timeGroup.dinner.address" class="breakfast-address">📍 {{ timeGroup.dinner.address }}</text>
+                        <text v-if="timeGroup.dinner.address" class="breakfast-address"><text class="iconfont icon-weizhi"></text> {{ timeGroup.dinner.address }}</text>
                         <text v-if="timeGroup.dinner.specialty" class="breakfast-specialty">特色：{{ timeGroup.dinner.specialty }}</text>
                         <text v-if="timeGroup.dinner.price" class="breakfast-price">¥{{ timeGroup.dinner.price }}</text>
                       </view>
@@ -173,7 +210,7 @@
                   <view v-if="item.scenic" class="scenic-item">
                     <view class="poi-time">{{ item.scenic.stationLabel || '第一站' }}</view>
                     <view class="poi-icon icon-scenic">
-                      <text>🏛️</text>
+                      <text class="iconfont icon-jingdian"></text>
                     </view>
                     <view class="poi-content">
                       <view class="poi-name">{{ item.scenic.name }}</view>
@@ -190,7 +227,7 @@
                         <text class="notes-text">{{ item.scenic.notes }}</text>
                       </view>
                       <view v-if="item.scenic.address" class="poi-address">
-                        <text>📍 {{ item.scenic.address }}</text>
+                        <text><text class="iconfont icon-weizhi"></text> {{ item.scenic.address }}</text>
                       </view>
                     </view>
                   </view>
@@ -199,7 +236,7 @@
             </view>
 
             <!-- 当天景点卡片 - 横向滚动 -->
-            <view class="poi-cards-section" v-if="currentDayScenics.length > 0">
+            <view class="poi-cards-section" v-if="!useAiTimelineOnly && currentDayScenics.length > 0">
               <view class="section-title">景点</view>
               <scroll-view scroll-x class="poi-scroll" show-scrollbar="false">
                 <view class="poi-cards-list">
@@ -211,14 +248,10 @@
                   >
                     <view class="poi-card-image-wrapper">
                       <image
-                        v-if="scenic.imageUrl"
                         class="poi-card-image"
-                        :src="scenic.imageUrl"
+                        :src="scenic.imageUrl ? getImageUrl(scenic.imageUrl) : defaultScenicImage"
                         mode="aspectFill"
                       />
-                      <view v-else class="poi-card-image-placeholder">
-                        <text class="poi-card-icon">🏛️</text>
-                      </view>
                     </view>
                     <view class="poi-card-content">
                       <text class="poi-card-name">{{ scenic.name }}</text>
@@ -235,7 +268,7 @@
             </view>
 
             <!-- 当天美食卡片 - 横向滚动 -->
-            <view class="poi-cards-section" v-if="currentDayFoods.length > 0">
+            <view class="poi-cards-section" v-if="!useAiTimelineOnly && currentDayFoods.length > 0">
               <view class="section-title">美食</view>
               <scroll-view scroll-x class="poi-scroll" show-scrollbar="false">
                 <view class="poi-cards-list">
@@ -247,14 +280,10 @@
                   >
                     <view class="poi-card-image-wrapper">
                       <image
-                        v-if="food.imageUrl"
                         class="poi-card-image"
-                        :src="food.imageUrl"
+                        :src="food.imageUrl ? getImageUrl(food.imageUrl) : defaultFoodImage"
                         mode="aspectFill"
                       />
-                      <view v-else class="poi-card-image-placeholder">
-                        <text class="poi-card-icon">🍜</text>
-                      </view>
                     </view>
                     <view class="poi-card-content">
                       <text class="poi-card-name">{{ food.name }}</text>
@@ -285,6 +314,15 @@
             :enable-zoom="true"
             provider="amap"
           ></map>
+          <view v-if="fullMapLegends.length > 0" class="map-legend-panel">
+            <view class="map-legend-title">行程图例</view>
+            <view class="map-legend-list">
+              <view v-for="item in fullMapLegends" :key="item.dayNo" class="map-legend-item">
+                <view class="map-legend-color" :style="{ backgroundColor: item.color }"></view>
+                <text class="map-legend-text">Day {{ item.dayNo }}</text>
+              </view>
+            </view>
+          </view>
         </view>
       </view>
     </scroll-view>
@@ -316,6 +354,8 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import { routeApi } from '@/api/route'
 import { useUserStore } from '@/store/user'
 import { getCache, setCache } from '@/utils/storage'
+import { defaultFoodImage, defaultScenicImage } from '@/utils/config'
+import { getImageUrl } from '@/utils/image'
 
 interface RouteData {
   route?: {
@@ -363,6 +403,138 @@ const currentDayData = computed(() => {
   if (!routeData.value?.days || routeData.value.days.length === 0) return null
   return routeData.value.days[selectedDayIndex.value] || routeData.value.days[0]
 })
+
+const safeText = (value: any): string => {
+  if (value == null) return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+  try {
+    return JSON.stringify(value)
+  } catch (e) {
+    return ''
+  }
+}
+
+const parseDayIntro = (dayData: any) => {
+  const intro = dayData?.day?.intro
+  const empty = { morning: '', noon: '', afternoon: '', evening: '' }
+  if (!intro) return empty
+  const introText = safeText(intro).trim()
+  if (!introText) return empty
+
+  try {
+    if (introText.startsWith('{') && introText.endsWith('}')) {
+      const parsed = JSON.parse(introText)
+      return {
+        morning: safeText(parsed?.morning),
+        noon: safeText(parsed?.noon || parsed?.lunch),
+        afternoon: safeText(parsed?.afternoon),
+        evening: safeText(parsed?.evening),
+      }
+    }
+  } catch (e) {
+    // fallback plain text
+  }
+
+  return {
+    morning: introText,
+    noon: '',
+    afternoon: '',
+    evening: '',
+  }
+}
+
+/** 解析 AI 时段文案：主题行 + * 时间安排 / * 详细行程 / * 交通方式 */
+interface AiBlockFields {
+  title: string
+  timeSchedule: string
+  detail: string
+  transport: string
+  rawFallback: string
+}
+
+const parseAiBlockFields = (text: string): AiBlockFields => {
+  const raw = safeText(text).trim()
+  const empty: AiBlockFields = { title: '', timeSchedule: '', detail: '', transport: '', rawFallback: '' }
+  if (!raw) return empty
+
+  const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0)
+  const timeRe = /^\*?\s*时间安排[：:]\s*(.+)$/
+  const detailRe = /^\*?\s*详细行程[：:]\s*(.+)$/
+  const transRe = /^\*?\s*交通方式[：:]\s*(.+)$/
+
+  const isFieldLine = (line: string) => timeRe.test(line) || detailRe.test(line) || transRe.test(line)
+  const firstFieldIdx = lines.findIndex((l) => isFieldLine(l))
+
+  if (firstFieldIdx === -1) {
+    return { title: '', timeSchedule: '', detail: '', transport: '', rawFallback: raw }
+  }
+
+  const title = firstFieldIdx > 0 ? lines.slice(0, firstFieldIdx).join('\n').trim() : ''
+
+  let timeSchedule = ''
+  let detail = ''
+  let transport = ''
+  let pendingDetail = false
+
+  for (let i = firstFieldIdx; i < lines.length; i++) {
+    const line = lines[i]
+    const tm = line.match(timeRe)
+    if (tm) {
+      timeSchedule = tm[1].trim()
+      pendingDetail = false
+      continue
+    }
+    const dm = line.match(detailRe)
+    if (dm) {
+      detail = dm[1].trim()
+      pendingDetail = true
+      continue
+    }
+    const trm = line.match(transRe)
+    if (trm) {
+      transport = trm[1].trim()
+      pendingDetail = false
+      continue
+    }
+    if (pendingDetail) {
+      detail += (detail ? '\n' : '') + line
+    }
+  }
+
+  const hasStruct = !!(timeSchedule || detail || transport)
+  if (!hasStruct) {
+    return { title: '', timeSchedule: '', detail: '', transport: '', rawFallback: raw }
+  }
+  return { title, timeSchedule, detail, transport, rawFallback: '' }
+}
+
+const aiTimelineBlocks = computed(() => {
+  const day = currentDayData.value
+  if (!day) return []
+  const intro = parseDayIntro(day)
+  const rawBlocks = [
+    { key: 'morning', label: '上午', text: safeText(intro.morning).trim() },
+    { key: 'noon', label: '中午', text: safeText(intro.noon).trim() },
+    { key: 'afternoon', label: '下午', text: safeText(intro.afternoon).trim() },
+    { key: 'evening', label: '晚上', text: safeText(intro.evening).trim() },
+  ]
+  return rawBlocks
+    .filter((b) => b.text.length > 0)
+    .map((b) => ({
+      label: b.label,
+      fields: parseAiBlockFields(b.text),
+    }))
+})
+
+const useAiTimelineOnly = computed(() => aiTimelineBlocks.value.length > 0)
+
+const isNarrativeRelevant = (text: string, names: string[]) => {
+  const content = safeText(text).trim()
+  if (!content) return false
+  if (!names || names.length === 0) return false
+  return names.some((name) => !!name && content.includes(name))
+}
 
 // 当前天的景点列表（显示所有景点，不再因为全天景点而隐藏其他景点）
 const currentDayScenics = computed(() => {
@@ -435,6 +607,93 @@ const mapCenter = ref({
 
 const mapMarkers = ref<any[]>([])
 const mapPolyline = ref<any[]>([])
+const routeMapMode = ref<'day' | 'full'>('day')
+
+// 动态 marker 图标缓存（小程序 map 的 iconPath 需要本地路径/临时文件路径）
+const markerIconCache = ref<{ scenic?: string; food?: string }>({})
+let mapUpdateGen = 0
+const DAY_LINE_COLORS = ['#3BA272', '#2F7DDB', '#F59E0B', '#EF4444', '#8B5CF6', '#14B8A6', '#EC4899']
+
+const getDayLineColor = (dayNo: number) => DAY_LINE_COLORS[(Math.max(1, dayNo) - 1) % DAY_LINE_COLORS.length]
+
+const fullMapLegends = computed(() => {
+  if (activeTab.value !== 'map' || routeMapMode.value !== 'full' || !routeData.value?.days?.length) return []
+  return routeData.value.days.map((day, idx) => {
+    const dayNo = Number(day?.day?.dayNo || idx + 1)
+    return {
+      dayNo,
+      color: getDayLineColor(dayNo),
+    }
+  })
+})
+
+const createPoiMarkerIcon = (type: 'scenic' | 'food'): Promise<string> => {
+  if (markerIconCache.value[type]) {
+    return Promise.resolve(markerIconCache.value[type] as string)
+  }
+
+  return new Promise((resolve) => {
+    try {
+      const ctx = uni.createCanvasContext('poi-marker-canvas')
+      const size = 64
+      const r = 22
+      const cx = size / 2
+      const cy = 28
+
+      // 背景圆
+      ctx.clearRect(0, 0, size, size)
+      ctx.beginPath()
+      ctx.arc(cx, cy, r, 0, 2 * Math.PI)
+      ctx.closePath()
+
+      const fill = type === 'food' ? '#3BA272' : '#5D92B0'
+      ctx.setFillStyle(fill)
+      ctx.fill()
+
+      // 白色描边
+      ctx.setStrokeStyle('#FFFFFF')
+      ctx.setLineWidth(4)
+      ctx.stroke()
+
+      // 小尾巴（三角形）
+      ctx.beginPath()
+      ctx.moveTo(cx, cy + r + 2)
+      ctx.lineTo(cx - 10, cy + r + 18)
+      ctx.lineTo(cx + 10, cy + r + 18)
+      ctx.closePath()
+      ctx.setFillStyle(fill)
+      ctx.fill()
+      ctx.setStrokeStyle('#FFFFFF')
+      ctx.setLineWidth(3)
+      ctx.stroke()
+
+      // 中心白点
+      ctx.beginPath()
+      ctx.arc(cx, cy, 7, 0, 2 * Math.PI)
+      ctx.closePath()
+      ctx.setFillStyle('#FFFFFF')
+      ctx.fill()
+
+      ctx.draw(false, () => {
+        setTimeout(() => {
+          uni.canvasToTempFilePath({
+            canvasId: 'poi-marker-canvas',
+            success: (res: any) => {
+              markerIconCache.value[type] = res.tempFilePath
+              resolve(res.tempFilePath)
+            },
+            fail: () => {
+              // 失败则用默认 marker（不设置 iconPath）
+              resolve('')
+            },
+          })
+        }, 60)
+      })
+    } catch {
+      resolve('')
+    }
+  })
+}
 
 // 加载路线详情
 const loadRouteDetail = async () => {
@@ -443,59 +702,9 @@ const loadRouteDetail = async () => {
   loading.value = true
   try {
     const res = await routeApi.getDetail(routeId.value)
-    console.log('========== 路线详情API返回数据 ==========')
-    console.log('完整响应:', JSON.stringify(res, null, 2))
-    
+
     if (res.statusCode === 200 && res.data.code === 200) {
       routeData.value = res.data.data
-      
-      console.log('路线数据:', routeData.value)
-      console.log('路线名称:', routeData.value?.route?.routeName)
-      console.log('天数:', routeData.value?.days?.length)
-      
-      // 详细打印每一天的数据
-      if (routeData.value?.days) {
-        routeData.value.days.forEach((dayItem: any, dayIndex: number) => {
-          const dayNo = dayItem.day?.dayNo || dayIndex + 1
-          console.log(`\n========== Day ${dayNo} 数据 ==========`)
-          console.log('Day对象:', dayItem.day)
-          console.log('POI数量:', dayItem.pois?.length || 0)
-          
-          if (dayItem.pois && dayItem.pois.length > 0) {
-            // 按sort排序
-            const sortedPois = [...dayItem.pois].sort((a: any, b: any) => {
-              const sortA = a.poi?.sort || 0
-              const sortB = b.poi?.sort || 0
-              return sortA - sortB
-            })
-            
-            sortedPois.forEach((poi: any, poiIndex: number) => {
-              const poiType = poi.poi?.poiType || 'unknown'
-              const poiId = poi.poi?.poiId
-              const sort = poi.poi?.sort || 0
-              const detail = poi.detail
-              const name = detail?.name || '未知'
-              const timeSlot = poi.poi?.timeSlot || ''
-              
-              console.log(`  POI[${poiIndex}] (sort=${sort}):`)
-              console.log(`    类型: ${poiType}`)
-              console.log(`    POI ID: ${poiId}`)
-              console.log(`    名称: ${name}`)
-              console.log(`    时间段: ${timeSlot || '无'}`)
-              if (detail?.address) {
-                console.log(`    地址: ${detail.address}`)
-              }
-              if (poiType === 'scenic' && detail?.suggestedVisitTime) {
-                console.log(`    建议游玩时间: ${detail.suggestedVisitTime}`)
-              }
-            })
-          } else {
-            console.log('  该天没有POI数据')
-          }
-        })
-      }
-      
-      console.log('========================================\n')
 
       // 加载收藏状态
       loadFavoriteStatus()
@@ -503,11 +712,9 @@ const loadRouteDetail = async () => {
       // 初始化地图数据（显示当前选中天的路线）
       updateMapData()
     } else {
-      console.error('API返回错误:', res.data)
       uni.showToast({ title: res.data.msg || '加载失败', icon: 'none' })
     }
   } catch (e) {
-    console.error('加载路线详情失败:', e)
     uni.showToast({ title: '网络错误', icon: 'none' })
   } finally {
     loading.value = false
@@ -556,13 +763,32 @@ const toggleFavorite = async () => {
       icon: 'success'
     })
   } catch (e) {
-    console.error('切换收藏失败:', e)
     uni.showToast({ title: '操作失败', icon: 'none' })
   }
 }
 
+const toCoordNumber = (v: any): number | null => {
+  const n = typeof v === 'number' ? v : parseFloat(String(v))
+  return Number.isFinite(n) ? n : null
+}
+
+const isChinaCoord = (lat: number, lng: number) => lat >= 3 && lat <= 54.5 && lng >= 73 && lng <= 135.5
+
+const extractPoiCoord = (detail: any): { latitude: number; longitude: number } | null => {
+  if (!detail) return null
+  const latRaw = detail.latitude ?? detail.lat
+  const lngRaw = detail.longitude ?? detail.lng ?? detail.lon
+  const lat = toCoordNumber(latRaw)
+  const lng = toCoordNumber(lngRaw)
+  if (lat == null || lng == null) return null
+  if (!isChinaCoord(lat, lng)) return null
+  return { latitude: lat, longitude: lng }
+}
+
 // 更新地图数据（根据选中的天数显示对应的路线）
 const updateMapData = () => {
+  routeMapMode.value = 'day'
+  const gen = ++mapUpdateGen
   // 先清空地图数据，避免显示无关内容
   mapMarkers.value = []
   mapPolyline.value = []
@@ -571,7 +797,6 @@ const updateMapData = () => {
 
   const dayItem = routeData.value.days[selectedDayIndex.value]
   if (!dayItem || !dayItem.pois || dayItem.pois.length === 0) {
-    console.log('当前天没有POI数据')
     return
   }
 
@@ -585,22 +810,23 @@ const updateMapData = () => {
     return sortA - sortB
   })
 
-  console.log(`更新地图数据 - Day ${selectedDayIndex.value + 1}, POI数量: ${sortedPois.length}`)
-
   const dayCoordinates: any[] = []
   const dayNo = dayItem.day?.dayNo || selectedDayIndex.value + 1
   let poiOrder = 1 // POI顺序计数器
 
-  sortedPois.forEach((poiItem, poiIndex) => {
+  // 提前生成两种 marker 图标（并行），避免循环内重复生成
+  Promise.all([createPoiMarkerIcon('scenic'), createPoiMarkerIcon('food')]).then(([scenicIcon, foodIcon]) => {
+    if (gen !== mapUpdateGen) return
+    sortedPois.forEach((poiItem, poiIndex) => {
     const detail = poiItem.detail
     if (!detail) {
-      console.warn(`POI ${poiIndex} 没有detail数据`)
       return
     }
     
-    if (detail && (detail.latitude || detail.lat) && (detail.longitude || detail.lng || detail.lon)) {
-      const lat = detail.latitude || detail.lat
-      const lng = detail.longitude || detail.lng || detail.lon
+    const coord = extractPoiCoord(detail)
+    if (coord) {
+      const lat = coord.latitude
+      const lng = coord.longitude
 
       // 创建标记，包含顺序标签（景点显示顺序，美食不显示顺序）
       const isScenic = poiItem.poi?.poiType === 'scenic'
@@ -608,14 +834,16 @@ const updateMapData = () => {
       const poiName = getPoiName(poiItem)
       const markerTitle = orderLabel ? `${orderLabel} ${poiName}` : poiName
       
-      const marker = {
-        id: `day${selectedDayIndex.value}_poi${poiIndex}`,
+      // 微信小程序要求 marker.id 必须为 number
+      const markerId = (dayNo || 1) * 1000 + (poiIndex + 1)
+      const isFood = poiItem.poi?.poiType === 'food'
+      const marker: any = {
+        id: markerId,
         latitude: lat,
         longitude: lng,
         title: markerTitle,
         width: 40,
         height: 40,
-        iconPath: poiItem.poi?.poiType === 'food' ? '/static/food-marker.png' : '/static/scenic-marker.png',
         callout: {
           content: markerTitle,
           color: '#333',
@@ -627,6 +855,8 @@ const updateMapData = () => {
           textAlign: 'center'
         }
       }
+      const icon = isFood ? foodIcon : scenicIcon
+      if (icon) marker.iconPath = icon
 
       markers.push(marker)
       dayCoordinates.push({
@@ -638,47 +868,142 @@ const updateMapData = () => {
       if (isScenic) {
         poiOrder++
       }
-    } else {
-      console.warn(`POI ${poiIndex} (${getPoiName(poiItem)}) 没有有效的坐标信息`)
     }
+    })
+
+    // 为当前天创建路线
+    if (dayCoordinates.length > 1) {
+      polylines.push({
+        points: dayCoordinates,
+        color: '#3BA272',
+        width: 4,
+        arrowLine: true,
+        borderColor: '#2d8f5f',
+        borderWidth: 1
+      })
+    }
+
+    // 计算地图中心点（所有点的中心）
+    if (dayCoordinates.length > 0) {
+      let sumLat = 0
+      let sumLng = 0
+      dayCoordinates.forEach(coord => {
+        sumLat += coord.latitude
+        sumLng += coord.longitude
+      })
+      mapCenter.value = {
+        latitude: sumLat / dayCoordinates.length,
+        longitude: sumLng / dayCoordinates.length
+      }
+    }
+
+    // 更新地图数据
+    if (gen === mapUpdateGen) {
+      mapMarkers.value = markers
+      mapPolyline.value = polylines
+    }
+  }).catch(() => {
+    // ignore
   })
+}
 
-  console.log(`地图标记数量: ${markers.length}, 坐标点数量: ${dayCoordinates.length}`)
+const updateFullMapData = () => {
+  routeMapMode.value = 'full'
+  const gen = ++mapUpdateGen
+  mapMarkers.value = []
+  mapPolyline.value = []
 
-  // 为当前天创建路线
-  if (dayCoordinates.length > 1) {
-    polylines.push({
-      points: dayCoordinates,
-      color: '#3BA272',
-      width: 4,
-      arrowLine: true,
-      borderColor: '#2d8f5f',
-      borderWidth: 1
+  const days = routeData.value?.days || []
+  if (!days.length) return
+
+  Promise.all([createPoiMarkerIcon('scenic'), createPoiMarkerIcon('food')]).then(([scenicIcon, foodIcon]) => {
+    if (gen !== mapUpdateGen) return
+    const markers: any[] = []
+    const polylines: any[] = []
+    const allCoords: Array<{ latitude: number; longitude: number }> = []
+
+    days.forEach((dayItem, dayIdx) => {
+      const sortedPois = [...(dayItem?.pois || [])].sort((a, b) => {
+        const sortA = a.poi?.sort || 0
+        const sortB = b.poi?.sort || 0
+        return sortA - sortB
+      })
+      const dayNo = Number(dayItem?.day?.dayNo || dayIdx + 1)
+      const dayCoords: Array<{ latitude: number; longitude: number }> = []
+      let scenicSeq = 1
+
+      sortedPois.forEach((poiItem, poiIdx) => {
+        const detail = poiItem?.detail
+        const coord = extractPoiCoord(detail)
+        if (!coord) return
+        const isFood = poiItem.poi?.poiType === 'food'
+        const markerTitle = `${isFood ? '食' : '景'} Day${dayNo}-${isFood ? poiIdx + 1 : scenicSeq} ${getPoiName(poiItem)}`
+        if (!isFood) scenicSeq++
+        const marker: any = {
+          id: dayNo * 10000 + poiIdx + 1,
+          latitude: coord.latitude,
+          longitude: coord.longitude,
+          title: markerTitle,
+          width: 34,
+          height: 34,
+          callout: {
+            content: markerTitle,
+            color: '#2d2d2d',
+            fontSize: 12,
+            borderRadius: 6,
+            bgColor: '#ffffff',
+            padding: 6,
+            display: 'BYCLICK',
+            textAlign: 'center',
+          },
+        }
+        const icon = isFood ? foodIcon : scenicIcon
+        if (icon) marker.iconPath = icon
+        markers.push(marker)
+        dayCoords.push(coord)
+        allCoords.push(coord)
+      })
+
+      if (dayCoords.length > 1) {
+        polylines.push({
+          points: dayCoords,
+          color: getDayLineColor(dayNo),
+          width: 5,
+          arrowLine: true,
+          dottedLine: false,
+        })
+      }
     })
-  }
 
-  // 计算地图中心点（所有点的中心）
-  if (dayCoordinates.length > 0) {
-    let sumLat = 0
-    let sumLng = 0
-    dayCoordinates.forEach(coord => {
-      sumLat += coord.latitude
-      sumLng += coord.longitude
-    })
-    mapCenter.value = {
-      latitude: sumLat / dayCoordinates.length,
-      longitude: sumLng / dayCoordinates.length
+    if (allCoords.length) {
+      let sumLat = 0
+      let sumLng = 0
+      allCoords.forEach((p) => {
+        sumLat += p.latitude
+        sumLng += p.longitude
+      })
+      mapCenter.value = {
+        latitude: sumLat / allCoords.length,
+        longitude: sumLng / allCoords.length,
+      }
     }
-  }
 
-  // 更新地图数据
-  mapMarkers.value = markers
-  mapPolyline.value = polylines
+    if (gen === mapUpdateGen) {
+      mapMarkers.value = markers
+      mapPolyline.value = polylines
+    }
+  }).catch(() => {
+    // ignore
+  })
 }
 
 // 格式化当天内容（按照时间段分组：上午、中午、下午、晚上）
 const formatDayContent = (dayData: any) => {
   if (!dayData || !dayData.pois || dayData.pois.length === 0) return []
+  const dayIntro = parseDayIntro(dayData)
+  const poiNames = (dayData.pois || [])
+    .map((p: any) => safeText(p?.detail?.name).trim())
+    .filter((name: string) => !!name)
 
   // 按sort排序
   const sortedPois = [...dayData.pois].sort((a, b) => {
@@ -687,23 +1012,9 @@ const formatDayContent = (dayData: any) => {
     return sortA - sortB
   })
 
-  // 调试信息：打印排序后的POI列表
-  const dayNo = dayData.day?.dayNo || selectedDayIndex.value + 1
-  console.log(`\n========== formatDayContent - Day ${dayNo} ==========`)
-  console.log('排序后的POI列表:')
-  sortedPois.forEach((poi: any, index: number) => {
-    const poiType = poi.poi?.poiType || 'unknown'
-    const sort = poi.poi?.sort || 0
-    const name = poi.detail?.name || '未知'
-    const timeSlot = poi.poi?.timeSlot || ''
-    console.log(`  [${index}] sort=${sort}, type=${poiType}, name=${name}, timeSlot=${timeSlot}`)
-  })
-
   // 分离景点和美食
   const scenicPois = sortedPois.filter((p: any) => p.poi?.poiType === 'scenic')
   const foodPois = sortedPois.filter((p: any) => p.poi?.poiType === 'food')
-
-  console.log(`景点数量: ${scenicPois.length}, 美食数量: ${foodPois.length}`)
 
   // 检查第一个景点是否游玩时间为"全天"
   const firstScenic = scenicPois[0]
@@ -711,16 +1022,13 @@ const formatDayContent = (dayData: any) => {
                     (firstScenic.detail.suggestedVisitTime.includes('全天') || 
                      firstScenic.detail.suggestedVisitTime.includes('一天'))
   
-  if (firstScenic) {
-    console.log(`第一个景点: ${firstScenic.detail?.name}, 游玩时间: ${firstScenic.detail?.suggestedVisitTime}, 是否全天: ${isFullDay}`)
-  }
-
   // 注意：即使第一个景点是全天，也应该显示所有景点，不要只显示一个
   // 全天景点只是建议游玩时间，不应该影响其他景点的显示
   // 如果第一个景点是全天且只有一个景点，才使用简化显示
   if (isFullDay && scenicPois.length === 1) {
     const morningGroup: any = {
       timeLabel: '上午',
+      description: dayIntro.morning,
       items: []
     }
     
@@ -853,18 +1161,22 @@ const formatDayContent = (dayData: any) => {
   // 初始化时间段组
   const morningGroup: any = {
     timeLabel: '上午',
+    description: isNarrativeRelevant(dayIntro.morning, poiNames) ? dayIntro.morning : '',
     items: []
   }
   const noonGroup: any = {
     timeLabel: '中午',
+    description: isNarrativeRelevant(dayIntro.noon, poiNames) ? dayIntro.noon : '',
     items: []
   }
   const afternoonGroup: any = {
     timeLabel: '下午',
+    description: isNarrativeRelevant(dayIntro.afternoon, poiNames) ? dayIntro.afternoon : '',
     items: []
   }
   const eveningGroup: any = {
     timeLabel: '晚上',
+    description: isNarrativeRelevant(dayIntro.evening, poiNames) ? dayIntro.evening : '',
     items: []
   }
 
@@ -1144,16 +1456,6 @@ const formatDayContent = (dayData: any) => {
     groups.push(eveningGroup)
   }
 
-  console.log(`格式化完成，生成 ${groups.length} 个时间段组`)
-  groups.forEach((group, index) => {
-    console.log(`  时间段组[${index}]: ${group.timeLabel}`)
-    if (group.breakfast) console.log(`    早餐: ${group.breakfast.name}`)
-    if (group.lunch) console.log(`    午餐: ${group.lunch.name}`)
-    if (group.dinner) console.log(`    晚餐: ${group.dinner.name}`)
-    console.log(`    景点数量: ${group.items.filter((item: any) => item.scenic).length}`)
-  })
-  console.log('========================================\n')
-
   return groups
 }
 
@@ -1200,9 +1502,9 @@ const getPoiDesc = (poiItem: any) => {
 
 // 获取POI图标
 const getPoiIcon = (poiType?: string) => {
-  if (poiType === 'scenic') return '🏛️'
-  if (poiType === 'food') return '🍜'
-  return '📍'
+  if (poiType === 'scenic') return '景'
+  if (poiType === 'food') return '食'
+  return '点'
 }
 
 // 获取POI图标类名
@@ -1248,8 +1550,8 @@ const handleDayChange = (dayIndex: number) => {
 // 查看完整地图
 const viewFullMap = () => {
   activeTab.value = 'map'
-  // 切换到地图视图时，确保地图数据是最新的
-  updateMapData()
+  // 切换到地图视图时，展示全行程（所有天数）
+  updateFullMapData()
 }
 
 // 开始导航
@@ -1314,6 +1616,14 @@ const onViewFood = (food: any) => {
 onLoad((options: any) => {
   if (options.id) {
     routeId.value = Number(options.id)
+    // 浏览量 +1（与列表点击进详情一致，其它入口打开详情也会计数）
+    routeApi.recordView(routeId.value)
+      .then(() => {
+        // 本页立即同步展示（列表页会在 onShow 时刷新为后端真实值）
+        const r: any = routeData.value?.route
+        if (r) r.viewCount = Number(r.viewCount || 0) + 1
+      })
+      .catch(() => {})
     loadRouteDetail()
   }
 })
@@ -1327,7 +1637,16 @@ onShow(() => {
 
 // 监听天数切换，自动更新地图
 watch(selectedDayIndex, () => {
-  if (routeData.value) {
+  if (routeData.value && activeTab.value !== 'map') {
+    updateMapData()
+  }
+})
+
+watch(activeTab, (tab) => {
+  if (!routeData.value) return
+  if (tab === 'map') {
+    updateFullMapData()
+  } else {
     updateMapData()
   }
 })
@@ -1600,6 +1919,37 @@ watch(selectedDayIndex, () => {
   flex-shrink: 0;
 }
 
+.day-narrative-card {
+  background: #f7fbf9;
+  border: 1rpx solid #e1f0e8;
+  border-radius: 16rpx;
+  padding: 18rpx 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.narrative-title {
+  font-size: 24rpx;
+  color: #3ba272;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+}
+
+.narrative-block {
+  margin-top: 8rpx;
+}
+
+.narrative-label {
+  font-size: 24rpx;
+  color: #333;
+  font-weight: 600;
+}
+
+.narrative-text {
+  font-size: 24rpx;
+  color: #555;
+  line-height: 1.6;
+}
+
 .time-blocks {
   display: flex;
   flex-direction: column;
@@ -1615,6 +1965,42 @@ watch(selectedDayIndex, () => {
 
 .time-block:first-child .time-label {
   margin-top: 0;
+}
+
+.time-description {
+  background: #f7fbf9;
+  border: 1rpx solid #e1f0e8;
+  border-radius: 12rpx;
+  padding: 14rpx 16rpx;
+}
+
+.time-description-text {
+  font-size: 24rpx;
+  color: #4f5b53;
+  line-height: 1.6;
+}
+
+.ai-segment-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.5;
+  margin-bottom: 12rpx;
+}
+
+.ai-segment-row {
+  margin-bottom: 10rpx;
+}
+
+.ai-segment-row:last-child {
+  margin-bottom: 0;
+}
+
+.ai-segment-text {
+  font-size: 24rpx;
+  color: #4f5b53;
+  line-height: 1.65;
+  display: block;
 }
 
 /* POI卡片区域 */
@@ -2030,11 +2416,54 @@ watch(selectedDayIndex, () => {
   border-radius: 24rpx;
   overflow: hidden;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+  position: relative;
 }
 
 .full-map {
   width: 100%;
   height: 100%;
+}
+
+.map-legend-panel {
+  position: absolute;
+  left: 20rpx;
+  top: 20rpx;
+  z-index: 12;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 16rpx;
+  padding: 14rpx 16rpx;
+  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.12);
+}
+
+.map-legend-title {
+  font-size: 22rpx;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+}
+
+.map-legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.map-legend-color {
+  width: 24rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+}
+
+.map-legend-text {
+  font-size: 22rpx;
+  color: #555;
+  line-height: 1;
 }
 
 /* 加载状态 */

@@ -74,7 +74,16 @@ public class RoutePlanController {
             dailySelections = new java.util.ArrayList<>();
             for (Object o : (List<?>) dailySelectionsObj) {
                 if (o instanceof Map) {
-                    dailySelections.add((Map<String, Object>) o);
+                    // 将原始 Map 复制为 Map<String, Object>（避免未检查强转告警）
+                    Map<String, Object> copied = new java.util.HashMap<>();
+                    Map<?, ?> raw = (Map<?, ?>) o;
+                    for (Map.Entry<?, ?> entry : raw.entrySet()) {
+                        Object k = entry.getKey();
+                        if (k != null) {
+                            copied.put(k.toString(), entry.getValue());
+                        }
+                    }
+                    dailySelections.add(copied);
                 }
             }
         }
@@ -88,7 +97,33 @@ public class RoutePlanController {
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
         response.put("msg", "success");
-        response.put("data", Collections.singletonMap("routeId", routeId));
+        Map<String, Object> data = new HashMap<>();
+        data.put("routeId", routeId);
+        // 方便测试：返回 AI 可用性与本次是否使用（以落库字段为准）
+        data.put("aiAvailable", useAi && routePlanService != null); // 仅标识请求希望使用AI
+        try {
+            Map<String, Object> detail = routePlanService.getRouteDetail(routeId);
+            Object routeObj = detail != null ? detail.get("route") : null;
+            if (routeObj instanceof com.smarttravel.route.domain.TravelRoute) {
+                com.smarttravel.route.domain.TravelRoute r = (com.smarttravel.route.domain.TravelRoute) routeObj;
+                data.put("aiUsed", r.getAiUsed() != null && r.getAiUsed() == 1);
+            }
+        } catch (Exception ignored) {
+        }
+        response.put("data", data);
+        return response;
+    }
+
+    /**
+     * 记录路线浏览（浏览量 +1），无需登录
+     */
+    @PostMapping("/{id}/view")
+    public Map<String, Object> recordRouteView(@PathVariable Long id) {
+        boolean ok = routePlanService.incrementRouteViewCount(id);
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", ok ? 200 : 404);
+        response.put("msg", ok ? "success" : "route not found");
+        response.put("data", Collections.singletonMap("ok", ok));
         return response;
     }
 
@@ -128,6 +163,33 @@ public class RoutePlanController {
         response.put("code", 200);
         response.put("msg", "success");
         response.put("data", list);
+        return response;
+    }
+
+    /**
+     * 更新路线名称（用于“保存时命名/历史编辑”）
+     */
+    @PutMapping("/{id}/name")
+    public Map<String, Object> updateRouteName(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        String routeName = body != null && body.get("routeName") != null ? body.get("routeName").toString() : null;
+        boolean ok = routePlanService.updateRouteName(id, routeName);
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", ok ? 200 : 400);
+        response.put("msg", ok ? "success" : "invalid routeName");
+        response.put("data", ok ? Collections.singletonMap("updated", true) : Collections.emptyMap());
+        return response;
+    }
+
+    /**
+     * 弃用/删除路线（用于“返回后弃用/历史删除”）
+     */
+    @DeleteMapping("/{id}")
+    public Map<String, Object> discardRoute(@PathVariable Long id) {
+        boolean ok = routePlanService.discardRoute(id);
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", ok ? 200 : 400);
+        response.put("msg", ok ? "success" : "discard failed");
+        response.put("data", ok ? Collections.singletonMap("discarded", true) : Collections.emptyMap());
         return response;
     }
 }

@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +66,10 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
         // 获取景点标签
         List<String> tagNames = new ArrayList<>();
         if (spot != null && spot.getId() != null) {
-            List<ContentTag> contentTags = contentTagMapper.selectByContentIds("scenic", Collections.singletonList(spot.getId()));
+            // 避免使用 Collections.singletonList 导致 JDK17+ 反射访问受限
+            List<Long> scenicIds = new ArrayList<>();
+            scenicIds.add(spot.getId());
+            List<ContentTag> contentTags = contentTagMapper.selectByContentIds("scenic", scenicIds);
             if (contentTags != null && !contentTags.isEmpty()) {
                 List<Long> tagIds = contentTags.stream()
                     .map(ContentTag::getTagId)

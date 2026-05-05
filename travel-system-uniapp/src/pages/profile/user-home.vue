@@ -9,7 +9,7 @@
           <view class="avatar-wrapper" @click="previewAvatar">
             <image
               class="user-avatar"
-              :src="userInfo.avatar || defaultAvatar"
+              :src="avatarSrc"
               mode="aspectFill"
             />
             <view v-if="isOwnProfile" class="avatar-edit-icon" @click.stop="changeAvatar">
@@ -157,7 +157,7 @@
     <view v-if="showAvatarPreview" class="avatar-preview-modal" @click="closeAvatarPreview">
       <image
         class="preview-image"
-        :src="userInfo.avatar || defaultAvatar"
+        :src="avatarSrc"
         mode="aspectFit"
         @tap.stop
       />
@@ -172,10 +172,20 @@ import { userApi } from '@/api/user'
 import { useUserStore } from '@/store/user'
 import { getCache, setCache } from '@/utils/storage'
 import { safeNavigateTo, resetNavigationState } from '@/utils/router'
+import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
 const currentUser = computed(() => store.state.profile)
 const defaultAvatar = 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200'
+
+// 头像展示地址：将后端返回的相对路径（如 /uploads/...）转换为完整 URL，避免小程序本地资源加载错误
+const avatarSrc = computed(() => {
+  const avatar = userInfo.value.avatar
+  if (!avatar) {
+    return defaultAvatar
+  }
+  return getImageUrl(avatar)
+})
 
 // 获取页面参数
 // 注意：getCurrentPages 是全局函数，在 onMounted 中调用更安全
@@ -258,14 +268,14 @@ const hasCheckedInToday = ref(false)
 // 获取勋章图标
 const getMedalIcon = (medal: any) => {
   const iconMap: Record<string, string> = {
-    '新手': '🌱',
-    '达人': '⭐',
-    '专家': '🏆',
-    '大师': '👑',
-    '旅行家': '✈️',
-    '探索者': '🗺️'
+    '新手': '新',
+    '达人': '达',
+    '专家': '专',
+    '大师': '师',
+    '旅行家': '旅',
+    '探索者': '探'
   }
-  return iconMap[medal.name || medal] || '🏅'
+  return iconMap[medal.name || medal] || '章'
 }
 
 // 加载用户信息
@@ -398,7 +408,13 @@ const openChat = () => {
     return
   }
   
-  safeNavigateTo(`/pages/profile/chat?userId=${targetId}&nickname=${encodeURIComponent(userInfo.value.nickname || '')}&avatar=${encodeURIComponent(userInfo.value.avatar || '')}`).catch(() => {
+  // 这里传递处理后的完整头像地址，避免在聊天页出现 /uploads/ 相对路径导致的小程序加载错误
+  const avatarUrl = avatarSrc.value
+  safeNavigateTo(
+    `/pages/profile/chat?userId=${targetId}&nickname=${encodeURIComponent(
+      userInfo.value.nickname || ''
+    )}&avatar=${encodeURIComponent(avatarUrl || '')}`
+  ).catch(() => {
     // 静默处理错误
   })
 }
@@ -645,11 +661,11 @@ const formatInteractionText = (item: any) => {
 
 // 获取互动图标
 const getInteractionIcon = (type: string) => {
-  if (type === 'like') return '👍'
-  if (type === 'comment') return '💬'
+  if (type === 'like') return '赞'
+  if (type === 'comment') return '评'
   if (type === 'follow') return '➕'
-  if (type === 'newNote') return '📝'
-  return '🔔'
+  if (type === 'newNote') return '记'
+  return '信'
 }
 
 // 加载互动动态
@@ -719,14 +735,6 @@ const formatTime = (time: string) => {
   if (days < 7) return `${days}天前`
   return `${date.getMonth() + 1}-${date.getDate()}`
 }
-
-// 获取图片URL
-const getImageUrl = (url: string) => {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return `https://your-api-domain.com${url}`
-}
-
 
 onMounted(() => {
   resetNavigationState()

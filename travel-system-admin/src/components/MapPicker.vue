@@ -71,8 +71,8 @@
             <p>请先配置高德地图API Key才能使用地图选点功能。</p>
             <p>获取API Key：<a href="https://console.amap.com/dev/key/app" target="_blank">https://console.amap.com/dev/key/app</a></p>
             <p>配置方式：在系统参数中配置"地图 API Key"</p>
-            <p style="color: #f56c6c; margin-top: 8px;">⚠️ 注意：请确保API Key已启用"Web服务"和"地点搜索"服务权限</p>
-            <p style="color: #e6a23c; margin-top: 8px;">💡 提示：如果出现"INVALID_USER_SCODE"错误，请检查是否启用了安全密钥。如果启用了，需要在配置文件中设置安全密钥；如果未启用，请在高德控制台关闭安全密钥验证。</p>
+            <p style="color: #f56c6c; margin-top: 8px;">注意：请确保API Key已启用"Web服务"和"地点搜索"服务权限</p>
+            <p style="color: #e6a23c; margin-top: 8px;">提示：如果出现"INVALID_USER_SCODE"错误，请检查是否启用了安全密钥。如果启用了，需要在配置文件中设置安全密钥；如果未启用，请在高德控制台关闭安全密钥验证。</p>
           </div>
         </template>
       </el-alert>
@@ -775,9 +775,9 @@ const handleSearch = () => {
         const hasSecurityKey = props.securityKey && props.securityKey.trim() !== '';
 
         if (hasSecurityKey) {
-          errorText = '⚠️ 安全密钥验证失败！\n\n可能的原因：\n1. 安全密钥配置不正确\n2. 域名白名单未配置或配置错误\n3. 高德控制台的安全密钥设置有问题\n\n✅ 解决方案：\n1. 检查高德控制台的安全密钥是否正确\n2. 确认域名白名单配置（留空表示无限制）\n3. 如果不需要安全密钥，请在配置文件中将 MAP_SECURITY_KEY 设置为空字符串';
+          errorText = '安全密钥验证失败！\n\n可能的原因：\n1. 安全密钥配置不正确\n2. 域名白名单未配置或配置错误\n3. 高德控制台的安全密钥设置有问题\n\n解决方案：\n1. 检查高德控制台的安全密钥是否正确\n2. 确认域名白名单配置（留空表示无限制）\n3. 如果不需要安全密钥，请在配置文件中将 MAP_SECURITY_KEY 设置为空字符串';
         } else {
-          errorText = '⚠️ 安全密钥验证失败！\n\n问题原因：\n高德控制台可能启用了安全密钥验证，但代码中未配置安全密钥。\n\n✅ 解决方案（二选一）：\n\n方案一：禁用安全密钥验证（推荐开发环境）\n1. 登录高德控制台：https://console.amap.com/\n2. 进入"应用管理" → 选择你的应用\n3. 找到"安全密钥"设置\n4. 关闭或清空安全密钥验证\n5. 等待1-2分钟生效后，刷新本页面重试\n\n方案二：配置安全密钥\n1. 在高德控制台获取安全密钥\n2. 在配置文件中设置 MAP_SECURITY_KEY\n3. 确保域名白名单配置正确（留空表示无限制）\n\n💡 提示：\n- 开发环境建议禁用安全密钥验证\n- 域名白名单留空 = 无域名限制\n- 如果域名白名单不为空，请确保包含当前访问的域名';
+          errorText = '安全密钥验证失败！\n\n问题原因：\n高德控制台可能启用了安全密钥验证，但代码中未配置安全密钥。\n\n解决方案（二选一）：\n\n方案一：禁用安全密钥验证（推荐开发环境）\n1. 登录高德控制台：https://console.amap.com/\n2. 进入"应用管理" -> 选择你的应用\n3. 找到"安全密钥"设置\n4. 关闭或清空安全密钥验证\n5. 等待1-2分钟生效后，刷新本页面重试\n\n方案二：配置安全密钥\n1. 在高德控制台获取安全密钥\n2. 在配置文件中设置 MAP_SECURITY_KEY\n3. 确保域名白名单配置正确（留空表示无限制）\n\n提示：\n- 开发环境建议禁用安全密钥验证\n- 域名白名单留空 = 无域名限制\n- 如果域名白名单不为空，请确保包含当前访问的域名';
         }
 
         ElMessage.error({

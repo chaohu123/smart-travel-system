@@ -59,7 +59,7 @@
         <el-table-column prop="medalName" label="勋章名称" width="150" />
         <el-table-column prop="medalIcon" label="勋章图标" width="100" align="center">
           <template #default="{ row }">
-            <span style="font-size: 24px;">{{ row.medalIcon || '🏅' }}</span>
+            <span style="font-size: 24px;">{{ row.medalIcon || '徽章' }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
@@ -129,9 +129,9 @@
           <el-input v-model="form.medalName" placeholder="如：新手、达人、专家" />
         </el-form-item>
         <el-form-item label="勋章图标" prop="medalIcon">
-          <el-input v-model="form.medalIcon" placeholder="输入emoji或图标，如：🌱、⭐、🏆" />
+          <el-input v-model="form.medalIcon" placeholder="输入图标文本，如：新手、达人、专家" />
           <div class="medal-preview">
-            <span class="preview-icon">{{ form.medalIcon || '🏅' }}</span>
+            <span class="preview-icon">{{ form.medalIcon || '徽章' }}</span>
             <span class="preview-text">预览效果</span>
           </div>
         </el-form-item>
@@ -199,7 +199,7 @@ const form = reactive<Level>({
   minExperience: 0,
   maxExperience: undefined,
   medalName: '',
-  medalIcon: '🏅',
+  medalIcon: '徽章',
   description: '',
   status: 1
 });
@@ -338,7 +338,7 @@ const resetForm = () => {
     minExperience: 0,
     maxExperience: undefined,
     medalName: '',
-    medalIcon: '🏅',
+    medalIcon: '徽章',
     description: '',
     status: 1
   });

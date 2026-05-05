@@ -7,6 +7,7 @@
         <result column="city_name" property="cityName"/>
         <result column="province" property="province"/>
         <result column="country" property="country"/>
+        <result column="image_url" property="imageUrl"/>
         <result column="latitude" property="latitude"/>
         <result column="longitude" property="longitude"/>
         <result column="status" property="status"/>
@@ -16,7 +17,7 @@
     </resultMap>
 
     <select id="selectList" parameterType="com.smarttravel.content.domain.City" resultMap="CityResult">
-        SELECT id, city_name, province, country, latitude, longitude, status,
+        SELECT id, city_name, province, country, image_url, latitude, longitude, status,
                create_time, update_time, del_flag
         FROM city
         WHERE del_flag = 0
@@ -27,7 +28,7 @@
     </select>
 
     <select id="selectListWithPage" resultMap="CityResult">
-        SELECT id, city_name, province, country, latitude, longitude, status,
+        SELECT id, city_name, province, country, image_url, latitude, longitude, status,
                create_time, update_time, del_flag
         FROM city
         WHERE del_flag = 0
@@ -60,14 +61,14 @@
     </select>
 
     <select id="selectById" parameterType="long" resultMap="CityResult">
-        SELECT id, city_name, province, country, latitude, longitude, status,
+        SELECT id, city_name, province, country, image_url, latitude, longitude, status,
                create_time, update_time, del_flag
         FROM city
         WHERE id = #{id} AND del_flag = 0
     </select>
 
     <select id="selectByCityNameAndProvince" resultMap="CityResult">
-        SELECT id, city_name, province, country, latitude, longitude, status,
+        SELECT id, city_name, province, country, image_url, latitude, longitude, status,
                create_time, update_time, del_flag
         FROM city
         WHERE del_flag = 0
@@ -108,13 +109,13 @@
         INSERT INTO city
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="id != null">id,</if>
-            city_name, province, country, latitude, longitude, status,
+            city_name, province, country, image_url, latitude, longitude, status,
             create_time, update_time, del_flag
         </trim>
         VALUES
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="id != null">#{id},</if>
-            #{cityName}, #{province}, #{country}, #{latitude}, #{longitude}, #{status},
+            #{cityName}, #{province}, #{country}, #{imageUrl}, #{latitude}, #{longitude}, #{status},
             NOW(), NOW(), 0
         </trim>
     </insert>
@@ -125,6 +126,7 @@
             <if test="cityName != null">city_name = #{cityName},</if>
             <if test="province != null">province = #{province},</if>
             <if test="country != null">country = #{country},</if>
+            <if test="imageUrl != null">image_url = #{imageUrl},</if>
             <if test="latitude != null">latitude = #{latitude},</if>
             <if test="longitude != null">longitude = #{longitude},</if>
             <if test="status != null">status = #{status},</if>

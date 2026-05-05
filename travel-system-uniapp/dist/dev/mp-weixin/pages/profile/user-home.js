@@ -4,6 +4,7 @@ var api_user = require("../../api/user.js");
 var store_user = require("../../store/user.js");
 var utils_storage = require("../../utils/storage.js");
 var utils_router = require("../../utils/router.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/http.js");
 require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
@@ -11,6 +12,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const store = store_user.useUserStore();
     const currentUser = common_vendor.computed(() => store.state.profile);
     const defaultAvatar = "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
+    const avatarSrc = common_vendor.computed(() => {
+      const avatar = userInfo.value.avatar;
+      if (!avatar) {
+        return defaultAvatar;
+      }
+      return utils_image.getImageUrl(avatar);
+    });
     const targetUserId = common_vendor.ref(null);
     const userInfo = common_vendor.ref({
       id: null,
@@ -165,7 +173,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         common_vendor.index.showToast({ title: "\u7528\u6237\u4E0D\u5B58\u5728", icon: "none" });
         return;
       }
-      utils_router.safeNavigateTo(`/pages/profile/chat?userId=${targetId}&nickname=${encodeURIComponent(userInfo.value.nickname || "")}&avatar=${encodeURIComponent(userInfo.value.avatar || "")}`).catch(() => {
+      const avatarUrl = avatarSrc.value;
+      utils_router.safeNavigateTo(
+        `/pages/profile/chat?userId=${targetId}&nickname=${encodeURIComponent(
+          userInfo.value.nickname || ""
+        )}&avatar=${encodeURIComponent(avatarUrl || "")}`
+      ).catch(() => {
       });
     };
     const checkTodayCheckInStatus = () => {
@@ -353,14 +366,14 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const getInteractionIcon = (type) => {
       if (type === "like")
-        return "\u{1F44D}";
+        return "\u8D5E";
       if (type === "comment")
-        return "\u{1F4AC}";
+        return "\u8BC4";
       if (type === "follow")
         return "\u2795";
       if (type === "newNote")
-        return "\u{1F4DD}";
-      return "\u{1F514}";
+        return "\u8BB0";
+      return "\u4FE1";
     };
     const loadInteractions = async () => {
       if (!isOwnProfile.value)
@@ -464,7 +477,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     });
     return (_ctx, _cache) => {
       return common_vendor.e({
-        a: userInfo.value.avatar || defaultAvatar,
+        a: common_vendor.unref(avatarSrc),
         b: common_vendor.unref(isOwnProfile)
       }, common_vendor.unref(isOwnProfile) ? {
         c: common_vendor.o(changeAvatar)
@@ -532,7 +545,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }, interactionList.value.length === 0 ? {} : {}) : {}, {
         N: showAvatarPreview.value
       }, showAvatarPreview.value ? {
-        O: userInfo.value.avatar || defaultAvatar,
+        O: common_vendor.unref(avatarSrc),
         P: common_vendor.o(() => {
         }),
         Q: common_vendor.o(closeAvatarPreview)

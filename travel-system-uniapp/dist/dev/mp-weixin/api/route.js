@@ -18,6 +18,13 @@ const routeApi = {
       showLoading: false
     });
   },
+  recordView: (id) => {
+    return utils_http.request({
+      url: `/route/${id}/view`,
+      method: "POST",
+      showLoading: false
+    });
+  },
   toggleFavorite: (userId, routeId) => {
     return utils_http.request({
       url: "/route/favorite",
@@ -32,6 +39,23 @@ const routeApi = {
       method: "GET",
       data: { userId },
       needAuth: true
+    });
+  },
+  updateName: (routeId, routeName) => {
+    return utils_http.request({
+      url: `/route/${routeId}/name`,
+      method: "PUT",
+      data: { routeName },
+      needAuth: true,
+      showLoading: false
+    });
+  },
+  discard: (routeId) => {
+    return utils_http.request({
+      url: `/route/${routeId}`,
+      method: "DELETE",
+      needAuth: true,
+      showLoading: false
     });
   }
 };

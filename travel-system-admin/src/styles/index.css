@@ -6,100 +6,37 @@ body,
   padding: 0;
 }
 
+:root {
+  /* 低饱和湖蓝主色与中性背景 */
+  --admin-lake-600: #4a7fa0;
+  --admin-lake-500: #5d92b0;
+  --admin-lake-400: #7aa9c4;
+  --admin-lake-200: #b8d4e6;
+  --admin-lake-100: #e3eef5;
+  --admin-lake-soft: rgba(93, 146, 176, 0.14);
+  --admin-lake-glow: rgba(93, 146, 176, 0.22);
+  --admin-surface: #f6f8fa;
+  --admin-surface-2: #eef1f4;
+  --admin-card: #ffffff;
+  --admin-text: #2c3338;
+  --admin-muted: #6b7280;
+  --admin-border: #e5e9ee;
+  --admin-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+  --admin-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.08), 0 16px 40px rgba(74, 127, 160, 0.12);
+  --admin-radius: 14px;
+  --admin-radius-sm: 10px;
+  --admin-sidebar-w: 232px;
+  --admin-sidebar-w-collapsed: 72px;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-  background-color: #f0f2f5;
+    'Helvetica Neue', Arial, 'Noto Sans', 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
+  background-color: var(--admin-surface);
+  color: var(--admin-text);
 }
 
 .app-wrapper {
   height: 100%;
 }
-
-.sidebar-logo {
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: bold;
-  font-size: 18px;
-  background: #001529;
-}
-
-.el-menu-vertical-demo {
-  border-right: none;
-}
-
-.layout-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 60px;
-  padding: 0 20px;
-  background: #ffffff;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
-}
-
-.layout-header-left {
-  display: flex;
-  align-items: center;
-}
-
-.layout-header-title {
-  font-size: 16px;
-  font-weight: 500;
-  margin-right: 12px;
-}
-
-.tags-view {
-  height: 40px;
-  padding: 4px 12px;
-  background: #f5f7fa;
-  border-bottom: 1px solid #ebeef5;
-  display: flex;
-  align-items: center;
-}
-
-.tags-view-item {
-  padding: 4px 12px;
-  margin-right: 8px;
-  border-radius: 4px;
-  background: #ffffff;
-  cursor: pointer;
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.tags-view-item.active {
-  background: #409eff;
-  color: #ffffff;
-}
-
-.main-content {
-  padding: 16px;
-}
-
-.sidebar {
-  background: #001529;
-}
-
-.layout-header-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.tag-close {
-  font-size: 12px;
-}
-
-
-
-
-
-
-
-

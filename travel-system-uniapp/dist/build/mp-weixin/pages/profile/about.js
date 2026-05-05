@@ -1,0 +1,1 @@
+"use strict";var e=require("../../common/vendor.js");const s=e.defineComponent({setup(s){const t=s=>{e.index.setClipboardData({data:s,success:()=>{e.index.showToast({title:"已复制到剪贴板",icon:"success"})}})};return(s,o)=>({a:e.o((e=>t("support@smarttravel.com"))),b:e.o((e=>t("400-888-8888")))})}});var t=e._export_sfc(s,[["__scopeId","data-v-6fcc0d16"]]);wx.createPage(t);

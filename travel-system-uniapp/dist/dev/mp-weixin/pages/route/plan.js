@@ -6,8 +6,11 @@ var store_user = require("../../store/user.js");
 var utils_storage = require("../../utils/storage.js");
 require("../../utils/http.js");
 require("../../utils/config.js");
+require("../../utils/image.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
+    const ROUTE_PLAN_RESET_FORM_FLAG = "route_plan_reset_form_on_show";
+    const ROUTE_PLAN_POST_GENERATE_KEY = "route_plan_post_generate_route_id";
     const steps = [
       { label: "\u76EE\u7684\u5730", key: "destination" },
       { label: "\u65F6\u95F4\u4E0E\u6210\u5458", key: "timeAndCompanion" },
@@ -16,6 +19,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const currentStep = common_vendor.ref(0);
     const showNlpInput = common_vendor.ref(false);
     const nlpText = common_vendor.ref("");
+    const postGenerateVisible = common_vendor.ref(false);
+    const postGenerateRouteId = common_vendor.ref(null);
+    const postGenerateName = common_vendor.ref("");
+    const postGenerateStep = common_vendor.ref("choice");
     const cityList = common_vendor.ref([]);
     const popularCities = common_vendor.ref([]);
     const selectedCity = common_vendor.ref(null);
@@ -26,24 +33,24 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const dateTips = common_vendor.ref("");
     const selectedCompanion = common_vendor.ref(1);
     const companionList = common_vendor.ref([
-      { id: 1, name: "\u72EC\u884C", icon: "\u{1F6B6}" },
-      { id: 2, name: "\u60C5\u4FA3", icon: "\u{1F491}" },
-      { id: 3, name: "\u5BB6\u5EAD", icon: "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}" },
-      { id: 4, name: "\u670B\u53CB", icon: "\u{1F465}" },
-      { id: 5, name: "\u4EB2\u5B50", icon: "\u{1F468}\u200D\u{1F469}\u200D\u{1F466}" },
-      { id: 6, name: "\u5E26\u8001\u4EBA", icon: "\u{1F474}" }
+      { id: 1, name: "\u72EC\u884C", iconClass: "icon-wodedefuben" },
+      { id: 2, name: "\u60C5\u4FA3", iconClass: "icon-aixin" },
+      { id: 3, name: "\u5BB6\u5EAD", iconClass: "icon-shouye1" },
+      { id: 4, name: "\u670B\u53CB", iconClass: "icon-icon" },
+      { id: 5, name: "\u4EB2\u5B50", iconClass: "icon-wodedefuben" },
+      { id: 6, name: "\u5E26\u8001\u4EBA", iconClass: "icon-guanyuwomen" }
     ]);
     const selectedTags = common_vendor.ref([]);
     const tagList = common_vendor.ref([]);
     const relaxationValue = common_vendor.ref(50);
     const budgetValue = common_vendor.ref(50);
     const quickTags = common_vendor.ref([
-      { id: 1, name: "\u5E26\u5A03\u51FA\u6E38", icon: "\u{1F476}" },
-      { id: 2, name: "\u6DF1\u5EA6\u6444\u5F71", icon: "\u{1F4F7}" },
-      { id: 3, name: "\u7279\u79CD\u5175\u884C\u7A0B", icon: "\u26A1" },
-      { id: 4, name: "\u4F11\u95F2\u5EA6\u5047", icon: "\u{1F3D6}\uFE0F" },
-      { id: 5, name: "\u7F8E\u98DF\u4E4B\u65C5", icon: "\u{1F35C}" },
-      { id: 6, name: "\u6587\u5316\u63A2\u7D22", icon: "\u{1F3DB}\uFE0F" }
+      { id: 1, name: "\u5E26\u5A03\u51FA\u6E38", iconClass: "icon-wodedefuben" },
+      { id: 2, name: "\u6DF1\u5EA6\u6444\u5F71", iconClass: "icon-camera" },
+      { id: 3, name: "\u7279\u79CD\u5175\u884C\u7A0B", iconClass: "icon-richeng" },
+      { id: 4, name: "\u4F11\u95F2\u5EA6\u5047", iconClass: "icon-zuji" },
+      { id: 5, name: "\u7F8E\u98DF\u4E4B\u65C5", iconClass: "icon-meishi" },
+      { id: 6, name: "\u6587\u5316\u63A2\u7D22", iconClass: "icon-jingdianjieshao" }
     ]);
     const selectedQuickTags = common_vendor.ref([]);
     const loading = common_vendor.ref(false);
@@ -58,6 +65,111 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const store = store_user.useUserStore();
     const user = common_vendor.computed(() => store.state.profile);
     const dailySelections = common_vendor.ref([]);
+    const savePlanHistory = (routeId, days) => {
+      var _a, _b;
+      const userId = (_a = user.value) == null ? void 0 : _a.id;
+      if (!userId)
+        return;
+      const storageKey = `plan_history_${userId}`;
+      const history = common_vendor.index.getStorageSync(storageKey) || [];
+      const newItem = {
+        id: routeId,
+        routeName: `\u667A\u80FD\u89C4\u5212\u884C\u7A0B-${days}\u5929`,
+        title: `\u667A\u80FD\u89C4\u5212\u884C\u7A0B-${days}\u5929`,
+        destination: ((_b = selectedCity.value) == null ? void 0 : _b.name) || destination.value || "\u672A\u77E5\u76EE\u7684\u5730",
+        days,
+        createTime: new Date().toISOString(),
+        sourceType: "system",
+        status: "planned"
+      };
+      const deduped = history.filter((item) => Number(item == null ? void 0 : item.id) !== Number(routeId));
+      deduped.unshift(newItem);
+      common_vendor.index.setStorageSync(storageKey, deduped.slice(0, 50));
+    };
+    const updateLocalPlanHistoryName = (routeId, routeName) => {
+      var _a;
+      const userId = (_a = user.value) == null ? void 0 : _a.id;
+      if (!userId)
+        return;
+      const storageKey = `plan_history_${userId}`;
+      const history = common_vendor.index.getStorageSync(storageKey) || [];
+      const next = history.map((item) => {
+        if (Number(item == null ? void 0 : item.id) !== Number(routeId))
+          return item;
+        return {
+          ...item,
+          routeName,
+          title: routeName
+        };
+      });
+      common_vendor.index.setStorageSync(storageKey, next);
+    };
+    const removeLocalPlanHistory = (routeId) => {
+      var _a;
+      const userId = (_a = user.value) == null ? void 0 : _a.id;
+      if (!userId)
+        return;
+      const storageKey = `plan_history_${userId}`;
+      const history = common_vendor.index.getStorageSync(storageKey) || [];
+      const next = history.filter((item) => Number(item == null ? void 0 : item.id) !== Number(routeId));
+      common_vendor.index.setStorageSync(storageKey, next);
+    };
+    const closePostGenerate = (shouldReset) => {
+      postGenerateVisible.value = false;
+      postGenerateStep.value = "choice";
+      postGenerateName.value = "";
+      postGenerateRouteId.value = null;
+      if (shouldReset) {
+        resetPlanForm();
+      }
+    };
+    const openPostGenerate = (routeId) => {
+      var _a;
+      postGenerateRouteId.value = Number(routeId);
+      postGenerateVisible.value = true;
+      postGenerateStep.value = "choice";
+      const days = travelDays.value;
+      const dest = ((_a = selectedCity.value) == null ? void 0 : _a.name) || destination.value || "";
+      postGenerateName.value = dest ? `${dest}${days ? `-${days}\u5929` : ""}\u884C\u7A0B` : `\u6211\u7684\u884C\u7A0B`;
+    };
+    const saveGeneratedRoute = async () => {
+      var _a;
+      const routeId = postGenerateRouteId.value;
+      if (!routeId)
+        return;
+      const name = postGenerateName.value.trim();
+      if (!name) {
+        common_vendor.index.showToast({ title: "\u8BF7\u8F93\u5165\u8DEF\u7EBF\u540D\u79F0", icon: "none" });
+        return;
+      }
+      try {
+        await api_route.routeApi.updateName(routeId, name);
+        updateLocalPlanHistoryName(routeId, name);
+        const uid = (_a = user.value) == null ? void 0 : _a.id;
+        if (uid) {
+          try {
+            await api_route.routeApi.toggleFavorite(Number(uid), Number(routeId));
+          } catch (e) {
+          }
+        }
+        common_vendor.index.showToast({ title: "\u5DF2\u4FDD\u5B58", icon: "success" });
+        closePostGenerate(true);
+      } catch (e) {
+        common_vendor.index.showToast({ title: (e == null ? void 0 : e.message) || "\u4FDD\u5B58\u5931\u8D25", icon: "none" });
+      }
+    };
+    const discardGeneratedRoute = async () => {
+      const routeId = postGenerateRouteId.value;
+      if (!routeId)
+        return;
+      try {
+        await api_route.routeApi.discard(routeId);
+      } catch (e) {
+      }
+      removeLocalPlanHistory(routeId);
+      common_vendor.index.showToast({ title: "\u5DF2\u5F03\u7528", icon: "success" });
+      closePostGenerate(true);
+    };
     const showDatePicker = common_vendor.ref(false);
     const datePickerType = common_vendor.ref("start");
     const datePickerValue = common_vendor.ref([0, 0, 0]);
@@ -99,16 +211,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const showFoodScheduleModal = common_vendor.ref(false);
     const currentScheduleItem = common_vendor.ref(null);
     const scenicTimeSlots = [
-      { value: "morning", label: "\u4E0A\u5348", icon: "\u{1F305}" },
-      { value: "afternoon", label: "\u4E0B\u5348", icon: "\u2600\uFE0F" },
-      { value: "evening", label: "\u508D\u665A", icon: "\u{1F306}" },
-      { value: "night", label: "\u665A\u4E0A", icon: "\u{1F319}" }
+      { value: "morning", label: "\u4E0A\u5348", iconClass: "icon-kaifangshijian" },
+      { value: "afternoon", label: "\u4E0B\u5348", iconClass: "icon-kaifangshijian" },
+      { value: "evening", label: "\u508D\u665A", iconClass: "icon-kaifangshijian" },
+      { value: "night", label: "\u665A\u4E0A", iconClass: "icon-kaifangshijian" }
     ];
     const foodTimeSlots = [
-      { value: "breakfast", label: "\u65E9\u9910", icon: "\u{1F305}" },
-      { value: "lunch", label: "\u5348\u9910", icon: "\u2600\uFE0F" },
-      { value: "dinner", label: "\u665A\u9910", icon: "\u{1F306}" },
-      { value: "snack", label: "\u5C0F\u5403", icon: "\u{1F361}" }
+      { value: "breakfast", label: "\u65E9\u9910", iconClass: "icon-kaifangshijian" },
+      { value: "lunch", label: "\u5348\u9910", iconClass: "icon-kaifangshijian" },
+      { value: "dinner", label: "\u665A\u9910", iconClass: "icon-kaifangshijian" },
+      { value: "snack", label: "\u5C0F\u5403", iconClass: "icon-kaifangshijian" }
     ];
     const scenicScheduleForm = common_vendor.ref({ day: 1, timeSlot: "morning" });
     const foodScheduleForm = common_vendor.ref({ day: 1, timeSlot: "breakfast" });
@@ -484,12 +596,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         }
         dailySelections.value[dayIndex].scenicTimeSlots[scenicId] = schedule;
       }
-      console.log("\u666F\u70B9\u65F6\u95F4\u6BB5\u5206\u914D:", {
-        scenicId,
-        schedule,
-        allScenicSchedules: allScenicSchedules.value,
-        dailySelections: dailySelections.value[dayIndex]
-      });
       closeScenicScheduleModal();
       common_vendor.index.showToast({
         title: "\u5B89\u6392\u6210\u529F",
@@ -553,12 +659,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         }
         dailySelections.value[dayIndex].foodTimeSlots[foodId] = schedule;
       }
-      console.log("\u7F8E\u98DF\u65F6\u95F4\u6BB5\u5206\u914D:", {
-        foodId,
-        schedule,
-        allFoodSchedules: allFoodSchedules.value,
-        dailySelections: dailySelections.value[dayIndex]
-      });
       closeFoodScheduleModal();
       common_vendor.index.showToast({
         title: "\u5B89\u6392\u6210\u529F",
@@ -809,17 +909,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             scenicTimeSlots: scenicTimeSlots2.length > 0 ? scenicTimeSlots2 : void 0,
             foodTimeSlots: foodTimeSlots2.length > 0 ? foodTimeSlots2 : void 0
           };
-          if (scenicTimeSlots2.length > 0 || foodTimeSlots2.length > 0) {
-            console.log(`\u7B2C${dayNum}\u5929\u7684\u65F6\u95F4\u6BB5\u5206\u914D:`, {
-              scenicTimeSlots: scenicTimeSlots2,
-              foodTimeSlots: foodTimeSlots2
-            });
-          }
           return dayData;
         });
-        console.log("\u63D0\u4EA4\u7684dailySelections\u6570\u636E:", JSON.stringify(dailySelectionsData, null, 2));
-        console.log("allScenicSchedules:", allScenicSchedules.value);
-        console.log("allFoodSchedules:", allFoodSchedules.value);
         const res = await api_route.routeApi.generate({
           cityId,
           days: selectedDays,
@@ -847,21 +938,22 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             icon: "success",
             duration: 1500
           });
+          savePlanHistory(Number(routeId), selectedDays);
           loading.value = false;
           await new Promise((resolve) => setTimeout(resolve, 1500));
           const detailUrl = `/pages/itinerary/itinerary-detail?id=${encodeURIComponent(routeId)}`;
-          console.log("[generateRoute] \u51C6\u5907\u8DF3\u8F6C\u5230\u8BE6\u60C5\u9875:", detailUrl);
+          const markResetOnReturn = () => {
+            utils_storage.setCache(ROUTE_PLAN_RESET_FORM_FLAG, true);
+            utils_storage.setCache(ROUTE_PLAN_POST_GENERATE_KEY, Number(routeId));
+          };
           common_vendor.index.navigateTo({
             url: detailUrl,
-            success: () => {
-              console.log("[generateRoute] \u8DF3\u8F6C\u6210\u529F");
-            },
-            fail: (err) => {
-              console.error("[generateRoute] navigateTo \u5931\u8D25:", err);
+            success: markResetOnReturn,
+            fail: () => {
               common_vendor.index.redirectTo({
                 url: detailUrl,
-                fail: (redirectErr) => {
-                  console.error("[generateRoute] redirectTo \u4E5F\u5931\u8D25:", redirectErr);
+                success: markResetOnReturn,
+                fail: () => {
                   common_vendor.index.showToast({
                     title: "\u9875\u9762\u8DF3\u8F6C\u5931\u8D25\uFF0C\u8BF7\u624B\u52A8\u5237\u65B0",
                     icon: "none",
@@ -879,7 +971,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           loading.value = false;
         }
       } catch (error) {
-        console.error("[generateRoute] \u8BF7\u6C42\u9519\u8BEF:", error);
         if (error.statusCode === 504 || error.statusCode === 500 || error.statusCode === 502) {
           common_vendor.index.showToast({
             title: "\u670D\u52A1\u5668\u5904\u7406\u4E2D\uFF0C\u8BF7\u7A0D\u540E\u67E5\u770B\u7ED3\u679C",
@@ -918,7 +1009,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           popularCities.value = cityList.value.slice(0, 6);
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u57CE\u5E02\u5217\u8868\u5931\u8D25", error);
       }
     };
     const loadTags = async () => {
@@ -934,7 +1024,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }));
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u6807\u7B7E\u5217\u8868\u5931\u8D25", error);
         tagList.value = [];
       }
     };
@@ -1006,7 +1095,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u9009\u62E9\u5668\u5217\u8868\u5931\u8D25:", error);
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
       }
     };
@@ -1044,6 +1132,44 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       selectorVisible.value = false;
       selectorTempSelected.value = [];
     };
+    const resetPlanForm = () => {
+      currentStep.value = 0;
+      showNlpInput.value = false;
+      nlpText.value = "";
+      selectedCity.value = null;
+      destination.value = "";
+      startDate.value = "";
+      endDate.value = "";
+      dateTips.value = "";
+      selectedCompanion.value = 1;
+      selectedTags.value = [];
+      relaxationValue.value = 50;
+      budgetValue.value = 50;
+      selectedQuickTags.value = [];
+      dailySelections.value = [];
+      loading.value = false;
+      currentLoadingStep.value = 0;
+      showDatePicker.value = false;
+      datePickerType.value = "start";
+      datePickerValue.value = [0, 0, 0];
+      tempSelectedDate.value = "";
+      showScenicScheduleModal.value = false;
+      showFoodScheduleModal.value = false;
+      currentScheduleItem.value = null;
+      scenicScheduleForm.value = { day: 1, timeSlot: "morning" };
+      foodScheduleForm.value = { day: 1, timeSlot: "breakfast" };
+      allScenicSchedules.value = {};
+      allFoodSchedules.value = {};
+      selectorVisible.value = false;
+      selectorTab.value = "pending";
+      selectorType.value = "scenic";
+      selectorDayIndex.value = 0;
+      selectorList.value = [];
+      selectorTempSelected.value = [];
+      utils_storage.removeCache("route_pending_additions");
+      pendingScenics.value = [];
+      pendingFoods.value = [];
+    };
     const loadPendingAdditions = () => {
       const pendingAdditions = utils_storage.getCache("route_pending_additions");
       pendingScenics.value = [];
@@ -1074,6 +1200,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       loadPendingAdditions();
     });
     common_vendor.onShow(() => {
+      if (utils_storage.getCache(ROUTE_PLAN_RESET_FORM_FLAG)) {
+        utils_storage.removeCache(ROUTE_PLAN_RESET_FORM_FLAG);
+        const rid = utils_storage.getCache(ROUTE_PLAN_POST_GENERATE_KEY);
+        if (rid) {
+          utils_storage.removeCache(ROUTE_PLAN_POST_GENERATE_KEY);
+          openPostGenerate(Number(rid));
+        } else {
+          resetPlanForm();
+        }
+      }
       loadPendingAdditions();
     });
     return (_ctx, _cache) => {
@@ -1110,7 +1246,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         d: destination.value,
         e: common_vendor.f(quickTags.value, (tag, k0, i0) => {
           return {
-            a: common_vendor.t(tag.icon),
+            a: common_vendor.n(tag.iconClass),
             b: common_vendor.t(tag.name),
             c: tag.id,
             d: selectedQuickTags.value.includes(tag.id) ? 1 : "",
@@ -1136,7 +1272,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       } : {}, {
         s: common_vendor.f(companionList.value, (companion, k0, i0) => {
           return {
-            a: common_vendor.t(companion.icon),
+            a: common_vendor.n(companion.iconClass),
             b: common_vendor.t(companion.name),
             c: companion.id,
             d: selectedCompanion.value === companion.id ? 1 : "",
@@ -1251,7 +1387,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         }),
         ac: common_vendor.f(scenicTimeSlots, (slot, k0, i0) => {
           return {
-            a: common_vendor.t(slot.icon),
+            a: common_vendor.n(slot.iconClass),
             b: common_vendor.t(slot.label),
             c: slot.value,
             d: scenicScheduleForm.value.timeSlot === slot.value ? 1 : "",
@@ -1278,7 +1414,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         }),
         al: common_vendor.f(foodTimeSlots, (slot, k0, i0) => {
           return {
-            a: common_vendor.t(slot.icon),
+            a: common_vendor.n(slot.iconClass),
             b: common_vendor.t(slot.label),
             c: slot.value,
             d: foodScheduleForm.value.timeSlot === slot.value ? 1 : "",
@@ -1343,6 +1479,22 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         aP: common_vendor.o(() => {
         }),
         aQ: common_vendor.o(closeSelector)
+      }) : {}, {
+        aR: postGenerateVisible.value
+      }, postGenerateVisible.value ? common_vendor.e({
+        aS: postGenerateStep.value === "choice"
+      }, postGenerateStep.value === "choice" ? {
+        aT: common_vendor.o(discardGeneratedRoute),
+        aU: common_vendor.o(($event) => postGenerateStep.value = "name")
+      } : {
+        aV: postGenerateName.value,
+        aW: common_vendor.o(($event) => postGenerateName.value = $event.detail.value),
+        aX: common_vendor.o(($event) => postGenerateStep.value = "choice"),
+        aY: common_vendor.o(saveGeneratedRoute)
+      }, {
+        aZ: common_vendor.o(() => {
+        }),
+        ba: common_vendor.o(($event) => closePostGenerate(false))
       }) : {});
     };
   }

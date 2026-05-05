@@ -1,60 +1,82 @@
 <template>
   <div class="app-wrapper">
-    <el-container style="height: 100%">
-      <el-aside width="240px" class="sidebar">
-        <div class="sidebar-logo">智能旅游系统</div>
-        <el-menu
-          :default-active="activeMenu"
-          class="el-menu-vertical-demo"
-          router
-          background-color="#001529"
-          text-color="#bfcbd9"
-          active-text-color="#409eff"
-        >
-          <template v-for="group in orderedMenuGroups" :key="group.category">
-            <el-menu-item
-              v-if="group.category === '数据总览' && group.items.length === 1"
-              :index="group.items[0].path"
-            >
-              <el-icon v-if="group.items[0].icon">
-                <component :is="group.items[0].icon" />
-              </el-icon>
-              <span>{{ group.items[0].title }}</span>
-            </el-menu-item>
-            <el-sub-menu v-else :index="group.category">
-              <template #title>
-                <el-icon v-if="group.icon">
-                  <component :is="group.icon" />
-                </el-icon>
-                <span>{{ group.category }}</span>
-              </template>
+    <el-container class="admin-shell">
+      <el-aside :width="sidebarCollapsed ? '72px' : '232px'" class="sidebar">
+        <div class="sidebar-brand" :class="{ collapsed: sidebarCollapsed }">
+          <span class="brand-mark">旅</span>
+          <span v-if="!sidebarCollapsed" class="brand-text">智能旅游 · 后台</span>
+        </div>
+        <el-scrollbar class="sidebar-scroll">
+          <el-menu
+            :default-active="activeMenu"
+            :collapse="sidebarCollapsed"
+            :collapse-transition="true"
+            router
+            class="admin-menu"
+          >
+            <template v-for="group in orderedMenuGroups" :key="group.category">
               <el-menu-item
-                v-for="item in group.items"
-                :key="item.path"
-                :index="item.path"
+                v-if="group.category === '数据总览' && group.items.length === 1"
+                :index="group.items[0].path"
               >
-                <el-icon v-if="item.icon">
-                  <component :is="item.icon" />
+                <el-icon v-if="group.items[0].icon">
+                  <component :is="group.items[0].icon" />
                 </el-icon>
-                <span>{{ item.title }}</span>
+                <span>{{ group.items[0].title }}</span>
               </el-menu-item>
-            </el-sub-menu>
-          </template>
-        </el-menu>
+              <el-sub-menu v-else :index="group.category">
+                <template #title>
+                  <el-icon v-if="group.icon">
+                    <component :is="group.icon" />
+                  </el-icon>
+                  <span>{{ group.category }}</span>
+                </template>
+                <el-menu-item
+                  v-for="item in group.items"
+                  :key="item.path"
+                  :index="item.path"
+                >
+                  <el-icon v-if="item.icon">
+                    <component :is="item.icon" />
+                  </el-icon>
+                  <span>{{ item.title }}</span>
+                </el-menu-item>
+              </el-sub-menu>
+            </template>
+          </el-menu>
+        </el-scrollbar>
+        <div class="sidebar-collapse-bar">
+          <el-tooltip :content="sidebarCollapsed ? '展开菜单' : '收起菜单'" placement="right">
+            <el-button class="collapse-btn" text circle @click="sidebarCollapsed = !sidebarCollapsed">
+              <el-icon :size="18">
+                <Expand v-if="sidebarCollapsed" />
+                <Fold v-else />
+              </el-icon>
+            </el-button>
+          </el-tooltip>
+        </div>
       </el-aside>
-      <el-container>
+      <el-container class="main-column">
         <el-header class="layout-header">
           <div class="layout-header-left">
-            <div class="layout-header-title">智能旅游系统 · 管理后台</div>
-            <el-breadcrumb separator="/">
-              <el-breadcrumb-item v-for="crumb in breadcrumbs" :key="crumb">
-                {{ crumb }}
-              </el-breadcrumb-item>
-            </el-breadcrumb>
+            <div class="header-title-block">
+              <h1 class="header-page-title">{{ pageTitle }}</h1>
+              <p v-if="headerSubtitle" class="header-breadcrumb">{{ headerSubtitle }}</p>
+            </div>
           </div>
           <div class="layout-header-right">
-            <el-tag type="info" size="small">Mock 权限</el-tag>
-            <el-avatar size="small">管</el-avatar>
+            <template v-if="isDashboard">
+              <el-button class="header-action" @click="emitDashboard('refresh')">
+                <el-icon class="header-action-icon"><Refresh /></el-icon>
+                刷新数据
+              </el-button>
+              <el-button class="header-action primary" type="primary" @click="emitDashboard('export')">
+                <el-icon class="header-action-icon"><Download /></el-icon>
+                导出报表
+              </el-button>
+            </template>
+            <el-tag size="small" effect="plain" class="env-tag">Mock 权限</el-tag>
+            <el-avatar size="small" class="user-avatar">管</el-avatar>
           </div>
         </el-header>
         <div class="tags-view">
@@ -99,13 +121,19 @@ import {
   MagicStick,
   Setting,
   DocumentChecked,
-  Trophy
+  Trophy,
+  Fold,
+  Expand,
+  Refresh,
+  Download
 } from '@element-plus/icons-vue';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 const router = useRouter();
 const route = useRoute();
+
+const sidebarCollapsed = ref(false);
 
 const iconMap = {
   数据总览: Monitor,
@@ -162,16 +190,22 @@ const orderedMenuGroups = computed(() => {
   });
 });
 
-const breadcrumbs = computed(() => {
-  const parts: string[] = [];
-  if (route.meta?.category) {
-    parts.push(route.meta.category as string);
+const pageTitle = computed(() => (route.meta?.title as string) || '管理后台');
+
+const headerSubtitle = computed(() => {
+  const cat = route.meta?.category as string | undefined;
+  const title = route.meta?.title as string | undefined;
+  if (!cat || !title || cat === title) {
+    return '';
   }
-  if (route.meta?.title) {
-    parts.push(route.meta.title as string);
-  }
-  return parts;
+  return `${cat} / ${title}`;
 });
+
+const isDashboard = computed(() => route.path === '/dashboard');
+
+const emitDashboard = (action: 'refresh' | 'export') => {
+  window.dispatchEvent(new CustomEvent('admin-dashboard-action', { detail: action }));
+};
 
 const visitedViews = ref<{ path: string; title: string }[]>([]);
 const activeMenu = computed(() => route.path);
@@ -198,18 +232,14 @@ const closeTag = (tag: { path: string }) => {
   }
 };
 
-// 获取路由标题的辅助函数
 const getRouteTitle = (path: string): string => {
-  // 先尝试从当前路由获取
   if (route.path === path && route.meta?.title) {
     return route.meta.title as string;
   }
-  // 从路由配置中查找
-  const matchedRoute = router.getRoutes().find(r => r.path === path);
+  const matchedRoute = router.getRoutes().find((r) => r.path === path);
   if (matchedRoute?.meta?.title) {
     return matchedRoute.meta.title as string;
   }
-  // 处理重定向路由
   if (path === '/' || path === '') {
     return '数据总览';
   }
@@ -219,7 +249,6 @@ const getRouteTitle = (path: string): string => {
 watch(
   () => route.path,
   (newPath) => {
-    // 跳过根路径，因为会重定向
     if (newPath === '/' || newPath === '') {
       return;
     }
@@ -230,12 +259,9 @@ watch(
 );
 
 onMounted(() => {
-  // 确保路由已加载
   nextTick(() => {
     const currentPath = route.path;
-    // 跳过根路径
     if (currentPath === '/' || currentPath === '') {
-      // 等待重定向完成
       setTimeout(() => {
         const finalPath = route.path;
         if (finalPath !== '/' && finalPath !== '') {
@@ -251,3 +277,256 @@ onMounted(() => {
 });
 </script>
 
+<style scoped>
+.admin-shell {
+  height: 100%;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--admin-card);
+  border-right: 1px solid var(--admin-border);
+  transition: width 0.22s ease;
+  box-shadow: 2px 0 24px rgba(15, 23, 42, 0.04);
+}
+
+.sidebar-brand {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--admin-border);
+  flex-shrink: 0;
+}
+
+.sidebar-brand.collapsed {
+  justify-content: center;
+  padding: 0;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+  background: linear-gradient(145deg, var(--admin-lake-500), var(--admin-lake-600));
+  box-shadow: 0 4px 12px var(--admin-lake-glow);
+}
+
+.brand-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--admin-text);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-collapse-bar {
+  flex-shrink: 0;
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--admin-border);
+  display: flex;
+  justify-content: center;
+}
+
+.collapse-btn {
+  color: var(--admin-muted);
+}
+
+.collapse-btn:hover {
+  color: var(--admin-lake-600);
+  background: var(--admin-lake-soft) !important;
+}
+
+.main-column {
+  min-width: 0;
+  background: var(--admin-surface);
+}
+
+.layout-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 24px;
+  background: var(--admin-card);
+  border-bottom: 1px solid var(--admin-border);
+  box-shadow: none;
+}
+
+.layout-header-left {
+  min-width: 0;
+}
+
+.header-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.header-page-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--admin-text);
+  letter-spacing: 0.01em;
+}
+
+.header-breadcrumb {
+  margin: 0;
+  font-size: 12px;
+  color: var(--admin-muted);
+}
+
+.layout-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.header-action {
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.header-action.primary {
+  --el-button-bg-color: var(--admin-lake-500);
+  --el-button-border-color: var(--admin-lake-500);
+  --el-button-hover-bg-color: var(--admin-lake-600);
+  --el-button-hover-border-color: var(--admin-lake-600);
+}
+
+.header-action-icon {
+  margin-right: 4px;
+}
+
+.env-tag {
+  border-radius: 8px;
+  color: var(--admin-muted);
+  border-color: var(--admin-border);
+  background: var(--admin-surface);
+}
+
+.user-avatar {
+  background: var(--admin-lake-soft);
+  color: var(--admin-lake-600);
+  font-weight: 600;
+}
+
+.tags-view {
+  height: 40px;
+  padding: 4px 16px;
+  background: var(--admin-surface-2);
+  border-bottom: 1px solid var(--admin-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.tags-view-item {
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: var(--admin-card);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--admin-muted);
+  white-space: nowrap;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.tags-view-item:hover {
+  border-color: var(--admin-lake-200);
+  color: var(--admin-lake-600);
+}
+
+.tags-view-item.active {
+  background: var(--admin-lake-soft);
+  color: var(--admin-lake-600);
+  border-color: rgba(93, 146, 176, 0.35);
+  font-weight: 500;
+}
+
+.main-content {
+  padding: 0;
+  background: var(--admin-surface);
+}
+
+.tag-close {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.tag-close:hover {
+  opacity: 1;
+}
+
+:deep(.admin-menu) {
+  border-right: none;
+  background: transparent;
+  --el-menu-item-height: 44px;
+  --el-menu-sub-item-height: 42px;
+}
+
+:deep(.admin-menu.el-menu--collapse) {
+  width: 72px;
+}
+
+:deep(.admin-menu .el-menu-item),
+:deep(.admin-menu .el-sub-menu__title) {
+  color: var(--admin-muted);
+  border-radius: 10px;
+  margin: 2px 8px;
+  width: calc(100% - 16px);
+}
+
+:deep(.admin-menu .el-menu-item:hover),
+:deep(.admin-menu .el-sub-menu__title:hover) {
+  background: var(--admin-lake-soft) !important;
+  color: var(--admin-lake-600) !important;
+}
+
+:deep(.admin-menu .el-menu-item.is-active) {
+  background: var(--admin-lake-soft) !important;
+  color: var(--admin-lake-600) !important;
+  font-weight: 600;
+}
+
+:deep(.admin-menu .el-menu-item.is-active .el-icon),
+:deep(.admin-menu .el-sub-menu.is-active > .el-sub-menu__title .el-icon) {
+  color: var(--admin-lake-600);
+}
+
+:deep(.admin-menu .el-icon) {
+  color: inherit;
+}
+
+:deep(.admin-menu .el-menu--inline) {
+  background: transparent !important;
+}
+
+:deep(.admin-menu .el-menu--inline .el-menu-item) {
+  padding-left: 52px !important;
+}
+</style>

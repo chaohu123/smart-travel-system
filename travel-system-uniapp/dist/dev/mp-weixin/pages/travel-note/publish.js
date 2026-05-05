@@ -152,16 +152,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         if (res.statusCode === 200 && data.code === 200) {
           const detail = data.data;
           const note = detail.note || detail;
-          console.log("=== \u52A0\u8F7D\u6E38\u8BB0\u8BE6\u60C5 ===");
-          console.log("\u5B8C\u6574\u6570\u636E:", detail);
-          console.log("\u6E38\u8BB0\u57FA\u672C\u4FE1\u606F:", note);
-          console.log("\u56FE\u7247\u5217\u8868:", detail.images);
-          console.log("\u666F\u70B9\u5217\u8868:", detail.scenics);
-          console.log("\u6807\u7B7E\u5217\u8868:", detail.tags);
           title.value = note.title || note.title || "";
           content.value = note.content || note.content || "";
-          console.log("\u586B\u5145\u540E\u7684\u6807\u9898:", title.value, "\u957F\u5EA6:", title.value.length);
-          console.log("\u586B\u5145\u540E\u7684\u6B63\u6587:", content.value.substring(0, 50) + "...", "\u957F\u5EA6:", content.value.length);
           if (detail.images && Array.isArray(detail.images)) {
             const sortedImages = [...detail.images].sort((a, b) => (a.sort || 0) - (b.sort || 0));
             imageUrls.value = sortedImages.map((img) => {
@@ -187,47 +179,35 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             const city = cityList.value.find((c) => c.id === cityId || c.id === Number(cityId));
             if (city) {
               selectedCity.value = city;
-              console.log("\u8BBE\u7F6E\u57CE\u5E02:", city);
               await loadScenic(city.id);
             } else {
               const cityName = note.cityName || note.city_name;
               if (cityName) {
                 selectedCity.value = { id: Number(cityId), name: cityName };
-                console.log("\u4F7F\u7528\u4E34\u65F6\u57CE\u5E02\u5BF9\u8C61:", selectedCity.value);
                 await loadScenic(Number(cityId));
               } else {
-                console.warn("\u672A\u627E\u5230\u57CE\u5E02\u4FE1\u606F\uFF0CcityId:", cityId);
               }
             }
-          } else {
-            console.warn("\u6E38\u8BB0\u6CA1\u6709\u57CE\u5E02ID");
           }
           if (detail.scenics && Array.isArray(detail.scenics)) {
             scenicIds.value = detail.scenics.map((scenic) => {
               const id2 = scenic.id || scenic.scenicId || scenic.scenic_id;
               return id2 != null ? Number(id2) : null;
             }).filter((id2) => id2 != null);
-            console.log("\u586B\u5145\u666F\u70B9ID:", scenicIds.value);
           } else if (note.scenicIds || note.scenic_ids) {
             const ids = note.scenicIds || note.scenic_ids;
             scenicIds.value = Array.isArray(ids) ? ids.map((id2) => Number(id2)) : [];
-            console.log("\u4ECEnote\u4E2D\u586B\u5145\u666F\u70B9ID:", scenicIds.value);
           } else {
             scenicIds.value = [];
-            console.log("\u6CA1\u6709\u666F\u70B9ID");
           }
           if (detail.tags && Array.isArray(detail.tags)) {
             tagIds.value = detail.tags.map((id2) => Number(id2)).filter((id2) => id2 != null && !isNaN(id2));
-            console.log("\u586B\u5145\u6807\u7B7EID:", tagIds.value);
           } else if (note.tagIds || note.tag_ids) {
             const ids = note.tagIds || note.tag_ids;
             tagIds.value = Array.isArray(ids) ? ids.map((id2) => Number(id2)) : [];
-            console.log("\u4ECEnote\u4E2D\u586B\u5145\u6807\u7B7EID:", tagIds.value);
           } else {
             tagIds.value = [];
-            console.log("\u6CA1\u6709\u6807\u7B7EID");
           }
-          console.log("\u6570\u636E\u586B\u5145\u5B8C\u6210 - \u6807\u9898:", title.value, "\u6B63\u6587\u957F\u5EA6:", content.value.length, "\u56FE\u7247\u6570:", imageUrls.value.length);
         } else {
           common_vendor.index.showToast({ title: data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
           setTimeout(() => {
@@ -235,7 +215,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }, 1500);
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u6E38\u8BB0\u8BE6\u60C5\u5931\u8D25:", error);
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
         setTimeout(() => {
           common_vendor.index.navigateBack();
@@ -305,12 +284,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     common_vendor.onLoad((options) => {
-      console.log("onLoad \u83B7\u53D6\u5230\u7684\u53C2\u6570:", options);
       if (options && options.id) {
         noteId.value = parseInt(options.id);
-        console.log("\u68C0\u6D4B\u5230\u7F16\u8F91\u6A21\u5F0F\uFF0C\u6E38\u8BB0ID:", noteId.value);
-      } else {
-        console.log("\u975E\u7F16\u8F91\u6A21\u5F0F\uFF0C\u6CA1\u6709ID\u53C2\u6570");
       }
     });
     common_vendor.onMounted(() => {
@@ -319,17 +294,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         loadTags(),
         loadScenic()
       ]).then(() => {
-        console.log("\u57FA\u7840\u6570\u636E\u52A0\u8F7D\u5B8C\u6210 - \u57CE\u5E02\u6570:", cityList.value.length, "\u6807\u7B7E\u6570:", tagOptions.value.length, "\u666F\u70B9\u6570:", scenicOptions.value.length);
         if (noteId.value) {
-          console.log("\u5F00\u59CB\u52A0\u8F7D\u6E38\u8BB0\u8BE6\u60C5\uFF0CID:", noteId.value);
           loadNoteDetail(noteId.value);
-        } else {
-          console.log("\u975E\u7F16\u8F91\u6A21\u5F0F\uFF0C\u4E0D\u52A0\u8F7D\u8BE6\u60C5");
         }
       }).catch((error) => {
-        console.error("\u52A0\u8F7D\u57FA\u7840\u6570\u636E\u5931\u8D25:", error);
         if (noteId.value) {
-          console.log("\u57FA\u7840\u6570\u636E\u52A0\u8F7D\u5931\u8D25\uFF0C\u4F46\u4ECD\u5C1D\u8BD5\u52A0\u8F7D\u6E38\u8BB0\u8BE6\u60C5\uFF0CID:", noteId.value);
           loadNoteDetail(noteId.value);
         }
       });

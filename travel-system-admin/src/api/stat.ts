@@ -23,6 +23,11 @@ export interface CityTopData {
   count: number;
 }
 
+export interface CheckinPointTopData {
+  name: string;
+  count: number;
+}
+
 export interface StatResponse<T> {
   code: number;
   msg: string;
@@ -51,5 +56,17 @@ export function fetchCheckinTrend(days: number = 14) {
 // 热门城市TOP10
 export function fetchCityTop() {
   return http.get<StatResponse<CityTopData[]>>('/admin/stat/city/top');
+}
+
+// 按日新增用户趋势
+export function fetchUserTrend(days: number = 14) {
+  return http.get<StatResponse<TrendResponse>>('/admin/stat/user/trend', {
+    params: { days }
+  });
+}
+
+// 打卡地点热度 TOP10
+export function fetchCheckinPointTop() {
+  return http.get<StatResponse<CheckinPointTopData[]>>('/admin/stat/checkin/point/top');
 }
 

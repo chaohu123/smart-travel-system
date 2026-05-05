@@ -44,7 +44,7 @@
 
           <!-- 时间范围 -->
           <view class="time-row" v-if="timeRange">
-            <text class="time-icon">📅</text>
+            <text class="iconfont icon-richeng time-icon"></text>
             <text class="time-text">{{ timeRange }}</text>
           </view>
         </view>
@@ -52,7 +52,7 @@
         <!-- 活动介绍卡片 -->
         <view class="intro-card" v-if="detail.description">
           <view class="card-title">
-            <text class="title-icon">📖</text>
+            <text class="iconfont icon-jingdianjieshao title-icon"></text>
             <text class="title-text">活动介绍</text>
           </view>
           <view class="card-content">
@@ -63,7 +63,7 @@
         <!-- 活动规则卡片 -->
         <view class="rules-card" v-if="detail.rules">
           <view class="card-title">
-            <text class="title-icon">📋</text>
+            <text class="iconfont icon-yijianfankui title-icon"></text>
             <text class="title-text">活动规则</text>
           </view>
           <view class="card-content">
@@ -74,7 +74,10 @@
         <!-- 关联路线 -->
         <view class="related-section" v-if="relatedRoutes.length > 0">
           <view class="section-header">
-            <text class="section-title">🎯 推荐路线</text>
+            <text class="section-title">
+              <text class="iconfont icon-xianlu section-title-icon"></text>
+              推荐路线
+            </text>
             <text class="section-more" @click="viewAllRoutes">查看全部 ></text>
           </view>
           <scroll-view scroll-x class="horizontal-scroll">
@@ -87,7 +90,7 @@
               >
                 <image
                   class="related-cover"
-                  :src="route.coverImage || '/static/default-route.jpg'"
+                  :src="route.coverImage || 'https://ts2.tc.mm.bing.net/th/id/OIP-C.D0FxyIfldS08x95YBJdFQAHaFj?rs=1&pid=ImgDetMain&o=7&rm=3'"
                   mode="aspectFill"
                 />
                 <view class="related-overlay"></view>
@@ -107,7 +110,10 @@
         <!-- 关联景点 -->
         <view class="related-section" v-if="relatedScenics.length > 0">
           <view class="section-header">
-            <text class="section-title">🏞️ 推荐景点</text>
+            <text class="section-title">
+              <text class="iconfont icon-jingdian section-title-icon"></text>
+              推荐景点
+            </text>
             <text class="section-more" @click="viewAllScenics">查看全部 ></text>
           </view>
           <scroll-view scroll-x class="horizontal-scroll">
@@ -120,7 +126,7 @@
               >
                 <image
                   class="related-cover"
-                  :src="scenic.imageUrl || '/static/default-scenic.jpg'"
+                  :src="getImageUrl(scenic.imageUrl) || defaultScenicImage"
                   mode="aspectFill"
                 />
                 <view class="related-overlay"></view>
@@ -140,7 +146,10 @@
         <!-- 关联美食 -->
         <view class="related-section" v-if="relatedFoods.length > 0">
           <view class="section-header">
-            <text class="section-title">🍜 推荐美食</text>
+            <text class="section-title">
+              <text class="iconfont icon-meishi section-title-icon"></text>
+              推荐美食
+            </text>
             <text class="section-more" @click="viewAllFoods">查看全部 ></text>
           </view>
           <scroll-view scroll-x class="horizontal-scroll">
@@ -153,7 +162,7 @@
               >
                 <image
                   class="related-cover"
-                  :src="getImageUrl(food.imageUrl) || '/static/default-food.jpg'"
+                  :src="getImageUrl(food.imageUrl) || defaultFoodImage"
                   mode="aspectFill"
                 />
                 <view class="related-overlay"></view>
@@ -173,7 +182,10 @@
         <!-- 关联游记 -->
         <view class="related-section" v-if="relatedNotes.length > 0">
           <view class="section-header">
-            <text class="section-title">📝 相关游记</text>
+            <text class="section-title">
+              <text class="iconfont icon-youji section-title-icon"></text>
+              相关游记
+            </text>
             <text class="section-more" @click="viewAllNotes">查看全部 ></text>
           </view>
           <view class="notes-list">
@@ -203,7 +215,7 @@
 
       <!-- 空状态 -->
       <view v-else class="empty-state">
-        <text class="empty-icon">📭</text>
+        <text class="iconfont icon-youji empty-icon"></text>
         <text class="empty-text">活动不存在或已下线</text>
       </view>
     </scroll-view>
@@ -211,8 +223,7 @@
     <!-- 底部操作栏 -->
     <view class="bottom-bar">
       <button class="share-btn" @click="handleShare">
-        <text class="share-icon">📤</text>
-        <text class="share-text">分享</text>
+        <text class="iconfont icon-fenxiang share-icon"></text>
       </button>
       <button class="participate-btn" @click="handleParticipate" :disabled="!canParticipate">
         <text class="participate-text">{{ participateText }}</text>
@@ -226,6 +237,7 @@ import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { activityApi, type ActivityDetail } from '@/api/activity'
 import { getImageUrl } from '@/utils/image'
+import { defaultFoodImage, defaultScenicImage } from '@/utils/config'
 
 const activityId = ref<number | null>(null)
 const loading = ref(false)
@@ -390,7 +402,6 @@ const loadDetail = async () => {
     }
   } catch (error) {
     // API调用失败时使用模拟数据
-    console.warn('活动API未就绪，使用模拟数据', error)
     await new Promise(resolve => setTimeout(resolve, 500))
     detail.value = {
       id: activityId.value,
@@ -574,7 +585,8 @@ onLoad((options: { id?: string | number }) => {
 }
 
 .content {
-  padding: 0 24rpx 160rpx;
+  /* 底部预留更大空间，避免“相关游记”被底部操作栏遮挡 */
+  padding: 0 24rpx 240rpx;
 }
 
 .header-section {
@@ -662,7 +674,8 @@ onLoad((options: { id?: string | number }) => {
 }
 
 .time-icon {
-  font-size: 24rpx;
+  font-size: 28rpx;
+  color: #666666;
 }
 
 .time-text {
@@ -728,6 +741,13 @@ onLoad((options: { id?: string | number }) => {
   font-size: 32rpx;
   font-weight: bold;
   color: #333;
+  display: flex;
+  align-items: center;
+}
+
+.section-title-icon {
+  font-size: 32rpx;
+  margin-right: 8rpx;
 }
 
 .section-more {
@@ -904,13 +924,8 @@ onLoad((options: { id?: string | number }) => {
 }
 
 .share-icon {
-  font-size: 32rpx;
-}
-
-.share-text {
-  font-size: 24rpx;
+  font-size: 40rpx;
   color: #666666;
-  margin-left: 4rpx;
 }
 
 .participate-btn {

@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var api_user = require("../../api/user.js");
 var store_user = require("../../store/user.js");
 var utils_router = require("../../utils/router.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
@@ -11,6 +12,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const store = store_user.useUserStore();
     const user = common_vendor.computed(() => store.state.profile);
     const defaultAvatar = "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
+    const userAvatarSrc = common_vendor.computed(() => {
+      var _a;
+      if (!((_a = user.value) == null ? void 0 : _a.avatar))
+        return defaultAvatar;
+      return utils_image.getImageUrl(user.value.avatar);
+    });
     const userStats = common_vendor.ref({
       notes: 0,
       favorites: 0,
@@ -204,7 +211,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }, !common_vendor.unref(user) ? {
         j: common_vendor.o(openLogin)
       } : {
-        k: common_vendor.unref(user).avatar || defaultAvatar,
+        k: common_vendor.unref(userAvatarSrc),
         l: common_vendor.t(common_vendor.unref(user).nickname),
         m: common_vendor.t(common_vendor.unref(user).signature || "\u8BA9AI\u4E3A\u60A8\u91CF\u8EAB\u6253\u9020\u4E0B\u4E00\u6B21\u65C5\u884C"),
         n: common_vendor.o(navigateToUserHome)

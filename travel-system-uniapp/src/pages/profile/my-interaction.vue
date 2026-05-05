@@ -52,7 +52,7 @@
 
           <!-- 空状态 -->
           <view v-else-if="!favoritesLoading && favoritesList.length === 0" class="empty-state">
-            <text class="empty-icon">⭐</text>
+            <text class="empty-icon iconfont icon-menpiao"></text>
             <text class="empty-text">还没有收藏任何{{ getFavoriteCategoryLabel() }}</text>
             <text class="empty-tip">去发现精彩内容吧~</text>
           </view>
@@ -82,7 +82,7 @@
                 <view class="note-meta-row">
                   <image
                     class="note-author-avatar"
-                    :src="item.authorAvatar || defaultAvatar"
+                    :src="getImageUrl(item.authorAvatar) || defaultAvatar"
                     mode="aspectFill"
                   />
                   <text class="note-author-name">{{ item.authorName || '匿名用户' }}</text>
@@ -241,7 +241,7 @@
 
           <!-- 空状态 -->
           <view v-else-if="!likesLoading && likesList.length === 0" class="empty-state">
-            <text class="empty-icon">👍</text>
+            <text class="empty-icon iconfont icon-icon"></text>
             <text class="empty-text">还没有点赞过任何{{ getLikeCategoryLabel() }}</text>
             <text class="empty-tip">去发现精彩内容吧~</text>
           </view>
@@ -271,7 +271,7 @@
                 <view class="note-meta-row">
                   <image
                     class="note-author-avatar"
-                    :src="note.authorAvatar || defaultAvatar"
+                    :src="getImageUrl(note.authorAvatar) || defaultAvatar"
                     mode="aspectFill"
                   />
                   <text class="note-author-name">{{ note.authorName || '匿名用户' }}</text>
@@ -369,7 +369,7 @@
 
           <!-- 空状态 -->
           <view v-else-if="!commentsLoading && commentsList.length === 0" class="empty-state">
-            <text class="empty-icon">💬</text>
+            <text class="empty-icon iconfont icon-pinglun"></text>
             <text class="empty-text">还没有发表过评论</text>
             <text class="empty-tip">去分享你的想法吧~</text>
           </view>
@@ -423,6 +423,7 @@ import { travelNoteApi, scenicSpotApi, foodApi, travelNoteInteractionApi } from 
 import { routeApi } from '@/api/route'
 import { useUserStore } from '@/store/user'
 import { safeNavigateTo, resetNavigationState } from '@/utils/router'
+import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -907,13 +908,6 @@ const formatTime = (time: string) => {
   } else {
     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
   }
-}
-
-// 获取图片URL
-const getImageUrl = (url: string) => {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  return `https://your-api-domain.com${url}`
 }
 
 // 获取标签

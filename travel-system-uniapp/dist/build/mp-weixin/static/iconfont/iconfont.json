@@ -1,0 +1,268 @@
+{
+  "id": "5096176",
+  "name": "smart-travel-sysytem",
+  "font_family": "iconfont",
+  "css_prefix_text": "icon-",
+  "description": "",
+  "glyphs": [
+    {
+      "icon_id": "957399",
+      "name": "景点介绍",
+      "font_class": "jingdianjieshao",
+      "unicode": "e674",
+      "unicode_decimal": 58996
+    },
+    {
+      "icon_id": "2121722",
+      "name": "门票",
+      "font_class": "menpiao",
+      "unicode": "e60c",
+      "unicode_decimal": 58892
+    },
+    {
+      "icon_id": "7089800",
+      "name": "附近美食",
+      "font_class": "fujinmeishi",
+      "unicode": "e614",
+      "unicode_decimal": 58900
+    },
+    {
+      "icon_id": "12480731",
+      "name": "通讯时长",
+      "font_class": "tongxunshichang",
+      "unicode": "e639",
+      "unicode_decimal": 58937
+    },
+    {
+      "icon_id": "20464688",
+      "name": "开放时间",
+      "font_class": "kaifangshijian",
+      "unicode": "e90d",
+      "unicode_decimal": 59661
+    },
+    {
+      "icon_id": "637813",
+      "name": "足迹",
+      "font_class": "zuji",
+      "unicode": "e638",
+      "unicode_decimal": 58936
+    },
+    {
+      "icon_id": "767023",
+      "name": "地址",
+      "font_class": "map",
+      "unicode": "e699",
+      "unicode_decimal": 59033
+    },
+    {
+      "icon_id": "784528",
+      "name": "日历",
+      "font_class": "icon1",
+      "unicode": "e65f",
+      "unicode_decimal": 58975
+    },
+    {
+      "icon_id": "1106443",
+      "name": "位置",
+      "font_class": "weizhi",
+      "unicode": "e615",
+      "unicode_decimal": 58901
+    },
+    {
+      "icon_id": "2272968",
+      "name": "景点",
+      "font_class": "jingdian",
+      "unicode": "e604",
+      "unicode_decimal": 58884
+    },
+    {
+      "icon_id": "2568662",
+      "name": "投诉",
+      "font_class": "tousu",
+      "unicode": "e6dd",
+      "unicode_decimal": 59101
+    },
+    {
+      "icon_id": "3995397",
+      "name": "功能建议",
+      "font_class": "we_huabanfuben",
+      "unicode": "e628",
+      "unicode_decimal": 58920
+    },
+    {
+      "icon_id": "6572211",
+      "name": "发布",
+      "font_class": "fabu",
+      "unicode": "e629",
+      "unicode_decimal": 58921
+    },
+    {
+      "icon_id": "6775644",
+      "name": "爱心",
+      "font_class": "aixin",
+      "unicode": "eca1",
+      "unicode_decimal": 60577
+    },
+    {
+      "icon_id": "10068467",
+      "name": "打卡",
+      "font_class": "daka",
+      "unicode": "e66c",
+      "unicode_decimal": 58988
+    },
+    {
+      "icon_id": "10164901",
+      "name": "其他",
+      "font_class": "qita",
+      "unicode": "e662",
+      "unicode_decimal": 58978
+    },
+    {
+      "icon_id": "17605478",
+      "name": "浏览",
+      "font_class": "liulan",
+      "unicode": "e816",
+      "unicode_decimal": 59414
+    },
+    {
+      "icon_id": "25070914",
+      "name": "问题反馈",
+      "font_class": "wentifankui",
+      "unicode": "e6b7",
+      "unicode_decimal": 59063
+    },
+    {
+      "icon_id": "3427871",
+      "name": "浏览量",
+      "font_class": "icon-",
+      "unicode": "e627",
+      "unicode_decimal": 58919
+    },
+    {
+      "icon_id": "17830630",
+      "name": "搜索",
+      "font_class": "sousuo",
+      "unicode": "e603",
+      "unicode_decimal": 58883
+    },
+    {
+      "icon_id": "1272735",
+      "name": "分享",
+      "font_class": "share-s",
+      "unicode": "e653",
+      "unicode_decimal": 58963
+    },
+    {
+      "icon_id": "3659158",
+      "name": "美食",
+      "font_class": "meishi",
+      "unicode": "e8f8",
+      "unicode_decimal": 59640
+    },
+    {
+      "icon_id": "4942665",
+      "name": "添加",
+      "font_class": "tianjia",
+      "unicode": "e620",
+      "unicode_decimal": 58912
+    },
+    {
+      "icon_id": "10164909",
+      "name": "城市",
+      "font_class": "chengshi",
+      "unicode": "e665",
+      "unicode_decimal": 58981
+    },
+    {
+      "icon_id": "667792",
+      "name": "评论",
+      "font_class": "pinglun",
+      "unicode": "e6ad",
+      "unicode_decimal": 59053
+    },
+    {
+      "icon_id": "777843",
+      "name": "赞",
+      "font_class": "icon",
+      "unicode": "e651",
+      "unicode_decimal": 58961
+    },
+    {
+      "icon_id": "933715",
+      "name": "线路",
+      "font_class": "xianlu",
+      "unicode": "e633",
+      "unicode_decimal": 58931
+    },
+    {
+      "icon_id": "2019922",
+      "name": "意见反馈",
+      "font_class": "yijianfankui",
+      "unicode": "e60f",
+      "unicode_decimal": 58895
+    },
+    {
+      "icon_id": "2076348",
+      "name": "游记",
+      "font_class": "youji",
+      "unicode": "e8ac",
+      "unicode_decimal": 59564
+    },
+    {
+      "icon_id": "4171088",
+      "name": "关于我们",
+      "font_class": "guanyuwomen",
+      "unicode": "e601",
+      "unicode_decimal": 58881
+    },
+    {
+      "icon_id": "10905635",
+      "name": "我 的的副本",
+      "font_class": "wodedefuben",
+      "unicode": "e634",
+      "unicode_decimal": 58932
+    },
+    {
+      "icon_id": "10933913",
+      "name": "历史",
+      "font_class": "lishi",
+      "unicode": "e60e",
+      "unicode_decimal": 58894
+    },
+    {
+      "icon_id": "21914683",
+      "name": "收藏",
+      "font_class": "shoucang",
+      "unicode": "e602",
+      "unicode_decimal": 58882
+    },
+    {
+      "icon_id": "28034228",
+      "name": "首页",
+      "font_class": "shouye1",
+      "unicode": "e600",
+      "unicode_decimal": 58880
+    },
+    {
+      "icon_id": "32115864",
+      "name": "日程",
+      "font_class": "richeng",
+      "unicode": "e765",
+      "unicode_decimal": 59237
+    },
+    {
+      "icon_id": "42319492",
+      "name": "打卡B",
+      "font_class": "dakaB",
+      "unicode": "101cd",
+      "unicode_decimal": 65997
+    },
+    {
+      "icon_id": "25331246",
+      "name": "偏好设置",
+      "font_class": "pianhaoshezhi",
+      "unicode": "e79f",
+      "unicode_decimal": 59295
+    }
+  ]
+}

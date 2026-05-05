@@ -237,6 +237,32 @@
   color: #999;
   flex-shrink: 0;
 }
+.day-narrative-card.data-v-1656b44a {
+  background: #f7fbf9;
+  border: 1rpx solid #e1f0e8;
+  border-radius: 16rpx;
+  padding: 18rpx 20rpx;
+  margin-bottom: 20rpx;
+}
+.narrative-title.data-v-1656b44a {
+  font-size: 24rpx;
+  color: #3ba272;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+}
+.narrative-block.data-v-1656b44a {
+  margin-top: 8rpx;
+}
+.narrative-label.data-v-1656b44a {
+  font-size: 24rpx;
+  color: #333;
+  font-weight: 600;
+}
+.narrative-text.data-v-1656b44a {
+  font-size: 24rpx;
+  color: #555;
+  line-height: 1.6;
+}
 .time-blocks.data-v-1656b44a {
   display: flex;
   flex-direction: column;
@@ -250,6 +276,36 @@
 }
 .time-block:first-child .time-label.data-v-1656b44a {
   margin-top: 0;
+}
+.time-description.data-v-1656b44a {
+  background: #f7fbf9;
+  border: 1rpx solid #e1f0e8;
+  border-radius: 12rpx;
+  padding: 14rpx 16rpx;
+}
+.time-description-text.data-v-1656b44a {
+  font-size: 24rpx;
+  color: #4f5b53;
+  line-height: 1.6;
+}
+.ai-segment-title.data-v-1656b44a {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.5;
+  margin-bottom: 12rpx;
+}
+.ai-segment-row.data-v-1656b44a {
+  margin-bottom: 10rpx;
+}
+.ai-segment-row.data-v-1656b44a:last-child {
+  margin-bottom: 0;
+}
+.ai-segment-text.data-v-1656b44a {
+  font-size: 24rpx;
+  color: #4f5b53;
+  line-height: 1.65;
+  display: block;
 }
 
 /* POI卡片区域 */
@@ -615,10 +671,47 @@
   border-radius: 24rpx;
   overflow: hidden;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+  position: relative;
 }
 .full-map.data-v-1656b44a {
   width: 100%;
   height: 100%;
+}
+.map-legend-panel.data-v-1656b44a {
+  position: absolute;
+  left: 20rpx;
+  top: 20rpx;
+  z-index: 12;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 16rpx;
+  padding: 14rpx 16rpx;
+  box-shadow: 0 6rpx 18rpx rgba(0, 0, 0, 0.12);
+}
+.map-legend-title.data-v-1656b44a {
+  font-size: 22rpx;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+}
+.map-legend-list.data-v-1656b44a {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.map-legend-item.data-v-1656b44a {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+.map-legend-color.data-v-1656b44a {
+  width: 24rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+}
+.map-legend-text.data-v-1656b44a {
+  font-size: 22rpx;
+  color: #555;
+  line-height: 1;
 }
 
 /* 加载状态 */

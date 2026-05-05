@@ -5,6 +5,7 @@ export interface City {
   cityName?: string;
   province?: string;
   country?: string;
+  imageUrl?: string;
   latitude?: number;
   longitude?: number;
   status?: number;

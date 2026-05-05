@@ -1,10 +1,10 @@
 <template>
   <view class="food-detail-page">
-    <!-- 顶部图片 -->
-    <view class="header-image" v-if="detail?.imageUrl">
+    <!-- 顶部图片：无图时使用默认图 -->
+    <view class="header-image">
       <image
         class="header-img"
-        :src="detail.imageUrl"
+        :src="detail?.imageUrl ? getImageUrl(detail.imageUrl) : defaultFoodImage"
         mode="aspectFill"
         :lazy-load="false"
       />
@@ -93,18 +93,63 @@
               @click="onViewScenic(scenic.id)"
             >
               <image
-                v-if="scenic.imageUrl"
                 class="scenic-image"
-                :src="scenic.imageUrl"
+                :src="scenic.imageUrl ? getImageUrl(scenic.imageUrl) : defaultScenicImage"
                 mode="aspectFill"
                 :lazy-load="true"
               />
-              <view v-else class="scenic-image-placeholder">
-                <text class="iconfont icon-jingdian scenic-icon"></text>
-              </view>
               <text class="scenic-name">{{ scenic.name }}</text>
               <text class="scenic-score" v-if="scenic.score">评分 {{ scenic.score }}</text>
             </view>
+          </view>
+        </view>
+
+        <!-- 打卡评价（展示他人打卡 + 自己打卡入口） -->
+        <view class="intro-card">
+          <view class="card-title">
+            <text class="iconfont icon-jingdianjieshao title-icon"></text>
+            <text class="title-text">打卡评价</text>
+          </view>
+
+          <!-- 他人打卡列表 -->
+          <view v-if="checkinList.length > 0" class="checkin-list">
+            <view
+              v-for="item in checkinList"
+              :key="item.id"
+              class="checkin-item"
+            >
+              <view class="checkin-user-row">
+                <image
+                  class="checkin-avatar"
+                  :src="item.userAvatar || defaultAvatar"
+                  mode="aspectFill"
+                />
+                <view class="checkin-user-info">
+                  <text class="checkin-nickname">{{ item.userNickname || '游客' }}</text>
+                  <text class="checkin-time">{{ item.checkinTime }}</text>
+                </view>
+              </view>
+              <view v-if="item.content" class="checkin-content-text">
+                {{ item.content }}
+              </view>
+              <view v-if="item.photoUrl" class="checkin-photo-row">
+                <image
+                  :src="getImageUrl(item.photoUrl)"
+                  class="checkin-photo"
+                  mode="aspectFill"
+                />
+              </view>
+            </view>
+          </view>
+          <view v-else class="checkin-empty">
+            <text>还没有人打卡，快来成为第一位打卡者吧～</text>
+          </view>
+
+          <!-- 自己打卡入口：简单按钮，引导回打卡页 -->
+          <view class="checkin-self-row">
+            <button class="checkin-self-btn" @click="goCheckin">
+              我也要去打卡
+            </button>
           </view>
         </view>
       </view>
@@ -143,10 +188,12 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { onShow, onLoad } from '@dcloudio/uni-app'
-import { foodApi, scenicSpotApi } from '@/api/content'
+import { foodApi, scenicSpotApi, checkinApi, type ApiResponse } from '@/api/content'
 import { getCache, setCache, removeCache } from '@/utils/storage'
 import { useUserStore } from '@/store/user'
 import { safeNavigateTo, safeSwitchTab, resetNavigationState } from '@/utils/router'
+import { defaultScenicImage, defaultFoodImage } from '@/utils/config'
+import { getImageUrl } from '@/utils/image'
 
 const foodId = ref<number | null>(null)
 const loading = ref(false)
@@ -168,6 +215,9 @@ const CACHE_EXPIRE = 5 * 60 // 5分钟缓存
 // 定时器管理
 let nearbyScenicsTimer: ReturnType<typeof setTimeout> | null = null
 let isPageActive = true // 页面是否激活
+
+// 打卡评价相关状态
+const checkinList = ref<any[]>([])
 
 // 收藏功能（使用本地存储）
 const FAVORITE_KEY = 'food_favorites'
@@ -262,7 +312,6 @@ const loadNearbyScenics = async () => {
     }
   } catch (e) {
     // 静默处理错误，不影响主流程
-    console.warn('加载附近景点失败:', e)
   }
 }
 
@@ -274,10 +323,9 @@ const onViewScenic = (scenicId: number) => {
   lastClickTime = now
   
   if (!scenicId) return
-  safeNavigateTo(`/pages/scenic/detail?id=${scenicId}`).catch((err) => {
+  safeNavigateTo(`/pages/scenic/detail?id=${scenicId}`).catch(() => {
     // 避免在页面卸载时显示 toast
     if (isPageActive) {
-      console.error('页面跳转失败:', err)
       uni.showToast({ title: '页面跳转失败', icon: 'none' })
     }
   })
@@ -332,7 +380,6 @@ const goCheckin = () => {
   if (!foodId.value) return
   safeSwitchTab('/pages/checkin/checkin').catch((err) => {
     if (isPageActive) {
-      console.error('页面跳转失败:', err)
       uni.showToast({ title: '页面跳转失败', icon: 'none' })
     }
   })
@@ -386,6 +433,21 @@ const addToRoute = () => {
   }
 }
 
+// 加载当前美食的打卡列表（用于展示他人打卡）
+const loadFoodCheckins = async () => {
+  if (!foodId.value) return
+  try {
+    const res = await checkinApi.getTargetCheckins('food', foodId.value, 1, 10)
+    const data = res.data as ApiResponse<{ list: any[] }>
+    if (res.statusCode === 200 && data.code === 200) {
+      const list = (data.data && (data.data as any).list) || []
+      checkinList.value = list || []
+    }
+  } catch (e) {
+    // 静默失败，不影响主流程
+  }
+}
+
 onLoad(() => {
   // 重置导航状态，避免路由错误
   resetNavigationState()
@@ -396,13 +458,15 @@ onMounted(() => {
   const pages = getCurrentPages()
   if (!pages || pages.length === 0) return
   const currentPage = pages[pages.length - 1] as any
-  const options = (currentPage?.options || {}) as { id?: string }
+  const options = (currentPage?.options || {}) as { id?: string; from?: string }
   const id = options?.id
+
   if (id) {
     const numId = Number(id)
     if (!isNaN(numId) && numId > 0) {
       foodId.value = numId
       loadDetail()
+      loadFoodCheckins()
     }
   }
 })
@@ -736,6 +800,93 @@ onUnmounted(() => {
   margin-top: 4rpx;
 }
 
+/* 打卡评价样式（列表 + 自己打卡按钮） */
+.checkin-list {
+  margin-top: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.checkin-item {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.checkin-item:last-child {
+  border-bottom-width: 0;
+}
+
+.checkin-user-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.checkin-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background-color: #e5e5e5;
+  flex-shrink: 0;
+}
+
+.checkin-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.checkin-nickname {
+  font-size: 26rpx;
+  color: #333333;
+  font-weight: 500;
+}
+
+.checkin-time {
+  font-size: 22rpx;
+  color: #999999;
+}
+
+.checkin-content-text {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #555555;
+  line-height: 1.6;
+}
+
+.checkin-photo-row {
+  margin-top: 10rpx;
+}
+
+.checkin-photo {
+  width: 100%;
+  height: 260rpx;
+  border-radius: 16rpx;
+  background-color: #f5f5f5;
+}
+
+.checkin-empty {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.checkin-self-row {
+  margin-top: 16rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.checkin-self-btn {
+  padding: 16rpx 32rpx;
+  background-color: #3ba272;
+  color: #ffffff;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  border: none;
+}
+
 /* 底部操作栏 */
 .bottom-bar {
   position: fixed;
@@ -823,6 +974,8 @@ onUnmounted(() => {
 
 .btn-text {
   font-size: 28rpx;
+  color: #ffffff;
+  display: inline-block;
 }
 </style>
 

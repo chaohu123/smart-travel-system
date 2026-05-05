@@ -1,0 +1,1 @@
+<view class="skeleton-list data-v-98a5817e"><view wx:for="{{a}}" wx:for-item="n" wx:key="a" class="skeleton-card data-v-98a5817e"><view class="skeleton-cover shimmer data-v-98a5817e"/><view class="skeleton-line shimmer data-v-98a5817e"/><view class="skeleton-line short shimmer data-v-98a5817e"/></view></view>

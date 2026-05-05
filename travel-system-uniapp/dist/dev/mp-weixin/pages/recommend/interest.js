@@ -1,348 +1,225 @@
 "use strict";
 var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
-var utils_http = require("../../utils/http.js");
-var store_user = require("../../store/user.js");
+var utils_config = require("../../utils/config.js");
+var utils_image = require("../../utils/image.js");
+require("../../utils/http.js");
 require("../../utils/storage.js");
-require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
-    const store = store_user.useUserStore();
-    const user = common_vendor.computed(() => store.state.profile);
-    const tagList = common_vendor.ref([]);
-    const selectedTags = common_vendor.ref([]);
-    const activeTab = common_vendor.ref("route");
-    const contentList = common_vendor.ref([]);
     const loading = common_vendor.ref(false);
-    const refreshing = common_vendor.ref(false);
-    const pageNum = common_vendor.ref(1);
-    const pageSize = common_vendor.ref(10);
-    const hasMore = common_vendor.ref(true);
-    const contentTabs = [
-      { type: "route", label: "\u8DEF\u7EBF", icon: "\u{1F5FA}\uFE0F" },
-      { type: "scenic", label: "\u666F\u70B9", icon: "\u{1F3DE}\uFE0F" },
-      { type: "food", label: "\u7F8E\u98DF", icon: "\u{1F35C}" },
-      { type: "note", label: "\u6E38\u8BB0", icon: "\u{1F4DD}" }
-    ];
-    const getTagIcon = (tagName) => {
-      const iconMap = {
-        "\u7F8E\u98DF": "\u{1F35C}",
-        "\u5386\u53F2": "\u{1F3DB}\uFE0F",
-        "\u4EB2\u5B50": "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}",
-        "\u81EA\u7136": "\u{1F332}",
-        "\u6587\u5316": "\u{1F4DA}",
-        "\u4F11\u95F2": "\u2615",
-        "\u63A2\u9669": "\u26F0\uFE0F",
-        "\u6444\u5F71": "\u{1F4F7}",
-        "\u8D2D\u7269": "\u{1F6CD}\uFE0F",
-        "\u591C\u751F\u6D3B": "\u{1F303}",
-        "\u5B97\u6559": "\u{1F54C}",
-        "\u5EFA\u7B51": "\u{1F3D7}\uFE0F",
-        "\u827A\u672F": "\u{1F3A8}",
-        "\u8FD0\u52A8": "\u26BD",
-        "\u6E29\u6CC9": "\u2668\uFE0F"
-      };
-      return iconMap[tagName] || "\u{1F3F7}\uFE0F";
+    const scenicList = common_vendor.ref([]);
+    const searchKeyword = common_vendor.ref("");
+    const currentCityName = common_vendor.ref("\u5B9A\u4F4D\u4E2D...");
+    const currentCityId = common_vendor.ref(null);
+    const cityList = common_vendor.ref([]);
+    const currentPage = common_vendor.ref(1);
+    const pageSize = common_vendor.ref(6);
+    const lastCityApplyTs = common_vendor.ref(0);
+    const goBack = () => {
+      common_vendor.index.navigateBack();
     };
-    const toggleTag = (tagId) => {
-      const index = selectedTags.value.indexOf(tagId);
-      if (index > -1) {
-        selectedTags.value.splice(index, 1);
-      } else {
-        selectedTags.value.push(tagId);
+    const filteredList = common_vendor.computed(() => {
+      const keyword = searchKeyword.value.trim().toLowerCase();
+      if (!keyword)
+        return scenicList.value;
+      return scenicList.value.filter((item) => {
+        const text = `${item.name || ""}${item.address || ""}${item.city || ""}`.toLowerCase();
+        return text.includes(keyword);
+      });
+    });
+    const totalPages = common_vendor.computed(() => {
+      if (!filteredList.value.length)
+        return 1;
+      return Math.ceil(filteredList.value.length / pageSize.value);
+    });
+    const pagedList = common_vendor.computed(() => {
+      const start = (currentPage.value - 1) * pageSize.value;
+      const end = start + pageSize.value;
+      return filteredList.value.slice(start, end);
+    });
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+    const loadCityList = async () => {
+      const res = await api_content.cityApi.list();
+      const data = res.data;
+      if (res.statusCode === 200 && data.code === 200) {
+        cityList.value = (data.data || []).map((item) => ({
+          id: item.id,
+          name: item.cityName || item.name,
+          latitude: item.latitude ? Number(item.latitude) : void 0,
+          longitude: item.longitude ? Number(item.longitude) : void 0
+        }));
       }
-      loadContent(true);
     };
-    const switchTab = (type) => {
-      if (activeTab.value === type)
-        return;
-      activeTab.value = type;
-      loadContent(true);
+    const matchCityByName = (name) => {
+      const matched = cityList.value.find((city) => name.includes(city.name.replace(/市$/, "")) || city.name.includes(name));
+      return matched || null;
     };
-    const formatCount = (count) => {
-      if (!count)
-        return "0";
-      if (count >= 1e4) {
-        return (count / 1e4).toFixed(1) + "w";
-      }
-      return count.toString();
-    };
-    const loadTags = async () => {
-      try {
-        const res = await api_content.tagApi.list();
-        const data = res.data;
-        if (res.statusCode === 200 && data.code === 200) {
-          tagList.value = data.data || [];
+    const matchNearestCity = (latitude, longitude) => {
+      const availableCities = cityList.value.filter((city) => Number.isFinite(city.latitude) && Number.isFinite(city.longitude));
+      if (!availableCities.length)
+        return null;
+      let nearest = null;
+      let minDistance = Number.POSITIVE_INFINITY;
+      availableCities.forEach((city) => {
+        const distance = calculateDistance(latitude, longitude, Number(city.latitude), Number(city.longitude));
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearest = city;
         }
-      } catch (error) {
-        console.error("\u52A0\u8F7D\u6807\u7B7E\u5931\u8D25:", error);
-      }
+      });
+      return nearest;
     };
-    const loadContent = async (reset = false) => {
-      var _a;
-      if (loading.value || !hasMore.value && !reset)
-        return;
-      if (selectedTags.value.length === 0) {
-        if (reset) {
-          contentList.value = [];
+    const getUserCityAndLoad = () => {
+      common_vendor.index.getLocation({
+        type: "gcj02",
+        geocode: true,
+        success: (res) => {
+          const addr = res.address || {};
+          const cityName = (addr.city || addr.province || "").replace(/市|省$/, "");
+          const byName = cityName ? matchCityByName(cityName) : null;
+          const byDistance = matchNearestCity(res.latitude, res.longitude);
+          const city = byName || byDistance;
+          if (city) {
+            currentCityName.value = city.name.replace(/市$/, "");
+            currentCityId.value = city.id;
+          } else {
+            currentCityName.value = cityName || "\u5168\u56FD";
+            currentCityId.value = null;
+          }
+          loadScenicList();
+        },
+        fail: () => {
+          currentCityName.value = "\u5168\u56FD";
+          currentCityId.value = null;
+          loadScenicList();
         }
-        return;
-      }
+      });
+    };
+    const loadScenicList = async () => {
       loading.value = true;
-      if (reset) {
-        pageNum.value = 1;
-        hasMore.value = true;
-        contentList.value = [];
-      }
       try {
-        const userId = (_a = user.value) == null ? void 0 : _a.id;
-        const tagNames = tagList.value.filter((tag) => selectedTags.value.includes(tag.id)).map((tag) => tag.name).join(",");
-        let res;
-        const limit = pageSize.value * pageNum.value;
-        switch (activeTab.value) {
-          case "route":
-            res = await api_content.recommendApi.routes(userId, limit);
-            break;
-          case "scenic":
-            res = await utils_http.request({
-              url: "/scenic/list",
-              method: "GET",
-              data: {
-                pageNum: pageNum.value,
-                pageSize: pageSize.value,
-                tagName: tagNames || void 0
-              },
-              showLoading: false
-            });
-            break;
-          case "food":
-            res = await utils_http.request({
-              url: "/food/list",
-              method: "GET",
-              data: {
-                pageNum: pageNum.value,
-                pageSize: pageSize.value,
-                tagName: tagNames || void 0
-              },
-              showLoading: false
-            });
-            break;
-          case "note":
-            res = await api_content.travelNoteApi.list({
-              pageNum: pageNum.value,
-              pageSize: pageSize.value,
-              tagName: tagNames || void 0
-            });
-            break;
+        const params = {
+          pageNum: 1,
+          pageSize: 1e3
+        };
+        if (currentCityId.value) {
+          params.cityId = currentCityId.value;
         }
+        const res = await api_content.scenicSpotApi.list(params);
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
-          let newItems = [];
-          if (activeTab.value === "route") {
-            newItems = data.data || [];
-          } else {
-            const listData = data.data;
-            if (listData == null ? void 0 : listData.rows) {
-              newItems = listData.rows;
-            } else if (listData == null ? void 0 : listData.list) {
-              newItems = listData.list;
-            } else if (Array.isArray(listData)) {
-              newItems = listData;
-            }
-          }
-          if (reset) {
-            contentList.value = newItems;
-          } else {
-            const existingIds = new Set(contentList.value.map((item) => item.id));
-            const uniqueNewItems = newItems.filter((item) => !existingIds.has(item.id));
-            contentList.value = [...contentList.value, ...uniqueNewItems];
-          }
-          if (activeTab.value === "route") {
-            hasMore.value = newItems.length >= limit;
-          } else {
-            const listData = data.data;
-            const total = (listData == null ? void 0 : listData.total) || 0;
-            hasMore.value = contentList.value.length < total;
-          }
-          if (hasMore.value) {
-            pageNum.value += 1;
-          }
+          const raw = data.data;
+          const rows = Array.isArray(raw == null ? void 0 : raw.rows) ? raw.rows : Array.isArray(raw == null ? void 0 : raw.list) ? raw.list : Array.isArray(raw) ? raw : [];
+          scenicList.value = rows;
         } else {
-          common_vendor.index.showToast({
-            title: data.msg || "\u52A0\u8F7D\u5931\u8D25",
-            icon: "none"
-          });
+          scenicList.value = [];
         }
-      } catch (error) {
-        console.error("\u52A0\u8F7D\u5185\u5BB9\u5931\u8D25:", error);
-        common_vendor.index.showToast({
-          title: (error == null ? void 0 : error.message) || "\u7F51\u7EDC\u9519\u8BEF",
-          icon: "none"
-        });
+      } catch {
+        scenicList.value = [];
       } finally {
         loading.value = false;
-        refreshing.value = false;
+        currentPage.value = 1;
       }
     };
-    const onRefresh = () => {
-      refreshing.value = true;
-      loadContent(true);
+    const onSearchConfirm = () => {
+      currentPage.value = 1;
     };
-    const loadMore = () => {
-      if (!loading.value && hasMore.value) {
-        loadContent();
+    const chooseCity = () => {
+      const handleCitySelected = (data) => {
+        currentCityId.value = data.id;
+        currentCityName.value = data.name;
+        currentPage.value = 1;
+        loadScenicList();
+      };
+      common_vendor.index.navigateTo({
+        url: "/pages/city/select",
+        events: {
+          citySelected: handleCitySelected
+        },
+        success: (res) => {
+          res.eventChannel.on("citySelected", handleCitySelected);
+        }
+      });
+    };
+    const applyCityFromStorage = () => {
+      const selected = common_vendor.index.getStorageSync("ticket_selected_city");
+      if (!selected || !selected.id || !selected.name)
+        return;
+      const ts = Number(selected.ts || 0);
+      if (ts <= lastCityApplyTs.value)
+        return;
+      if (currentCityId.value === selected.id && currentCityName.value === selected.name) {
+        lastCityApplyTs.value = ts;
+        return;
       }
+      currentCityId.value = selected.id;
+      currentCityName.value = selected.name;
+      currentPage.value = 1;
+      lastCityApplyTs.value = ts;
+      loadScenicList();
     };
-    const onViewRoute = (item) => {
-      common_vendor.index.navigateTo({ url: `/pages/itinerary/itinerary-detail?id=${item.id}` });
+    const goPrevPage = () => {
+      if (currentPage.value <= 1)
+        return;
+      currentPage.value -= 1;
     };
-    const onViewScenic = (item) => {
-      common_vendor.index.navigateTo({ url: `/pages/scenic/detail?id=${item.id}` });
+    const goNextPage = () => {
+      if (currentPage.value >= totalPages.value)
+        return;
+      currentPage.value += 1;
     };
-    const onViewFood = (item) => {
-      common_vendor.index.navigateTo({ url: `/pages/food/detail?id=${item.id}` });
+    const goScenicDetail = (id) => {
+      common_vendor.index.navigateTo({ url: `/pages/scenic/detail?id=${id}&from=ticket` });
     };
-    const onViewNote = (item) => {
-      common_vendor.index.navigateTo({ url: `/pages/travel-note/detail?id=${item.id}` });
-    };
-    common_vendor.watch(selectedTags, () => {
-      loadContent(true);
-    }, { deep: true });
-    common_vendor.onMounted(() => {
-      loadTags();
+    common_vendor.onMounted(async () => {
+      await loadCityList();
+      getUserCityAndLoad();
+    });
+    common_vendor.onShow(() => {
+      applyCityFromStorage();
     });
     return (_ctx, _cache) => {
       return common_vendor.e({
-        a: common_vendor.f(tagList.value, (tag, k0, i0) => {
+        a: common_vendor.o(goBack),
+        b: common_vendor.t(currentCityName.value),
+        c: common_vendor.o(chooseCity),
+        d: common_vendor.o(onSearchConfirm),
+        e: searchKeyword.value,
+        f: common_vendor.o(($event) => searchKeyword.value = $event.detail.value),
+        g: common_vendor.o(onSearchConfirm),
+        h: loading.value
+      }, loading.value ? {} : common_vendor.unref(pagedList).length === 0 ? {
+        j: common_vendor.t(scenicList.value.length === 0 ? "\u5F53\u524D\u5730\u533A\u6682\u65E0\u666F\u70B9" : "\u672A\u627E\u5230\u5339\u914D\u666F\u70B9")
+      } : {
+        k: common_vendor.f(common_vendor.unref(pagedList), (item, k0, i0) => {
           return {
-            a: common_vendor.t(getTagIcon(tag.name)),
-            b: common_vendor.t(tag.name),
-            c: tag.id,
-            d: selectedTags.value.includes(tag.id) ? 1 : "",
-            e: common_vendor.o(($event) => toggleTag(tag.id))
-          };
-        }),
-        b: common_vendor.f(contentTabs, (tab, k0, i0) => {
-          return {
-            a: common_vendor.t(tab.icon),
-            b: common_vendor.t(tab.label),
-            c: tab.type,
-            d: activeTab.value === tab.type ? 1 : "",
-            e: common_vendor.o(($event) => switchTab(tab.type))
-          };
-        }),
-        c: loading.value && contentList.value.length === 0
-      }, loading.value && contentList.value.length === 0 ? {
-        d: common_vendor.f(4, (i, k0, i0) => {
-          return {
-            a: i
-          };
-        })
-      } : common_vendor.e({
-        e: activeTab.value === "route"
-      }, activeTab.value === "route" ? {
-        f: common_vendor.f(contentList.value, (item, k0, i0) => {
-          return common_vendor.e({
-            a: item.coverImage || "/static/default-route.jpg",
-            b: common_vendor.t(item.days),
-            c: common_vendor.t(item.routeName),
-            d: item.summary
-          }, item.summary ? {
-            e: common_vendor.t(item.summary)
-          } : {}, {
-            f: common_vendor.t(formatCount(item.viewCount)),
-            g: common_vendor.t(formatCount(item.favoriteCount)),
+            a: item.imageUrl ? common_vendor.unref(utils_image.getImageUrl)(item.imageUrl) : common_vendor.unref(utils_config.defaultScenicImage),
+            b: common_vendor.t(item.name),
+            c: common_vendor.t(item.price && Number(item.price) > 0 ? `\xA5${Number(item.price)}\u8D77` : "\u514D\u8D39"),
+            d: !item.price || Number(item.price) === 0 ? 1 : "",
+            e: common_vendor.t(item.address || `${item.province || ""}${item.city || ""}` || "\u5730\u5740\u5F85\u5B8C\u5584"),
+            f: common_vendor.t(item.openTime || "\u5F00\u653E\u65F6\u95F4\u5F85\u5B9A"),
+            g: common_vendor.t(item.suggestedVisitTime || "\u65F6\u957F\u5F85\u5B8C\u5584"),
             h: item.id,
-            i: common_vendor.o(($event) => onViewRoute(item))
-          });
+            i: common_vendor.o(($event) => goScenicDetail(item.id))
+          };
         })
-      } : {}, {
-        g: activeTab.value === "scenic"
-      }, activeTab.value === "scenic" ? {
-        h: common_vendor.f(contentList.value, (item, k0, i0) => {
-          return common_vendor.e({
-            a: item.imageUrl || "/static/default-scenic.jpg",
-            b: item.score
-          }, item.score ? {
-            c: common_vendor.t(item.score)
-          } : {}, {
-            d: common_vendor.t(item.name),
-            e: item.address
-          }, item.address ? {
-            f: common_vendor.t(item.address)
-          } : {}, {
-            g: item.tags && item.tags.length > 0
-          }, item.tags && item.tags.length > 0 ? {
-            h: common_vendor.f(item.tags.slice(0, 3), (tag, k1, i1) => {
-              return {
-                a: common_vendor.t(tag),
-                b: tag
-              };
-            })
-          } : {}, {
-            i: item.id,
-            j: common_vendor.o(($event) => onViewScenic(item))
-          });
-        })
-      } : {}, {
-        i: activeTab.value === "food"
-      }, activeTab.value === "food" ? {
-        j: common_vendor.f(contentList.value, (item, k0, i0) => {
-          return common_vendor.e({
-            a: item.imageUrl || "/static/default-food.jpg",
-            b: item.avgPrice
-          }, item.avgPrice ? {
-            c: common_vendor.t(item.avgPrice)
-          } : {}, {
-            d: common_vendor.t(item.name),
-            e: item.address
-          }, item.address ? {
-            f: common_vendor.t(item.address)
-          } : {}, {
-            g: item.score
-          }, item.score ? {
-            h: common_vendor.t(item.score)
-          } : {}, {
-            i: item.foodType
-          }, item.foodType ? {
-            j: common_vendor.t(item.foodType)
-          } : {}, {
-            k: item.id,
-            l: common_vendor.o(($event) => onViewFood(item))
-          });
-        })
-      } : {}, {
-        k: activeTab.value === "note"
-      }, activeTab.value === "note" ? {
-        l: common_vendor.f(contentList.value, (item, k0, i0) => {
-          return common_vendor.e({
-            a: item.coverImage || "/static/default-note.jpg",
-            b: common_vendor.t(item.title),
-            c: item.authorName
-          }, item.authorName ? {
-            d: item.authorAvatar || "/static/default-avatar.png",
-            e: common_vendor.t(item.authorName)
-          } : {}, {
-            f: common_vendor.t(formatCount(item.viewCount)),
-            g: common_vendor.t(formatCount(item.likeCount)),
-            h: common_vendor.t(formatCount(item.commentCount)),
-            i: item.id,
-            j: common_vendor.o(($event) => onViewNote(item))
-          });
-        })
-      } : {}, {
-        m: !loading.value && contentList.value.length === 0
-      }, !loading.value && contentList.value.length === 0 ? {
-        n: common_vendor.t(selectedTags.value.length === 0 ? "\u8BF7\u9009\u62E9\u5174\u8DA3\u6807\u7B7E" : "\u6682\u65E0\u63A8\u8350\u5185\u5BB9"),
-        o: common_vendor.t(selectedTags.value.length === 0 ? "\u9009\u62E9\u6807\u7B7E\u540E\u4E3A\u4F60\u63A8\u8350\u76F8\u5173\u5185\u5BB9" : "\u6362\u4E2A\u6807\u7B7E\u8BD5\u8BD5\u5427")
-      } : {}, {
-        p: loading.value && contentList.value.length > 0
-      }, loading.value && contentList.value.length > 0 ? {} : {}, {
-        q: !hasMore.value && contentList.value.length > 0
-      }, !hasMore.value && contentList.value.length > 0 ? {} : {}), {
-        r: common_vendor.o(loadMore),
-        s: refreshing.value,
-        t: common_vendor.o(onRefresh)
+      }, {
+        i: common_vendor.unref(pagedList).length === 0,
+        l: currentPage.value <= 1,
+        m: common_vendor.o(goPrevPage),
+        n: common_vendor.t(currentPage.value),
+        o: common_vendor.t(common_vendor.unref(totalPages)),
+        p: currentPage.value >= common_vendor.unref(totalPages),
+        q: common_vendor.o(goNextPage)
       });
     };
   }

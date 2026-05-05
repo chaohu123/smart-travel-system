@@ -1,10 +1,11 @@
 <template>
   <view class="scenic-detail-page">
-    <!-- 顶部图片轮播 -->
-    <view class="header-image" v-if="detail?.imageUrl">
+    <view class="title-safe-space"></view>
+    <!-- 顶部图片：无图时使用默认图 -->
+    <view class="header-image">
       <image
         class="header-img"
-        :src="detail.imageUrl"
+        :src="getImageUrl(detail?.imageUrl) || defaultScenicImage"
         mode="aspectFill"
         :lazy-load="false"
       />
@@ -132,18 +133,63 @@
               @click="onViewFood(food.id)"
             >
               <image
-                v-if="food.imageUrl"
                 class="food-image"
-                :src="food.imageUrl"
+                :src="getImageUrl(food.imageUrl) || defaultFoodImage"
                 mode="aspectFill"
                 :lazy-load="true"
               />
-              <view v-else class="food-image-placeholder">
-                <text class="iconfont icon-meishi food-icon"></text>
-              </view>
               <text class="food-name">{{ food.name }}</text>
               <text class="food-score" v-if="food.score">评分 {{ food.score }}</text>
             </view>
+          </view>
+        </view>
+
+        <!-- 打卡评价（展示他人打卡 + 自己打卡入口） -->
+        <view class="intro-card">
+          <view class="card-title">
+            <text class="iconfont icon-jingdianjieshao title-icon"></text>
+            <text class="title-text">打卡评价</text>
+          </view>
+
+          <!-- 他人打卡列表 -->
+          <view v-if="checkinList.length > 0" class="checkin-list">
+            <view
+              v-for="item in checkinList"
+              :key="item.id"
+              class="checkin-item"
+            >
+              <view class="checkin-user-row">
+                <image
+                  class="checkin-avatar"
+                  :src="getImageUrl(item.userAvatar) || defaultAvatar"
+                  mode="aspectFill"
+                />
+                <view class="checkin-user-info">
+                  <text class="checkin-nickname">{{ item.userNickname || '游客' }}</text>
+                  <text class="checkin-time">{{ item.checkinTime }}</text>
+                </view>
+              </view>
+              <view v-if="item.content" class="checkin-content-text">
+                {{ item.content }}
+              </view>
+              <view v-if="item.photoUrl" class="checkin-photo-row">
+                <image
+                  :src="getImageUrl(item.photoUrl)"
+                  class="checkin-photo"
+                  mode="aspectFill"
+                />
+              </view>
+            </view>
+          </view>
+          <view v-else class="checkin-empty">
+            <text>还没有人打卡，快来成为第一位打卡者吧～</text>
+          </view>
+
+          <!-- 自己打卡入口：简单按钮，引导回打卡页 -->
+          <view class="checkin-self-row">
+            <button class="checkin-self-btn" @click="goCheckin">
+              我也要去打卡
+            </button>
           </view>
         </view>
       </view>
@@ -163,7 +209,6 @@
       </view>
       <view class="action-buttons">
         <button class="action-btn checkin-btn" @click="goCheckin">
-          <text class="btn-icon">✓</text>
           <text class="btn-text">去打卡</text>
         </button>
         <button
@@ -171,21 +216,118 @@
           :class="{ 'added': isInPendingList }"
           @click="addToRoute"
         >
-          <text class="btn-icon">{{ isInPendingList ? '✓' : '+' }}</text>
           <text class="btn-text">{{ isInPendingList ? '已添加到路线' : '添加到路线' }}</text>
         </button>
+        <button v-if="!isFreeScenic" class="action-btn ticket-btn" @click="openTicketModal">
+          <text class="btn-text">门票预订</text>
+        </button>
+        <view v-else class="action-btn ticket-btn ticket-btn-disabled">
+          <text class="btn-text">免费景点</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 打卡弹窗（景点详情内直接打卡） -->
+    <view v-if="showCheckinModal" class="modal-overlay" @click="closeCheckinModal">
+      <view class="modal-content" @click.stop>
+        <view class="modal-header">
+          <text class="modal-title">打卡 {{ detail?.name || '' }}</text>
+          <text class="modal-close" @click="closeCheckinModal">×</text>
+        </view>
+
+        <view class="modal-body">
+          <view class="upload-section">
+            <text class="section-label">上传照片</text>
+            <text v-if="locationMsg" class="location-warning">{{ locationMsg }}</text>
+            <view class="upload-area">
+              <view v-for="(img, index) in uploadImages" :key="index" class="upload-item">
+                <image class="upload-image" :src="img" mode="aspectFill" />
+                <text class="upload-delete" @click="removeImage(index)">×</text>
+              </view>
+              <view v-if="uploadImages.length < 9" class="upload-add" @click="chooseImage">
+                <text class="upload-text">添加照片</text>
+              </view>
+            </view>
+          </view>
+
+          <view class="comment-section">
+            <text class="section-label">简短评价</text>
+            <textarea
+              v-model="checkinComment"
+              class="comment-input"
+              placeholder="分享你的感受..."
+              maxlength="200"
+            />
+            <text class="char-count">{{ checkinComment.length }}/200</text>
+          </view>
+        </view>
+
+        <view class="modal-footer">
+          <button class="submit-btn" @click="submitCheckin">提交打卡</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 门票预订弹窗 -->
+    <view v-if="showTicketModal" class="modal-overlay" @click="closeTicketModal">
+      <view class="modal-content" @click.stop>
+        <view class="modal-header">
+          <text class="modal-title">预订 {{ detail?.name || '' }}</text>
+          <text class="modal-close" @click="closeTicketModal">×</text>
+        </view>
+        <view class="modal-body">
+          <view class="ticket-block">
+            <text class="section-label">票种</text>
+            <view
+              v-for="ticket in ticketOptions"
+              :key="ticket.id"
+              class="ticket-option"
+              :class="{ active: selectedTicketId === ticket.id }"
+              @click="selectedTicketId = ticket.id"
+            >
+              <text class="ticket-option-name">{{ ticket.name }}</text>
+              <view class="ticket-option-price">
+                <text class="ticket-origin">¥{{ ticket.originalPrice }}</text>
+                <text class="ticket-discount">¥{{ ticket.discountPrice }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="ticket-block">
+            <text class="section-label">游玩日期</text>
+            <picker mode="date" :value="selectedPlayDate" @change="onPlayDateChange">
+              <view class="ticket-input">{{ selectedPlayDate || '请选择日期' }}</view>
+            </picker>
+          </view>
+          <view class="ticket-block">
+            <text class="section-label">人数</text>
+            <view class="ticket-counter">
+              <text class="counter-btn" @click="changeTicketCount(-1)">-</text>
+              <text class="counter-num">{{ ticketCount }}</text>
+              <text class="counter-btn" @click="changeTicketCount(1)">+</text>
+            </view>
+          </view>
+          <view class="ticket-total">合计：¥{{ ticketTotalPrice }}</view>
+        </view>
+        <view class="modal-footer">
+          <button class="submit-btn" @click="submitTicketOrder">立即预订</button>
+        </view>
       </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { scenicSpotApi, foodApi } from '@/api/content'
+import { scenicSpotApi, foodApi, checkinApi, type ApiResponse } from '@/api/content'
 import { getCache, setCache, removeCache } from '@/utils/storage'
 import { useUserStore } from '@/store/user'
 import { safeNavigateTo, safeSwitchTab } from '@/utils/router'
+import { defaultFoodImage, defaultScenicImage } from '@/utils/config'
+import { getImageUrl } from '@/utils/image'
+
+const defaultAvatar =
+  'https://img0.baidu.com/it/u=3514125058,2569457770&fm=253&fmt=auto&app=138&f=PNG?w=256&h=256'
 
 const scenicId = ref<number | null>(null)
 const loading = ref(false)
@@ -204,8 +346,54 @@ const CLICK_DEBOUNCE_TIME = 300
 const CACHE_KEY_PREFIX = 'scenic_detail_'
 const CACHE_EXPIRE = 5 * 60 // 5分钟缓存
 
+// 打卡评价相关状态
+const checkinList = ref<any[]>([])
+
 // 收藏功能（使用本地存储）
 const FAVORITE_KEY = 'scenic_favorites'
+
+// 打卡弹窗相关状态
+const showCheckinModal = ref(false)
+const uploadImages = ref<string[]>([])
+const checkinComment = ref('')
+const locationOk = ref(false)
+const locationMsg = ref('')
+
+const showTicketModal = ref(false)
+const ticketCount = ref(1)
+const selectedPlayDate = ref('')
+const selectedTicketId = ref(1)
+const ticketOptions = computed(() => {
+  const basePrice = Number(detail.value?.price || 0)
+  if (!basePrice || basePrice <= 0) return []
+
+  // 基于景点详情价格动态构造可选票种，不写死具体金额。
+  return [
+    {
+      id: 1,
+      name: '成人票',
+      originalPrice: basePrice,
+      discountPrice: basePrice,
+    },
+  ]
+})
+const ticketTotalPrice = computed(() => {
+  const ticket = ticketOptions.value.find((item) => item.id === selectedTicketId.value)
+  return (ticket?.discountPrice || 0) * ticketCount.value
+})
+const isFreeScenic = computed(() => !detail.value?.price || Number(detail.value?.price) === 0)
+
+watch(
+  ticketOptions,
+  (options) => {
+    if (!options.length) return
+    const exists = options.some((item) => item.id === selectedTicketId.value)
+    if (!exists) {
+      selectedTicketId.value = options[0].id
+    }
+  },
+  { immediate: true },
+)
 
 const loadFavoriteStatus = () => {
   if (!scenicId.value) return
@@ -323,6 +511,21 @@ const loadNearbyFoods = async () => {
   }
 }
 
+// 加载当前景点的打卡列表（用于展示他人打卡）
+const loadScenicCheckins = async () => {
+  if (!scenicId.value) return
+  try {
+    const res = await checkinApi.getTargetCheckins('scenic', scenicId.value, 1, 10)
+    const data = res.data as ApiResponse<{ list: any[] }>
+    if (res.statusCode === 200 && data.code === 200) {
+      const list = (data.data && (data.data as any).list) || []
+      checkinList.value = list || []
+    }
+  } catch (e) {
+    // 静默失败，不影响主流程
+  }
+}
+
 const onViewFood = (foodId: number) => {
   const now = Date.now()
   if (now - lastClickTime < CLICK_DEBOUNCE_TIME) {
@@ -344,9 +547,7 @@ const goCheckin = () => {
   lastClickTime = now
   
   if (!scenicId.value) return
-  safeSwitchTab('/pages/checkin/checkin').catch(() => {
-    uni.showToast({ title: '页面跳转失败', icon: 'none' })
-  })
+  openCheckinModal()
 }
 
 const addToRoute = () => {
@@ -401,13 +602,14 @@ onMounted(() => {
   const pages = getCurrentPages()
   if (!pages || pages.length === 0) return
   const currentPage = pages[pages.length - 1] as any
-  const options = (currentPage?.options || {}) as { id?: string }
+  const options = (currentPage?.options || {}) as { id?: string; from?: string }
   const id = options?.id
   if (id) {
     const numId = Number(id)
     if (!isNaN(numId) && numId > 0) {
       scenicId.value = numId
       loadDetail()
+      loadScenicCheckins()
     }
   }
 })
@@ -416,6 +618,168 @@ onMounted(() => {
 onShow(() => {
   checkPendingStatus()
 })
+
+const showLoginPromptDialog = () => {
+  uni.showModal({
+    title: '需要登录',
+    content: '打卡前需要先登录账号',
+    confirmText: '去登录',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        safeSwitchTab('/pages/profile/profile')
+      }
+    },
+  })
+}
+
+const ensureLocation = () => {
+  uni.getLocation({
+    type: 'gcj02',
+    altitude: false,
+    geocode: false,
+    success: () => {
+      locationOk.value = true
+      locationMsg.value = ''
+    },
+    fail: (err) => {
+      locationOk.value = false
+      let errorMsg = '定位失败，请检查网络或授权定位'
+      if ((err as any)?.errMsg) {
+        const msg = (err as any).errMsg as string
+        if (msg.includes('auth deny') || msg.includes('authorize')) {
+          errorMsg = '需要位置权限，请在设置中开启'
+          uni.showModal({
+            title: '需要位置权限',
+            content: '为了完成打卡，需要获取您的位置信息。是否前往设置开启？',
+            confirmText: '去设置',
+            cancelText: '取消',
+            success: (modalRes) => {
+              if (modalRes.confirm) {
+                uni.openSetting({
+                  success: (settingRes) => {
+                    if ((settingRes as any).authSetting?.['scope.userLocation']) {
+                      ensureLocation()
+                    }
+                  },
+                })
+              }
+            },
+          })
+        } else if (msg.includes('timeout')) {
+          errorMsg = '定位超时，请检查网络连接'
+        } else if (msg.includes('fail')) {
+          errorMsg = '定位服务不可用，请检查设备定位设置'
+        }
+      }
+      locationMsg.value = errorMsg
+    },
+  })
+}
+
+const openCheckinModal = () => {
+  if (!user.value) {
+    showLoginPromptDialog()
+    return
+  }
+  if (!detail.value || !scenicId.value) return
+
+  uploadImages.value = []
+  checkinComment.value = ''
+  showCheckinModal.value = true
+  ensureLocation()
+}
+
+const closeCheckinModal = () => {
+  showCheckinModal.value = false
+}
+
+const chooseImage = () => {
+  uni.chooseImage({
+    count: 9 - uploadImages.value.length,
+    success: (res) => {
+      uploadImages.value.push(...res.tempFilePaths)
+    },
+  })
+}
+
+const removeImage = (index: number) => {
+  uploadImages.value.splice(index, 1)
+}
+
+const submitCheckin = async () => {
+  const userId = user.value?.id
+  if (!userId) {
+    showLoginPromptDialog()
+    return
+  }
+  if (!scenicId.value) return
+
+  if (!locationOk.value) {
+    uni.showToast({ title: '请先开启定位权限', icon: 'none' })
+    return
+  }
+
+  try {
+    await checkinApi.addCheckin({
+      userId,
+      targetType: 'scenic',
+      targetId: scenicId.value,
+      content: checkinComment.value.trim() || undefined,
+      latitude: detail.value?.latitude,
+      longitude: detail.value?.longitude,
+    })
+
+    uni.showToast({ title: '打卡成功', icon: 'success' })
+    closeCheckinModal()
+    loadScenicCheckins()
+  } catch (error: any) {
+    uni.showToast({
+      title: error?.data?.msg || error?.message || '打卡失败，请稍后重试',
+      icon: 'none',
+    })
+  }
+}
+
+const openTicketModal = () => {
+  if (!detail.value) return
+  if (isFreeScenic.value) {
+    uni.showToast({ title: '该景点免费，无需预订门票', icon: 'none' })
+    return
+  }
+  if (!ticketOptions.value.length) {
+    uni.showToast({ title: '该景点暂未配置可预订票种', icon: 'none' })
+    return
+  }
+  showTicketModal.value = true
+}
+
+const closeTicketModal = () => {
+  showTicketModal.value = false
+}
+
+const onPlayDateChange = (e: any) => {
+  selectedPlayDate.value = e.detail.value
+}
+
+const changeTicketCount = (step: number) => {
+  const next = ticketCount.value + step
+  if (next < 1 || next > 9) return
+  ticketCount.value = next
+}
+
+const submitTicketOrder = () => {
+  if (!selectedPlayDate.value) {
+    uni.showToast({ title: '请选择游玩日期', icon: 'none' })
+    return
+  }
+  if (!user.value) {
+    showLoginPromptDialog()
+    return
+  }
+  uni.showToast({ title: '门票预订成功', icon: 'success' })
+  closeTicketModal()
+}
 </script>
 
 <style scoped>
@@ -424,6 +788,10 @@ onShow(() => {
   background-color: #f7f8fa;
   display: flex;
   flex-direction: column;
+}
+
+.title-safe-space {
+  height: 12rpx;
 }
 
 /* 顶部图片 */
@@ -450,6 +818,8 @@ onShow(() => {
 
 .scroll {
   flex: 1;
+  box-sizing: border-box;
+  padding-top: 12rpx;
 }
 
 .content {
@@ -461,7 +831,7 @@ onShow(() => {
   background-color: #ffffff;
   border-radius: 24rpx;
   padding: 32rpx;
-  margin-top: 24rpx;
+  margin-top: 32rpx;
   position: relative;
   z-index: 10;
   box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.08);
@@ -758,6 +1128,93 @@ onShow(() => {
   margin-top: 4rpx;
 }
 
+/* 打卡评价样式（列表 + 自己打卡按钮） */
+.checkin-list {
+  margin-top: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.checkin-item {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.checkin-item:last-child {
+  border-bottom-width: 0;
+}
+
+.checkin-user-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.checkin-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background-color: #e5e5e5;
+  flex-shrink: 0;
+}
+
+.checkin-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.checkin-nickname {
+  font-size: 26rpx;
+  color: #333333;
+  font-weight: 500;
+}
+
+.checkin-time {
+  font-size: 22rpx;
+  color: #999999;
+}
+
+.checkin-content-text {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #555555;
+  line-height: 1.6;
+}
+
+.checkin-photo-row {
+  margin-top: 10rpx;
+}
+
+.checkin-photo {
+  width: 100%;
+  height: 260rpx;
+  border-radius: 16rpx;
+  background-color: #f5f5f5;
+}
+
+.checkin-empty {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #999999;
+}
+
+.checkin-self-row {
+  margin-top: 16rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.checkin-self-btn {
+  padding: 16rpx 32rpx;
+  background-color: #3ba272;
+  color: #ffffff;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  border: none;
+}
+
 .loading {
   padding: 80rpx 32rpx;
   text-align: center;
@@ -840,6 +1297,21 @@ onShow(() => {
   box-shadow: 0 8rpx 24rpx rgba(64, 158, 255, 0.3);
 }
 
+.ticket-btn {
+  background: linear-gradient(135deg, #50b999, #72cfb2);
+  color: #ffffff;
+  box-shadow: 0 8rpx 24rpx rgba(80, 185, 153, 0.3);
+}
+
+.ticket-btn-disabled {
+  background: #dfe9e5;
+  box-shadow: none;
+}
+
+.ticket-btn-disabled .btn-text {
+  color: #6f827c;
+}
+
 .route-btn.added {
   background: linear-gradient(135deg, #3ba272, #6fd3a5);
   box-shadow: 0 8rpx 24rpx rgba(59, 162, 114, 0.3);
@@ -852,5 +1324,244 @@ onShow(() => {
 
 .btn-text {
   font-size: 28rpx;
+  color: #ffffff;
+  display: inline-block;
+}
+
+/* 打卡弹窗（景点详情内直接打卡） */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  width: 90%;
+  max-height: 80vh;
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx 32rpx;
+  border-bottom: 1rpx solid #eeeeee;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333333;
+}
+
+.modal-close {
+  font-size: 44rpx;
+  color: #999999;
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-body {
+  flex: 1;
+  padding: 32rpx;
+  overflow-y: auto;
+}
+
+.upload-section {
+  margin-bottom: 28rpx;
+}
+
+.section-label {
+  font-size: 28rpx;
+  color: #333333;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.location-warning {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #f59e0b;
+}
+
+.upload-area {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.upload-item {
+  position: relative;
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.upload-image {
+  width: 100%;
+  height: 100%;
+}
+
+.upload-delete {
+  position: absolute;
+  top: 8rpx;
+  right: 8rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 999rpx;
+  background-color: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+}
+
+.upload-add {
+  width: 160rpx;
+  height: 160rpx;
+  border: 2rpx dashed #cccccc;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f6f7;
+}
+
+.upload-text {
+  font-size: 24rpx;
+  color: #3ba272;
+  font-weight: 600;
+}
+
+.comment-section {
+  position: relative;
+}
+
+.comment-input {
+  width: 100%;
+  min-height: 200rpx;
+  padding: 20rpx;
+  background-color: #f5f6f7;
+  border-radius: 16rpx;
+  font-size: 26rpx;
+  color: #333333;
+  box-sizing: border-box;
+}
+
+.char-count {
+  position: absolute;
+  bottom: 12rpx;
+  right: 20rpx;
+  font-size: 22rpx;
+  color: #999999;
+}
+
+.modal-footer {
+  padding: 24rpx 32rpx 32rpx;
+  border-top: 1rpx solid #eeeeee;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 24rpx;
+  background-color: #2fa66a;
+  color: #ffffff;
+  border-radius: 48rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  border: none;
+}
+
+.ticket-block {
+  margin-bottom: 22rpx;
+}
+
+.ticket-option {
+  border: 2rpx solid #e7ecea;
+  border-radius: 16rpx;
+  padding: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10rpx;
+}
+
+.ticket-option.active {
+  border-color: #3ba272;
+  background: #eef9f4;
+}
+
+.ticket-option-name {
+  font-size: 26rpx;
+  color: #33413d;
+}
+
+.ticket-option-price {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+}
+
+.ticket-origin {
+  font-size: 22rpx;
+  color: #9aa8a3;
+  text-decoration: line-through;
+}
+
+.ticket-discount {
+  font-size: 28rpx;
+  color: #e05050;
+  font-weight: 700;
+}
+
+.ticket-input {
+  margin-top: 12rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 12rpx;
+  background: #f5f7f6;
+  padding: 0 20rpx;
+  font-size: 26rpx;
+  color: #495c56;
+}
+
+.ticket-counter {
+  margin-top: 12rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.counter-num {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #2f3c38;
+}
+
+.ticket-total {
+  margin-top: 8rpx;
+  text-align: right;
+  font-size: 30rpx;
+  color: #e05050;
+  font-weight: 700;
 }
 </style>

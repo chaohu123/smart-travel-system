@@ -4,7 +4,7 @@
       <!-- Logo和App名称 -->
       <view class="app-header">
         <view class="app-logo">
-          <text class="logo-icon">✈️</text>
+          <text class="logo-icon iconfont icon-xianlu"></text>
         </view>
         <text class="app-name">智能旅行系统</text>
         <text class="app-version">Version 1.0.0</text>
@@ -28,28 +28,28 @@
         <view class="section-title">核心功能</view>
         <view class="feature-list">
           <view class="feature-item">
-            <text class="feature-icon">🤖</text>
+            <text class="feature-icon"></text>
             <view class="feature-content">
               <text class="feature-title">AI智能推荐</text>
               <text class="feature-desc">基于用户偏好智能推荐景点、美食和路线</text>
             </view>
           </view>
           <view class="feature-item">
-            <text class="feature-icon">📝</text>
+            <text class="feature-icon"></text>
             <view class="feature-content">
               <text class="feature-title">游记分享</text>
               <text class="feature-desc">记录旅行点滴，分享精彩瞬间</text>
             </view>
           </view>
           <view class="feature-item">
-            <text class="feature-icon">🗺️</text>
+            <text class="feature-icon"></text>
             <view class="feature-content">
               <text class="feature-title">路线规划</text>
               <text class="feature-desc">智能规划最优旅行路线，节省时间</text>
             </view>
           </view>
           <view class="feature-item">
-            <text class="feature-icon">📍</text>
+            <text class="feature-icon"></text>
             <view class="feature-content">
               <text class="feature-title">足迹打卡</text>
               <text class="feature-desc">记录旅行足迹，留下美好回忆</text>
@@ -63,13 +63,13 @@
         <view class="section-title">联系我们</view>
         <view class="contact-list">
           <view class="contact-item" @click="copyText('support@smarttravel.com')">
-            <text class="contact-icon">📧</text>
+            <text class="contact-icon "></text>
             <text class="contact-label">邮箱</text>
             <text class="contact-value">support@smarttravel.com</text>
             <text class="contact-arrow">›</text>
           </view>
           <view class="contact-item" @click="copyText('400-888-8888')">
-            <text class="contact-icon">📞</text>
+            <text class="contact-icon"></text>
             <text class="contact-label">客服热线</text>
             <text class="contact-value">400-888-8888</text>
             <text class="contact-arrow">›</text>
@@ -96,10 +96,6 @@
       </view>
 
       <!-- 版权信息 -->
-      <view class="copyright">
-        <text class="copyright-text">© 2024 智能旅行系统</text>
-        <text class="copyright-text">All Rights Reserved</text>
-      </view>
     </view>
   </view>
 </template>

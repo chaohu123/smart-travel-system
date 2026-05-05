@@ -20,8 +20,10 @@
       </view>
     </view>
 
-    <!-- 顶部 - 用户信息与状态 -->
+    <!-- 顶部 - 用户信息与状态（背景用 image，避免小程序里 CSS background url 不生效） -->
     <view class="user-header-card">
+      <image class="user-header-bg-img" src="/static/images/bg.jpg" mode="aspectFill" />
+      <view class="user-header-bg-mask" />
       <view v-if="!user" class="login-prompt" @click="openLogin">
         <view class="avatar-placeholder">?</view>
         <view class="login-texts">
@@ -35,7 +37,7 @@
 
       <view v-else class="user-info-box" @click="navigateToUserHome">
         <view class="user-center-content">
-          <image class="user-avatar" :src="user.avatar || defaultAvatar" mode="aspectFill" />
+          <image class="user-avatar" :src="userAvatarSrc" mode="aspectFill" />
           <view class="user-details">
             <view class="name-row">
               <text class="user-name">{{ user.nickname }}</text>
@@ -144,11 +146,18 @@ import { userApi } from '@/api/user'
 import { tagApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
 import { safeNavigateTo, resetNavigationState } from '@/utils/router'
+import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
 const defaultAvatar =
   'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200'
+
+// 统一处理头像地址，避免 /uploads/... 在小程序里当成本地路径导致加载失败
+const userAvatarSrc = computed(() => {
+  if (!user.value?.avatar) return defaultAvatar
+  return getImageUrl(user.value.avatar)
+})
 
 const userStats = ref({
   notes: 0,
@@ -364,15 +373,45 @@ const logout = () => {
   padding-bottom: 50rpx;
 }
 
-/* 顶部卡片 */
+/* 顶部卡片：底图用 image 组件，WXSS 的 background url 在小程序端常无效 */
 .user-header-card {
-  height: 380rpx;
-  background: linear-gradient(160deg, #3ba272 0%, #2bb673 100%);
+  position: relative;
+  overflow: hidden;
+  height: 400rpx;
   padding: 100rpx 40rpx 0;
   border-radius: 0 0 60rpx 60rpx;
+  background-color: #3ba272;
+  box-sizing: border-box;
+}
+
+.user-header-bg-img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.user-header-bg-mask {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    160deg,
+    rgba(45, 100, 80, 0.55) 0%,
+    rgba(59, 162, 114, 0.45) 100%
+  );
 }
 
 .login-prompt {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -425,6 +464,8 @@ const logout = () => {
 }
 
 .user-info-box {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -486,9 +527,11 @@ const logout = () => {
   text-align: center;
 }
 
-/* 行程状态条 */
+/* 行程状态条：原生 image 易盖住后续节点，需 z-index；负边距略减小使整块下移、少压在头图上 */
 .trip-status-bar {
-  margin: -60rpx 40rpx 40rpx;
+  position: relative;
+  z-index: 10;
+  margin: 0 40rpx 40rpx;
   background: #fff;
   border-radius: 30rpx;
   display: flex;

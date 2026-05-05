@@ -270,6 +270,80 @@
   margin-top: 4rpx;
 }
 
+/* 打卡评价样式（列表 + 自己打卡按钮） */
+.checkin-list.data-v-68d96164 {
+  margin-top: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+.checkin-item.data-v-68d96164 {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.checkin-item.data-v-68d96164:last-child {
+  border-bottom-width: 0;
+}
+.checkin-user-row.data-v-68d96164 {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.checkin-avatar.data-v-68d96164 {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background-color: #e5e5e5;
+  flex-shrink: 0;
+}
+.checkin-user-info.data-v-68d96164 {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.checkin-nickname.data-v-68d96164 {
+  font-size: 26rpx;
+  color: #333333;
+  font-weight: 500;
+}
+.checkin-time.data-v-68d96164 {
+  font-size: 22rpx;
+  color: #999999;
+}
+.checkin-content-text.data-v-68d96164 {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #555555;
+  line-height: 1.6;
+}
+.checkin-photo-row.data-v-68d96164 {
+  margin-top: 10rpx;
+}
+.checkin-photo.data-v-68d96164 {
+  width: 100%;
+  height: 260rpx;
+  border-radius: 16rpx;
+  background-color: #f5f5f5;
+}
+.checkin-empty.data-v-68d96164 {
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #999999;
+}
+.checkin-self-row.data-v-68d96164 {
+  margin-top: 16rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+.checkin-self-btn.data-v-68d96164 {
+  padding: 16rpx 32rpx;
+  background-color: #3ba272;
+  color: #ffffff;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  border: none;
+}
+
 /* 底部操作栏 */
 .bottom-bar.data-v-68d96164 {
   position: fixed;
@@ -346,4 +420,6 @@
 }
 .btn-text.data-v-68d96164 {
   font-size: 28rpx;
+  color: #ffffff;
+  display: inline-block;
 }

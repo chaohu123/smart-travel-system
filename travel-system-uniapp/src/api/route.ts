@@ -50,6 +50,15 @@ export const routeApi = {
     })
   },
 
+  /** 记录浏览（浏览量 +1），进入详情页时调用 */
+  recordView: (id: number) => {
+    return request({
+      url: `/route/${id}/view`,
+      method: 'POST',
+      showLoading: false,
+    })
+  },
+
   // 收藏/取消收藏线路
   toggleFavorite: (userId: number, routeId: number) => {
     return request({
@@ -67,6 +76,27 @@ export const routeApi = {
       method: 'GET',
       data: { userId },
       needAuth: true,
+    })
+  },
+
+  // 更新路线名称（保存/编辑用）
+  updateName: (routeId: number, routeName: string) => {
+    return request({
+      url: `/route/${routeId}/name`,
+      method: 'PUT',
+      data: { routeName },
+      needAuth: true,
+      showLoading: false,
+    })
+  },
+
+  // 弃用/删除路线（弃用/历史删除用）
+  discard: (routeId: number) => {
+    return request({
+      url: `/route/${routeId}`,
+      method: 'DELETE',
+      needAuth: true,
+      showLoading: false,
     })
   },
 }

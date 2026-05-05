@@ -47,7 +47,7 @@
             >
               <image
                 class="note-image"
-                :src="img.url"
+                :src="getImageUrl(img.url)"
                 mode="aspectFill"
                 :lazy-load="index > 2"
                 @click="previewImage(index)"
@@ -68,7 +68,7 @@
           >
             <image
               class="comment-avatar"
-              :src="comment.avatar || comment.userAvatar || authorAvatar"
+              :src="getImageUrl(comment.avatar || comment.userAvatar) || authorAvatar"
               mode="aspectFill"
               :lazy-load="true"
             />
@@ -206,6 +206,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { travelNoteApi, travelNoteInteractionApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
 import LoginPrompt from '@/components/LoginPrompt.vue'
+import { getImageUrl } from '@/utils/image'
 
 // API 响应类型定义
 interface ApiResponse<T = any> {
@@ -240,21 +241,19 @@ const commentCount = computed(() => {
 
 const coverImage = computed(() => {
   if (noteDetail.value?.images && noteDetail.value.images.length > 0) {
-    return noteDetail.value.images[0].url
+    return getImageUrl(noteDetail.value.images[0].url)
   }
   return null
 })
 
 const authorAvatar = computed(() => {
-  // 优先使用author对象中的avatar
+  // 优先使用 author 中的 avatar，转为完整 URL（避免 /uploads/ 在小程序里当成本地路径）
   if (noteDetail.value?.author?.avatar) {
-    return noteDetail.value.author.avatar
+    return getImageUrl(noteDetail.value.author.avatar)
   }
-  // 如果没有author信息，尝试从note中获取（兼容旧数据）
   if (noteDetail.value?.note?.authorAvatar) {
-    return noteDetail.value.note.authorAvatar
+    return getImageUrl(noteDetail.value.note.authorAvatar)
   }
-  // 默认头像
   return 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200'
 })
 
@@ -273,7 +272,7 @@ const authorName = computed(() => {
 
 const previewImage = (index: number | string) => {
   if (!noteDetail.value?.images) return
-  const urls = noteDetail.value.images.map((img: any) => img.url)
+  const urls = noteDetail.value.images.map((img: any) => getImageUrl(img.url))
   uni.previewImage({
     current: typeof index === 'string' ? parseInt(index) : index,
     urls: urls,

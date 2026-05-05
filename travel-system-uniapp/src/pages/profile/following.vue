@@ -39,7 +39,7 @@
         >
           <image
             class="user-avatar"
-            :src="following.avatar || defaultAvatar"
+            :src="getAvatarSrc(following.avatar)"
             mode="aspectFill"
           />
           <view class="user-info">
@@ -78,12 +78,18 @@ import { ref, computed, onMounted } from 'vue'
 import { userApi } from '@/api/user'
 import { useUserStore } from '@/store/user'
 import { safeNavigateTo, resetNavigationState } from '@/utils/router'
+import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
 const currentUser = computed(() => store.state.profile)
 const currentUserId = computed(() => currentUser.value?.id)
 
 const defaultAvatar = 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200'
+
+const getAvatarSrc = (avatar?: string) => {
+  if (!avatar) return defaultAvatar
+  return getImageUrl(avatar)
+}
 
 // 获取页面参数
 const targetUserId = ref<number | null>(null)

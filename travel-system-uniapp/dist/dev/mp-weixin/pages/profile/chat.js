@@ -1,12 +1,19 @@
 "use strict";
 var common_vendor = require("../../common/vendor.js");
 var store_user = require("../../store/user.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/storage.js");
+require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const store = store_user.useUserStore();
     const currentUser = common_vendor.computed(() => store.state.profile);
     const defaultAvatar = "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
+    const getAvatarSrc = (avatar) => {
+      if (!avatar)
+        return defaultAvatar;
+      return utils_image.getImageUrl(avatar);
+    };
     const targetUser = common_vendor.ref({
       userId: 0,
       nickname: "",
@@ -14,7 +21,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     });
     const currentUserAvatar = common_vendor.computed(() => {
       var _a;
-      return ((_a = currentUser.value) == null ? void 0 : _a.avatar) || defaultAvatar;
+      return getAvatarSrc(((_a = currentUser.value) == null ? void 0 : _a.avatar) || "");
     });
     const messages = common_vendor.ref([]);
     const loading = common_vendor.ref(false);
@@ -156,14 +163,14 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     return (_ctx, _cache) => {
       return {
         a: common_vendor.o(goBack),
-        b: targetUser.value.avatar || defaultAvatar,
+        b: getAvatarSrc(targetUser.value.avatar),
         c: common_vendor.t(targetUser.value.nickname || "\u672A\u77E5\u7528\u6237"),
         d: common_vendor.o(viewUserProfile),
         e: common_vendor.f(messages.value, (message, index, i0) => {
           return common_vendor.e({
             a: !message.isOwn
           }, !message.isOwn ? {
-            b: message.avatar || defaultAvatar
+            b: getAvatarSrc(message.avatar)
           } : {}, {
             c: common_vendor.t(message.content),
             d: message.isOwn ? 1 : "",

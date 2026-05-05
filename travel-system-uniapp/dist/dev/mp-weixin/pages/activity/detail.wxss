@@ -38,7 +38,8 @@
   color: #999;
 }
 .content.data-v-71a995fd {
-  padding: 0 24rpx 160rpx;
+  /* 底部预留更大空间，避免“相关游记”被底部操作栏遮挡 */
+  padding: 0 24rpx 240rpx;
 }
 .header-section.data-v-71a995fd {
   background-color: #ffffff;
@@ -110,7 +111,8 @@
   border-top: 1rpx solid #f0f0f0;
 }
 .time-icon.data-v-71a995fd {
-  font-size: 24rpx;
+  font-size: 28rpx;
+  color: #666666;
 }
 .time-text.data-v-71a995fd {
   font-size: 26rpx;
@@ -166,6 +168,12 @@
   font-size: 32rpx;
   font-weight: bold;
   color: #333;
+  display: flex;
+  align-items: center;
+}
+.section-title-icon.data-v-71a995fd {
+  font-size: 32rpx;
+  margin-right: 8rpx;
 }
 .section-more.data-v-71a995fd {
   font-size: 26rpx;
@@ -318,12 +326,8 @@
   background-color: #eeeeee;
 }
 .share-icon.data-v-71a995fd {
-  font-size: 32rpx;
-}
-.share-text.data-v-71a995fd {
-  font-size: 24rpx;
+  font-size: 40rpx;
   color: #666666;
-  margin-left: 4rpx;
 }
 .participate-btn.data-v-71a995fd {
   flex: 1;

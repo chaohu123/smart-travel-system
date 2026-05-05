@@ -1,334 +1,193 @@
 <template>
   <div class="dashboard">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <h1 class="page-title">数据总览</h1>
-      <p class="page-desc">智能旅游系统运营仪表盘 - 实时监控平台运营数据与趋势</p>
-    </div>
-
-    <!-- 系统活跃度总览 -->
-    <div class="activity-overview" v-if="!kpiCards[0].loading">
-      <el-card class="activity-card">
-        <div class="activity-content">
-          <div class="activity-label">系统活跃度</div>
-          <div class="activity-status" :class="activityStatusClass">
-            <el-icon class="activity-icon">
-              <component :is="activityIcon" />
-            </el-icon>
-            <span class="activity-text">{{ activityStatusText }}</span>
-          </div>
-          <div class="activity-desc">{{ activityDesc }}</div>
+    <!-- 运营预警 -->
+    <section v-if="activityReady" class="alert-panel">
+      <div class="alert-panel-inner">
+        <div class="alert-icon-wrap">
+          <el-icon class="alert-icon"><Warning /></el-icon>
         </div>
-      </el-card>
-    </div>
+        <div class="alert-body">
+          <div class="alert-head">
+            <span class="alert-title">运营预警</span>
+            <span class="alert-badge" :class="activityStatusClass">{{ activityStatusText }}</span>
+          </div>
+          <p class="alert-lead">{{ activityDesc }}</p>
+          <ul class="alert-suggestions">
+            <li v-for="(line, i) in operationSuggestions" :key="i">{{ line }}</li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
-    <!-- 1️⃣ 核心指标区（KPI区） -->
-    <div class="kpi-section">
-      <div class="section-title">核心运营指标</div>
-      <el-row :gutter="20" class="kpi-cards">
-        <el-col :span="6" v-for="kpi in kpiCards" :key="kpi.key">
-          <el-card class="kpi-card" :class="{ loading: kpi.loading }">
-            <div class="kpi-content">
-              <div class="kpi-header">
-                <el-icon class="kpi-icon" :class="kpi.iconClass">
-                  <component :is="kpi.icon" />
-                </el-icon>
-                <span class="kpi-label">{{ kpi.label }}</span>
+    <!-- 核心指标 -->
+    <section class="kpi-section">
+      <el-row :gutter="24">
+        <el-col v-for="kpi in kpiCards" :key="kpi.key" :xs="24" :sm="12" :lg="6">
+          <div class="kpi-card" :class="{ loading: kpi.loading }">
+            <div class="kpi-top">
+              <el-icon class="kpi-icon"><component :is="kpi.icon" /></el-icon>
+              <span class="kpi-label">{{ kpi.label }}</span>
+            </div>
+            <div class="kpi-value">
+              <span v-if="kpi.loading">…</span>
+              <span v-else>{{ formatNumber(kpi.value) }}</span>
+            </div>
+            <div v-if="!kpi.loading && kpi.trend !== null" class="kpi-foot">
+              <span class="kpi-trend" :class="kpi.trendClass">
+                <el-icon class="kpi-trend-ic"><component :is="kpi.trendIcon" /></el-icon>
+                {{ kpi.trendText }}
+              </span>
+              <span class="kpi-hint">较昨日</span>
+            </div>
+          </div>
+        </el-col>
+      </el-row>
+    </section>
+
+    <!-- 趋势 + 柱状图 -->
+    <section class="charts-section">
+      <el-row :gutter="24">
+        <el-col :xs="24" :lg="14">
+          <div class="panel-card chart-panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">用户增长与游记发布</h2>
+                <p class="panel-sub">双折线趋势（按日统计）</p>
               </div>
-              <div class="kpi-value">
-                <span v-if="kpi.loading">加载中...</span>
-                <span v-else>{{ formatNumber(kpi.value) }}</span>
-              </div>
-              <div class="kpi-trend" v-if="!kpi.loading && kpi.trend !== null">
-                <span class="trend-text" :class="kpi.trendClass">
-                  <el-icon class="trend-icon">
-                    <component :is="kpi.trendIcon" />
-                  </el-icon>
-                  {{ kpi.trendText }}
+              <el-radio-group v-model="chartRangeDays" size="small" class="range-tabs" @change="onChartRangeChange">
+                <el-radio-button :label="7">7 天</el-radio-button>
+                <el-radio-button :label="14">14 天</el-radio-button>
+                <el-radio-button :label="30">30 天</el-radio-button>
+              </el-radio-group>
+            </div>
+            <div class="panel-body chart-body">
+              <div v-if="trendChartsLoading" class="chart-placeholder is-loading">
+                <span class="loading-dots" aria-hidden="true">
+                  <span class="loading-dot" />
+                  <span class="loading-dot" />
+                  <span class="loading-dot" />
                 </span>
+                <span>加载趋势数据…</span>
               </div>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
-
-    <!-- 增长亮点洞察 -->
-    <div class="insight-section" v-if="growthInsights.length > 0">
-      <el-card class="insight-card">
-        <template #header>
-          <div class="insight-header">
-            <el-icon class="insight-icon"><ArrowUp /></el-icon>
-            <span class="insight-title">增长亮点</span>
-          </div>
-        </template>
-        <div class="insight-list">
-          <div v-for="(insight, index) in growthInsights" :key="index" class="insight-item">
-            <el-icon class="insight-item-icon" :class="insight.class">
-              <component :is="insight.icon" />
-            </el-icon>
-            <span class="insight-text">{{ insight.text }}</span>
-          </div>
-        </div>
-      </el-card>
-    </div>
-
-    <!-- 2️⃣ 趋势分析区 -->
-    <div class="trend-section">
-      <div class="section-title">趋势分析</div>
-      <el-row :gutter="20">
-        <!-- 游记发布趋势 -->
-        <el-col :span="12">
-          <el-card class="chart-card">
-            <template #header>
-              <div class="chart-header">
-                <span class="chart-title">游记发布趋势</span>
-                <el-radio-group v-model="travelNoteDays" size="small" @change="handleTravelNoteDaysChange">
-                  <el-radio-button :label="7">7天</el-radio-button>
-                  <el-radio-button :label="14">14天</el-radio-button>
-                  <el-radio-button :label="30">30天</el-radio-button>
-                </el-radio-group>
+              <div v-else-if="mergedTrendDays.length === 0" class="chart-placeholder muted is-empty">
+                <el-icon class="empty-icon"><DataAnalysis /></el-icon>
+                <span class="empty-text">暂无趋势数据</span>
               </div>
-            </template>
-            <div class="chart-container">
-              <div v-if="travelNoteTrendLoading" class="loading-placeholder">加载中...</div>
-              <div v-else-if="travelNoteTrendData.length === 0" class="empty-placeholder">暂无数据</div>
-              <div v-else class="line-chart-wrapper">
-                <svg class="line-chart" :viewBox="`0 0 ${chartWidth} ${chartHeight}`" preserveAspectRatio="none">
-                  <!-- 网格线 -->
-                  <g class="grid-lines">
-                    <line v-for="i in 5" :key="i" 
-                      :x1="0" 
-                      :y1="(i - 1) * (chartHeight / 5)" 
-                      :x2="chartWidth" 
-                      :y2="(i - 1) * (chartHeight / 5)"
-                      stroke="#f0f0f0" 
-                      stroke-width="1" />
+              <div v-else class="dual-chart">
+                <div class="chart-legend">
+                  <span class="lg-item"><i class="dot dot-a" />新增用户</span>
+                  <span class="lg-item"><i class="dot dot-b" />游记发布</span>
+                </div>
+                <svg class="dual-svg" :viewBox="`0 0 ${chartWidth} ${chartHeight}`" preserveAspectRatio="none">
+                  <g class="grid">
+                    <line
+                      v-for="i in 5"
+                      :key="i"
+                      :x1="0"
+                      :y1="padY + ((i - 1) * (chartHeight - padY * 2)) / 4"
+                      :x2="chartWidth"
+                      :y2="padY + ((i - 1) * (chartHeight - padY * 2)) / 4"
+                    />
                   </g>
-                  <!-- 折线 -->
-                  <polyline
-                    :points="travelNoteLinePoints"
-                    fill="none"
-                    stroke="#409eff"
-                    stroke-width="2"
-                    class="line-path"
-                  />
-                  <!-- 数据点 -->
+                  <polyline class="line line-user" :points="dualLines.userPoly" fill="none" />
+                  <polyline class="line line-note" :points="dualLines.notePoly" fill="none" />
                   <circle
-                    v-for="(point, index) in travelNotePoints"
-                    :key="index"
-                    :cx="point.x"
-                    :cy="point.y"
-                    r="4"
-                    fill="#409eff"
-                    class="data-point"
+                    v-for="(p, idx) in dualLines.userPts"
+                    :key="'u' + idx"
+                    class="pt pt-user"
+                    :cx="p.x"
+                    :cy="p.y"
+                    r="3.5"
                   />
-                  <!-- 标签 -->
-                  <text
-                    v-for="(point, index) in travelNotePoints"
-                    :key="`label-${index}`"
-                    :x="point.x"
-                    :y="point.y - 8"
-                    text-anchor="middle"
-                    font-size="10"
-                    fill="#909399"
-                    class="point-label"
-                  >
-                    {{ point.value }}
-                  </text>
+                  <circle
+                    v-for="(p, idx) in dualLines.notePts"
+                    :key="'n' + idx"
+                    class="pt pt-note"
+                    :cx="p.x"
+                    :cy="p.y"
+                    r="3.5"
+                  />
                 </svg>
-                <!-- X轴标签 -->
-                <div class="x-axis-labels">
-                  <span v-for="(item, index) in travelNoteTrendData" :key="index" class="x-label">
+                <div class="x-labels">
+                  <span v-for="item in xLabelItems" :key="item.day" class="x-lbl">
                     {{ formatDateShort(item.day) }}
                   </span>
                 </div>
               </div>
             </div>
-          </el-card>
+          </div>
         </el-col>
-
-        <!-- 打卡趋势 -->
-        <el-col :span="12">
-          <el-card class="chart-card">
-            <template #header>
-              <div class="chart-header">
-                <span class="chart-title">打卡趋势</span>
-                <el-radio-group v-model="checkinDays" size="small" @change="handleCheckinDaysChange">
-                  <el-radio-button :label="7">7天</el-radio-button>
-                  <el-radio-button :label="14">14天</el-radio-button>
-                  <el-radio-button :label="30">30天</el-radio-button>
-                </el-radio-group>
+        <el-col :xs="24" :lg="10">
+          <div class="panel-card chart-panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">打卡地点热度</h2>
+                <p class="panel-sub">按打卡记录聚合 TOP 地点</p>
               </div>
-            </template>
-            <div class="chart-container">
-              <div v-if="checkinTrendLoading" class="loading-placeholder">加载中...</div>
-              <div v-else-if="checkinTrendData.length === 0" class="empty-placeholder">暂无数据</div>
-              <div v-else class="line-chart-wrapper">
-                <svg class="line-chart" :viewBox="`0 0 ${chartWidth} ${chartHeight}`" preserveAspectRatio="none">
-                  <!-- 网格线 -->
-                  <g class="grid-lines">
-                    <line v-for="i in 5" :key="i" 
-                      :x1="0" 
-                      :y1="(i - 1) * (chartHeight / 5)" 
-                      :x2="chartWidth" 
-                      :y2="(i - 1) * (chartHeight / 5)"
-                      stroke="#f0f0f0" 
-                      stroke-width="1" />
-                  </g>
-                  <!-- 折线 -->
-                  <polyline
-                    :points="checkinLinePoints"
-                    fill="none"
-                    stroke="#67c23a"
-                    stroke-width="2"
-                    class="line-path"
-                  />
-                  <!-- 数据点 -->
-                  <circle
-                    v-for="(point, index) in checkinPoints"
-                    :key="index"
-                    :cx="point.x"
-                    :cy="point.y"
-                    r="4"
-                    fill="#67c23a"
-                    class="data-point"
-                  />
-                  <!-- 标签 -->
-                  <text
-                    v-for="(point, index) in checkinPoints"
-                    :key="`label-${index}`"
-                    :x="point.x"
-                    :y="point.y - 8"
-                    text-anchor="middle"
-                    font-size="10"
-                    fill="#909399"
-                    class="point-label"
-                  >
-                    {{ point.value }}
-                  </text>
-                </svg>
-                <!-- X轴标签 -->
-                <div class="x-axis-labels">
-                  <span v-for="(item, index) in checkinTrendData" :key="index" class="x-label">
-                    {{ formatDateShort(item.day) }}
-                  </span>
+            </div>
+            <div class="panel-body bar-body">
+              <div v-if="pointHotLoading" class="chart-placeholder is-loading">
+                <span class="loading-dots" aria-hidden="true">
+                  <span class="loading-dot" />
+                  <span class="loading-dot" />
+                  <span class="loading-dot" />
+                </span>
+                <span>加载热度数据…</span>
+              </div>
+              <div v-else-if="pointHotData.length === 0" class="chart-placeholder muted is-empty">
+                <el-icon class="empty-icon"><Histogram /></el-icon>
+                <span class="empty-text">暂无打卡地点数据</span>
+              </div>
+              <div v-else class="bar-list">
+                <div v-for="(row, idx) in pointHotData" :key="idx" class="bar-row">
+                  <span class="bar-name" :title="row.name">{{ row.name }}</span>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      :style="{ width: `${(row.count / pointHotMax) * 100}%` }"
+                    />
+                  </div>
+                  <span class="bar-count">{{ row.count }}</span>
                 </div>
               </div>
             </div>
-          </el-card>
+          </div>
         </el-col>
       </el-row>
-    </div>
-
-    <!-- 3️⃣ 分布统计区 -->
-    <div class="distribution-section">
-      <div class="section-title">分布统计</div>
-      <el-card class="distribution-card">
-        <template #header>
-          <div class="chart-header">
-            <span class="chart-title">热门城市 TOP 10</span>
-          </div>
-        </template>
-        <div class="distribution-container">
-          <div v-if="cityTopLoading" class="loading-placeholder">加载中...</div>
-          <div v-else-if="cityTopData.length === 0" class="empty-placeholder">暂无数据</div>
-          <div v-else class="city-list">
-            <div v-for="(item, index) in cityTopData" :key="index" class="city-item">
-              <div class="city-rank" :class="getRankClass(index)">{{ index + 1 }}</div>
-              <div class="city-name">{{ item.city }}</div>
-              <div class="city-count">
-                <span class="count-value">{{ item.count }}</span>
-                <span class="count-unit">篇游记</span>
-              </div>
-              <div class="city-bar-wrapper">
-                <div 
-                  class="city-bar" 
-                  :style="{ width: `${(item.count / maxCityCount) * 100}%` }"
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </el-card>
-    </div>
-
-    <!-- 4️⃣ 运营辅助区（预留） -->
-    <div class="operation-section">
-      <div class="section-title">运营辅助与策略扩展</div>
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <el-card class="operation-module">
-            <div class="module-header">
-              <el-icon class="module-icon"><UserFilled /></el-icon>
-              <span class="module-title">用户运营</span>
-            </div>
-            <div class="module-content">
-              <p class="module-desc">• 活跃用户分析</p>
-              <p class="module-desc">• 用户留存率统计</p>
-              <p class="module-desc">• 用户行为画像</p>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="8">
-          <el-card class="operation-module">
-            <div class="module-header">
-              <el-icon class="module-icon"><Document /></el-icon>
-              <span class="module-title">推荐策略</span>
-            </div>
-            <div class="module-content">
-              <p class="module-desc">• 推荐效果分析</p>
-              <p class="module-desc">• 内容标签分布</p>
-              <p class="module-desc">• 个性化推荐优化</p>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="8">
-          <el-card class="operation-module">
-            <div class="module-header">
-              <el-icon class="module-icon"><Bell /></el-icon>
-              <span class="module-title">运营预警</span>
-            </div>
-            <div class="module-content">
-              <p class="module-desc">• 数据异常监控</p>
-              <p class="module-desc">• 运营指标预警</p>
-              <p class="module-desc">• 系统健康度</p>
-            </div>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import { 
-  User, 
-  Document, 
-  Location, 
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import {
+  User,
+  Document,
+  Location,
   ArrowUp,
   ArrowDown,
   Minus,
-  InfoFilled,
-  UserFilled,
-  Bell,
-  CircleCheck,
   Warning,
-  CircleClose
+  DataAnalysis,
+  Histogram
 } from '@element-plus/icons-vue';
-import { fetchUserSummary, fetchTravelNoteTrend, fetchCheckinTrend, fetchCityTop } from '../api/stat';
-import type { TrendData, CityTopData } from '../api/stat';
+import { ElMessage } from 'element-plus';
+import {
+  fetchUserSummary,
+  fetchTravelNoteTrend,
+  fetchCheckinTrend,
+  fetchUserTrend,
+  fetchCheckinPointTop
+} from '../api/stat';
+import type { TrendData, CheckinPointTopData } from '../api/stat';
 
-// KPI卡片数据
 interface KPICard {
   key: string;
   label: string;
   value: number;
   loading: boolean;
   icon: any;
-  iconClass: string;
-  trend: number | null; // 趋势值（百分比）
+  trend: number | null;
   trendText: string;
   trendClass: string;
   trendIcon: any;
@@ -341,7 +200,6 @@ const kpiCards = ref<KPICard[]>([
     value: 0,
     loading: true,
     icon: User,
-    iconClass: 'icon-user',
     trend: null,
     trendText: '',
     trendClass: '',
@@ -353,7 +211,6 @@ const kpiCards = ref<KPICard[]>([
     value: 0,
     loading: true,
     icon: User,
-    iconClass: 'icon-user-add',
     trend: null,
     trendText: '',
     trendClass: '',
@@ -361,11 +218,10 @@ const kpiCards = ref<KPICard[]>([
   },
   {
     key: 'totalNotes',
-    label: '游记总数',
+    label: '游记发布量（区间）',
     value: 0,
     loading: true,
     icon: Document,
-    iconClass: 'icon-note',
     trend: null,
     trendText: '',
     trendClass: '',
@@ -373,11 +229,10 @@ const kpiCards = ref<KPICard[]>([
   },
   {
     key: 'totalCheckins',
-    label: '打卡总数',
+    label: '打卡次数（区间）',
     value: 0,
     loading: true,
     icon: Location,
-    iconClass: 'icon-checkin',
     trend: null,
     trendText: '',
     trendClass: '',
@@ -385,169 +240,169 @@ const kpiCards = ref<KPICard[]>([
   }
 ]);
 
-// 趋势数据
 const travelNoteTrendData = ref<TrendData[]>([]);
-const travelNoteTrendLoading = ref(true);
-const travelNoteDays = ref(14);
+const userTrendData = ref<TrendData[]>([]);
+const chartRangeDays = ref(14);
+const trendChartsLoading = ref(true);
 
-const checkinTrendData = ref<TrendData[]>([]);
-const checkinTrendLoading = ref(true);
-const checkinDays = ref(14);
+const pointHotData = ref<CheckinPointTopData[]>([]);
+const pointHotLoading = ref(true);
 
-// 热门城市数据
-const cityTopData = ref<CityTopData[]>([]);
-const cityTopLoading = ref(true);
+const chartWidth = 640;
+const chartHeight = 240;
+const padY = 32;
 
-// 图表尺寸
-const chartWidth = 600;
-const chartHeight = 200;
+const noteByDay = computed(() => {
+  const m: Record<string, number> = {};
+  travelNoteTrendData.value.forEach((d) => {
+    m[d.day] = d.count;
+  });
+  return m;
+});
 
-// 计算折线图数据点
-const travelNotePoints = computed(() => {
-  if (travelNoteTrendData.value.length === 0) return [];
-  const maxCount = Math.max(...travelNoteTrendData.value.map(item => item.count), 1);
-  const padding = 20;
-  const stepX = (chartWidth - padding * 2) / (travelNoteTrendData.value.length - 1 || 1);
-  const usableHeight = chartHeight - padding * 2;
-  
-  return travelNoteTrendData.value.map((item, index) => ({
-    x: padding + index * stepX,
-    y: padding + (1 - item.count / maxCount) * usableHeight,
-    value: item.count
+const userByDay = computed(() => {
+  const m: Record<string, number> = {};
+  userTrendData.value.forEach((d) => {
+    m[d.day] = d.count;
+  });
+  return m;
+});
+
+const mergedTrendDays = computed(() => {
+  const s = new Set<string>();
+  travelNoteTrendData.value.forEach((d) => s.add(d.day));
+  userTrendData.value.forEach((d) => s.add(d.day));
+  return Array.from(s).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+});
+
+const xLabelItems = computed(() => {
+  const days = mergedTrendDays.value;
+  const n = days.length;
+  if (!n) return [] as { day: string }[];
+  if (n <= 8) return days.map((day) => ({ day }));
+  const idxs = [0, Math.floor(n / 4), Math.floor(n / 2), Math.floor((3 * n) / 4), n - 1];
+  const uniq = [...new Set(idxs)].filter((i) => i >= 0 && i < n).sort((a, b) => a - b);
+  return uniq.map((i) => ({ day: days[i] }));
+});
+
+const dualLines = computed(() => {
+  const days = mergedTrendDays.value;
+  if (!days.length) {
+    return { notePts: [] as { x: number; y: number }[], userPts: [] as { x: number; y: number }[], notePoly: '', userPoly: '' };
+  }
+  const padX = 28;
+  const maxNote = Math.max(...days.map((d) => noteByDay.value[d] || 0), 1);
+  const maxUser = Math.max(...days.map((d) => userByDay.value[d] || 0), 1);
+  const innerW = chartWidth - padX * 2;
+  const innerH = chartHeight - padY * 2;
+  const step = days.length > 1 ? innerW / (days.length - 1) : 0;
+
+  const notePts = days.map((day, i) => ({
+    x: padX + i * step,
+    y: padY + (1 - (noteByDay.value[day] || 0) / maxNote) * innerH
   }));
-});
-
-const travelNoteLinePoints = computed(() => {
-  return travelNotePoints.value.map(p => `${p.x},${p.y}`).join(' ');
-});
-
-const checkinPoints = computed(() => {
-  if (checkinTrendData.value.length === 0) return [];
-  const maxCount = Math.max(...checkinTrendData.value.map(item => item.count), 1);
-  const padding = 20;
-  const stepX = (chartWidth - padding * 2) / (checkinTrendData.value.length - 1 || 1);
-  const usableHeight = chartHeight - padding * 2;
-  
-  return checkinTrendData.value.map((item, index) => ({
-    x: padding + index * stepX,
-    y: padding + (1 - item.count / maxCount) * usableHeight,
-    value: item.count
+  const userPts = days.map((day, i) => ({
+    x: padX + i * step,
+    y: padY + (1 - (userByDay.value[day] || 0) / maxUser) * innerH
   }));
+
+  return {
+    notePts,
+    userPts,
+    notePoly: notePts.map((p) => `${p.x},${p.y}`).join(' '),
+    userPoly: userPts.map((p) => `${p.x},${p.y}`).join(' ')
+  };
 });
 
-const checkinLinePoints = computed(() => {
-  return checkinPoints.value.map(p => `${p.x},${p.y}`).join(' ');
+const pointHotMax = computed(() => {
+  if (!pointHotData.value.length) return 1;
+  return Math.max(...pointHotData.value.map((r) => r.count), 1);
 });
 
-const maxCityCount = computed(() => {
-  if (cityTopData.value.length === 0) return 1;
-  return Math.max(...cityTopData.value.map(item => item.count), 1);
-});
+const activityReady = computed(() => !kpiCards.value.some((c) => c.loading));
 
-// 系统活跃度计算
 const activityStatus = computed(() => {
-  if (kpiCards.value.some(card => card.loading)) return null;
-  
-  const upCount = kpiCards.value.filter(card => 
-    card.trend !== null && card.trend > 0
-  ).length;
-  
-  const totalTrendCards = kpiCards.value.filter(card => 
-    card.trend !== null
-  ).length;
-  
+  if (!activityReady.value) return null;
+
+  const upCount = kpiCards.value.filter((card) => card.trend !== null && card.trend > 0).length;
+  const totalTrendCards = kpiCards.value.filter((card) => card.trend !== null).length;
   if (totalTrendCards === 0) return null;
-  
   const upRatio = upCount / totalTrendCards;
-  
+
   if (upRatio >= 0.75) {
-    return { 
-      level: 'high', 
-      text: '非常活跃', 
-      class: 'activity-high',
-      icon: CircleCheck,
-      desc: '系统各项指标均呈上升趋势，运营状态良好'
-    };
-  } else if (upRatio >= 0.5) {
-    return { 
-      level: 'medium', 
-      text: '较为活跃', 
-      class: 'activity-medium',
-      icon: Warning,
-      desc: '系统整体运行平稳，部分指标有增长空间'
-    };
-  } else if (upRatio >= 0.25) {
-    return { 
-      level: 'low', 
-      text: '活跃度一般', 
-      class: 'activity-low',
-      icon: Warning,
-      desc: '部分指标下降，建议关注运营策略调整'
-    };
-  } else {
-    return { 
-      level: 'very-low', 
-      text: '活跃度较低', 
-      class: 'activity-very-low',
-      icon: CircleClose,
-      desc: '多项指标下降，需要及时采取运营措施'
+    return {
+      level: 'high',
+      text: '健康',
+      class: 'st-high',
+      desc: '核心指标多数向好，可继续保持当前运营节奏。'
     };
   }
+  if (upRatio >= 0.5) {
+    return {
+      level: 'medium',
+      text: '关注',
+      class: 'st-mid',
+      desc: '整体平稳，建议对回落指标做定向复盘。'
+    };
+  }
+  if (upRatio >= 0.25) {
+    return {
+      level: 'low',
+      text: '预警',
+      class: 'st-low',
+      desc: '多项指标走弱，建议加强活动曝光与内容供给。'
+    };
+  }
+  return {
+    level: 'very-low',
+    text: '强预警',
+    class: 'st-bad',
+    desc: '多项指标明显下滑，建议尽快制定干预与复盘计划。'
+  };
 });
 
 const activityStatusClass = computed(() => activityStatus.value?.class || '');
-const activityStatusText = computed(() => activityStatus.value?.text || '计算中...');
+const activityStatusText = computed(() => activityStatus.value?.text || '');
 const activityDesc = computed(() => activityStatus.value?.desc || '');
-const activityIcon = computed(() => activityStatus.value?.icon || InfoFilled);
 
-// 增长亮点洞察
 const growthInsights = computed(() => {
-  const insights: Array<{ text: string; class: string; icon: any }> = [];
-  
-  // 找出增长最快的指标
+  const insights: Array<{ text: string }> = [];
   const growingCards = kpiCards.value
-    .filter(card => card.trend !== null && card.trend > 0)
+    .filter((card) => card.trend !== null && card.trend > 0)
     .sort((a, b) => (b.trend || 0) - (a.trend || 0));
-  
   if (growingCards.length > 0) {
     const topCard = growingCards[0];
     insights.push({
-      text: `${topCard.label}增长最快，较昨日上升${topCard.trend?.toFixed(1)}%`,
-      class: 'insight-up',
-      icon: ArrowUp
+      text: `${topCard.label}环比表现最佳，${topCard.trendText.replace('较昨日', '').trim()}。`
     });
   }
-  
-  // 热门城市洞察
-  if (cityTopData.value.length > 0) {
-    const topCity = cityTopData.value[0];
-    insights.push({
-      text: `${topCity.city}最受欢迎，已有${topCity.count}篇游记`,
-      class: 'insight-city',
-      icon: Location
-    });
-  }
-  
-  // 趋势洞察
   if (travelNoteTrendData.value.length >= 2) {
     const recent = travelNoteTrendData.value.slice(-3);
     const avgRecent = recent.reduce((sum, item) => sum + item.count, 0) / recent.length;
     const earlier = travelNoteTrendData.value.slice(0, 3);
     const avgEarlier = earlier.reduce((sum, item) => sum + item.count, 0) / earlier.length;
-    
-    if (avgRecent > avgEarlier * 1.2) {
-      insights.push({
-        text: '游记发布量近期显著提升，内容创作活跃',
-        class: 'insight-up',
-        icon: Document
-      });
+    if (avgRecent > avgEarlier * 1.15) {
+      insights.push({ text: '游记发布节奏近期抬升，可顺势做话题或打卡联动。' });
     }
   }
-  
+  if (pointHotData.value.length > 0) {
+    insights.push({
+      text: `「${pointHotData.value[0].name}」打卡最集中，适合作为线下活动或推荐位重点。`
+    });
+  }
   return insights;
 });
 
-// 格式化数字
+const operationSuggestions = computed(() => {
+  const lines: string[] = [];
+  if (activityDesc.value) lines.push(activityDesc.value);
+  growthInsights.value.forEach((g) => lines.push(g.text));
+  if (lines.length < 2) {
+    lines.push('保持每日查看核心指标与内容质量，避免异常波动被忽略。');
+  }
+  return lines.slice(0, 4);
+});
+
 const formatNumber = (num: number): string => {
   if (num >= 10000) {
     return (num / 10000).toFixed(1) + '万';
@@ -555,669 +410,845 @@ const formatNumber = (num: number): string => {
   return num.toString();
 };
 
-// 格式化日期（短格式）
 const formatDateShort = (dateStr: string) => {
   const date = new Date(dateStr);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  return `${month}/${day}`;
+  return `${date.getMonth() + 1}/${date.getDate()}`;
 };
 
-// 计算趋势
-const calculateTrend = (current: number, previous: number): { value: number; text: string; class: string; icon: any } => {
+const calculateTrend = (
+  current: number,
+  previous: number
+): { value: number; text: string; class: string; icon: any } => {
   if (previous === 0) {
-    return { value: 0, text: '较昨日持平', class: 'trend-neutral', icon: Minus };
+    return { value: 0, text: '持平', class: 'trend-neutral', icon: Minus };
   }
   const percent = ((current - previous) / previous) * 100;
   if (percent > 0) {
-    return { 
-      value: percent, 
-      text: `较昨日 ↑${percent.toFixed(1)}%`, 
-      class: 'trend-up', 
-      icon: ArrowUp 
+    return {
+      value: percent,
+      text: `↑ ${percent.toFixed(1)}%`,
+      class: 'trend-up',
+      icon: ArrowUp
     };
-  } else if (percent < 0) {
-    return { 
-      value: percent, 
-      text: `较昨日 ↓${Math.abs(percent).toFixed(1)}%`, 
-      class: 'trend-down', 
-      icon: ArrowDown 
-    };
-  } else {
-    return { value: 0, text: '较昨日持平', class: 'trend-neutral', icon: Minus };
   }
+  if (percent < 0) {
+    return {
+      value: percent,
+      text: `↓ ${Math.abs(percent).toFixed(1)}%`,
+      class: 'trend-down',
+      icon: ArrowDown
+    };
+  }
+  return { value: 0, text: '持平', class: 'trend-neutral', icon: Minus };
 };
 
-// 获取排名样式类
-const getRankClass = (index: number): string => {
-  if (index === 0) return 'rank-gold';
-  if (index === 1) return 'rank-silver';
-  if (index === 2) return 'rank-bronze';
-  return 'rank-normal';
-};
-
-// 加载用户统计
 const loadUserSummary = async () => {
   try {
     const response = await fetchUserSummary();
     if (response.data.code === 200) {
       const data = response.data.data;
-      
-      // 用户总数
       kpiCards.value[0].value = data.total;
       kpiCards.value[0].loading = false;
-      
-      // 今日新增用户
       kpiCards.value[1].value = data.today;
       kpiCards.value[1].loading = false;
-      
-      // 计算趋势
       const userTrend = calculateTrend(data.today, data.yesterday);
       kpiCards.value[1].trend = userTrend.value;
       kpiCards.value[1].trendText = userTrend.text;
       kpiCards.value[1].trendClass = userTrend.class;
       kpiCards.value[1].trendIcon = userTrend.icon;
     }
-  } catch (error) {
-    console.error('加载用户统计失败:', error);
+  } catch (e) {
+    console.error(e);
     kpiCards.value[0].loading = false;
     kpiCards.value[1].loading = false;
   }
 };
 
-// 加载游记趋势
 const loadTravelNoteTrend = async () => {
   try {
-    travelNoteTrendLoading.value = true;
-    const response = await fetchTravelNoteTrend(travelNoteDays.value);
+    const response = await fetchTravelNoteTrend(chartRangeDays.value);
     if (response.data.code === 200) {
       const result = response.data.data;
-      travelNoteTrendData.value = result.trend.reverse();
-      
-      // 计算游记总数
+      travelNoteTrendData.value = result.trend.slice().reverse();
       const total = travelNoteTrendData.value.reduce((sum, item) => sum + item.count, 0);
       kpiCards.value[2].value = total;
       kpiCards.value[2].loading = false;
-      
-      // 计算趋势
       const noteTrend = calculateTrend(result.todayCount, result.yesterdayCount);
       kpiCards.value[2].trend = noteTrend.value;
       kpiCards.value[2].trendText = noteTrend.text;
       kpiCards.value[2].trendClass = noteTrend.class;
       kpiCards.value[2].trendIcon = noteTrend.icon;
     }
-  } catch (error) {
-    console.error('加载游记趋势失败:', error);
-  } finally {
-    travelNoteTrendLoading.value = false;
+  } catch (e) {
+    console.error(e);
   }
 };
 
-// 加载打卡趋势
 const loadCheckinTrend = async () => {
   try {
-    checkinTrendLoading.value = true;
-    const response = await fetchCheckinTrend(checkinDays.value);
+    const response = await fetchCheckinTrend(chartRangeDays.value);
     if (response.data.code === 200) {
       const result = response.data.data;
-      checkinTrendData.value = result.trend.reverse();
-      
-      // 计算打卡总数
-      const total = checkinTrendData.value.reduce((sum, item) => sum + item.count, 0);
+      const trend = result.trend.slice().reverse();
+      const total = trend.reduce((sum, item) => sum + item.count, 0);
       kpiCards.value[3].value = total;
       kpiCards.value[3].loading = false;
-      
-      // 计算趋势
-      const checkinTrend = calculateTrend(result.todayCount, result.yesterdayCount);
-      kpiCards.value[3].trend = checkinTrend.value;
-      kpiCards.value[3].trendText = checkinTrend.text;
-      kpiCards.value[3].trendClass = checkinTrend.class;
-      kpiCards.value[3].trendIcon = checkinTrend.icon;
+      const t = calculateTrend(result.todayCount, result.yesterdayCount);
+      kpiCards.value[3].trend = t.value;
+      kpiCards.value[3].trendText = t.text;
+      kpiCards.value[3].trendClass = t.class;
+      kpiCards.value[3].trendIcon = t.icon;
     }
-  } catch (error) {
-    console.error('加载打卡趋势失败:', error);
-  } finally {
-    checkinTrendLoading.value = false;
+  } catch (e) {
+    console.error(e);
   }
 };
 
-// 加载热门城市
-const loadCityTop = async () => {
+const loadUserTrend = async () => {
   try {
-    cityTopLoading.value = true;
-    const response = await fetchCityTop();
+    const response = await fetchUserTrend(chartRangeDays.value);
     if (response.data.code === 200) {
-      cityTopData.value = response.data.data;
+      userTrendData.value = response.data.data.trend.slice().reverse();
     }
-  } catch (error) {
-    console.error('加载热门城市失败:', error);
-  } finally {
-    cityTopLoading.value = false;
+  } catch (e) {
+    console.error(e);
+    userTrendData.value = [];
   }
 };
 
-// 时间范围切换
-const handleTravelNoteDaysChange = () => {
-  loadTravelNoteTrend();
+const loadPointHot = async () => {
+  pointHotLoading.value = true;
+  try {
+    const response = await fetchCheckinPointTop();
+    if (response.data.code === 200) {
+      const raw = response.data.data as unknown as { name: string; count: number }[];
+      pointHotData.value = (raw || []).map((r) => ({
+        name: formatPointHotName(String(r.name ?? '未命名地点')),
+        count: Number(r.count ?? 0)
+      }));
+    }
+  } catch (e) {
+    console.error(e);
+    pointHotData.value = [];
+  } finally {
+    pointHotLoading.value = false;
+  }
 };
 
-const handleCheckinDaysChange = () => {
-  loadCheckinTrend();
+const formatPointHotName = (name: string): string => {
+  const source = (name || '').trim();
+  if (!source) return '未命名地点';
+  if (/^scenic#\d+$/i.test(source)) {
+    return source.replace(/^scenic#/i, '景点#');
+  }
+  if (/^food#\d+$/i.test(source)) {
+    return source.replace(/^food#/i, '美食#');
+  }
+  return source;
 };
 
-// 加载所有数据
+const loadTrendPair = async () => {
+  trendChartsLoading.value = true;
+  try {
+    await Promise.all([loadTravelNoteTrend(), loadUserTrend(), loadCheckinTrend()]);
+  } finally {
+    trendChartsLoading.value = false;
+  }
+};
+
+const onChartRangeChange = () => {
+  loadTrendPair();
+};
+
 const loadAllData = async () => {
-  await Promise.all([
-    loadUserSummary(),
-    loadTravelNoteTrend(),
-    loadCheckinTrend(),
-    loadCityTop()
-  ]);
+  await Promise.all([loadUserSummary(), loadTrendPair(), loadPointHot()]);
+};
+
+const exportCsv = () => {
+  const rows: string[][] = [];
+  rows.push(['智能旅游 · 数据总览报表', new Date().toLocaleString('zh-CN')]);
+  rows.push([]);
+  rows.push(['指标', '数值', '环比摘要']);
+  kpiCards.value.forEach((k) => {
+    rows.push([k.label, String(k.value), k.trend !== null ? k.trendText : '—']);
+  });
+  rows.push([]);
+  rows.push(['日期', '新增用户', '游记发布']);
+  mergedTrendDays.value.forEach((day) => {
+    rows.push([day, String(userByDay.value[day] || 0), String(noteByDay.value[day] || 0)]);
+  });
+  rows.push([]);
+  rows.push(['打卡地点', '次数']);
+  pointHotData.value.forEach((p) => rows.push([p.name, String(p.count)]));
+  const body = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + body], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `dashboard-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  ElMessage.success('报表已导出为 CSV');
+};
+
+const onDashboardAction = (ev: Event) => {
+  const e = ev as CustomEvent<'refresh' | 'export'>;
+  if (e.detail === 'refresh') {
+    loadAllData().then(() => ElMessage.success('数据已刷新'));
+  } else if (e.detail === 'export') {
+    exportCsv();
+  }
 };
 
 onMounted(() => {
   loadAllData();
+  window.addEventListener('admin-dashboard-action', onDashboardAction as EventListener);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('admin-dashboard-action', onDashboardAction as EventListener);
 });
 </script>
 
 <style scoped>
 .dashboard {
-  padding: 24px;
-  background-color: #f5f7fa;
-  min-height: calc(100vh - 60px);
+  padding: 28px 32px 48px;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
-/* 页面标题 */
-.page-header {
-  margin-bottom: 24px;
+@media (max-width: 991px) {
+  .dashboard {
+    padding: 22px 20px 40px;
+  }
+
+  .kpi-section :deep(.el-col),
+  .charts-section :deep(.el-col) {
+    margin-bottom: 20px;
+  }
+
+  .kpi-section :deep(.el-row > .el-col:last-child),
+  .charts-section :deep(.el-row > .el-col:last-child) {
+    margin-bottom: 0;
+  }
 }
 
-.page-title {
-  font-size: 24px;
-  font-weight: 700;
-  color: #303133;
-  margin: 0 0 8px 0;
+.alert-panel {
+  margin-bottom: 28px;
+  border-radius: var(--admin-radius);
+  padding: 1px;
+  background: linear-gradient(
+    120deg,
+    rgba(93, 146, 176, 0.38),
+    rgba(184, 212, 230, 0.28)
+  );
+  box-shadow:
+    var(--admin-shadow),
+    0 0 0 1px rgba(255, 255, 255, 0.6) inset;
 }
 
-.page-desc {
-  font-size: 14px;
-  color: #909399;
-  margin: 0;
-}
-
-/* 系统活跃度总览 */
-.activity-overview {
-  margin-bottom: 24px;
-}
-
-.activity-card {
-  border-radius: 8px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.activity-content {
-  padding: 8px 0;
-  color: #fff;
-}
-
-.activity-label {
-  font-size: 14px;
-  opacity: 0.9;
-  margin-bottom: 8px;
-}
-
-.activity-status {
-  display: flex;
-  align-items: center;
-  margin: 12px 0;
-}
-
-.activity-icon {
-  font-size: 24px;
-  margin-right: 8px;
-}
-
-.activity-text {
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.activity-desc {
-  font-size: 13px;
-  opacity: 0.85;
-  margin-top: 8px;
-}
-
-.activity-high {
-  color: #67c23a;
-}
-
-.activity-medium {
-  color: #e6a23c;
-}
-
-.activity-low {
-  color: #f56c6c;
-}
-
-.activity-very-low {
-  color: #f56c6c;
-}
-
-/* 增长亮点洞察 */
-.insight-section {
-  margin-bottom: 24px;
-}
-
-.insight-card {
-  border-radius: 8px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
-.insight-header {
-  display: flex;
-  align-items: center;
-  color: #fff;
-}
-
-.insight-icon {
-  font-size: 20px;
-  margin-right: 8px;
-}
-
-.insight-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #fff;
-}
-
-.insight-list {
-  padding: 8px 0;
-}
-
-.insight-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 0;
-  color: #fff;
-}
-
-.insight-item-icon {
-  font-size: 18px;
-  margin-right: 10px;
-}
-
-.insight-item-icon.insight-up {
-  color: #67c23a;
-}
-
-.insight-item-icon.insight-city {
-  color: #409eff;
-}
-
-.insight-text {
-  font-size: 14px;
-  opacity: 0.95;
-}
-
-/* 统一模块标题 */
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 16px;
-}
-
-/* 1️⃣ 核心指标区（KPI区） */
-.kpi-section {
-  margin-bottom: 24px;
-}
-
-.kpi-cards {
-  margin: 0;
-}
-
-.kpi-card {
-  border-radius: 8px;
-  transition: all 0.3s;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.kpi-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
-}
-
-.kpi-card.loading {
-  opacity: 0.6;
-}
-
-.kpi-content {
-  padding: 8px 0;
-}
-
-.kpi-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.kpi-icon {
-  font-size: 24px;
-  margin-right: 8px;
-}
-
-.kpi-icon.icon-user {
-  color: #409eff;
-}
-
-.kpi-icon.icon-user-add {
-  color: #67c23a;
-}
-
-.kpi-icon.icon-note {
-  color: #e6a23c;
-}
-
-.kpi-icon.icon-checkin {
-  color: #f56c6c;
-}
-
-.kpi-label {
-  font-size: 14px;
-  color: #909399;
-  font-weight: 500;
-}
-
-.kpi-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: #303133;
-  margin: 16px 0;
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  line-height: 1;
-}
-
-.kpi-trend {
-  margin-top: 8px;
-}
-
-.trend-text {
-  display: inline-flex;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.trend-icon {
-  margin-right: 4px;
-  font-size: 14px;
-}
-
-.trend-up {
-  color: #67c23a;
-}
-
-.trend-down {
-  color: #f56c6c;
-}
-
-.trend-neutral {
-  color: #909399;
-}
-
-/* 2️⃣ 趋势分析区 */
-.trend-section {
-  margin-bottom: 24px;
-}
-
-.chart-card {
-  border-radius: 8px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.chart-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.chart-container {
-  min-height: 280px;
-  padding: 20px 0;
-}
-
-.loading-placeholder,
-.empty-placeholder {
-  height: 280px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #909399;
-}
-
-.line-chart-wrapper {
+.alert-panel-inner {
   position: relative;
-  height: 280px;
-  padding: 20px 0 40px;
+  display: flex;
+  gap: 20px;
+  padding: 22px 28px;
+  border-radius: calc(var(--admin-radius) - 1px);
+  background: linear-gradient(
+    105deg,
+    rgba(227, 238, 245, 0.94),
+    rgba(255, 255, 255, 0.9)
+  );
+  backdrop-filter: blur(6px);
+  overflow: hidden;
 }
 
-.line-chart {
-  width: 100%;
+.alert-panel-inner::after {
+  content: '';
+  position: absolute;
+  right: -48px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 200px;
   height: 200px;
-  display: block;
-}
-
-.grid-lines line {
-  opacity: 0.5;
-}
-
-.line-path {
-  transition: all 0.3s;
-}
-
-.data-point {
-  cursor: pointer;
-  transition: r 0.2s;
-}
-
-.data-point:hover {
-  r: 6;
-}
-
-.point-label {
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(93, 146, 176, 0.14) 0%,
+    rgba(122, 169, 196, 0.06) 45%,
+    transparent 70%
+  );
   pointer-events: none;
 }
 
-.x-axis-labels {
-  display: flex;
-  justify-content: space-around;
-  margin-top: 10px;
-  padding: 0 20px;
-}
-
-.x-label {
-  font-size: 12px;
-  color: #909399;
-  flex: 1;
-  text-align: center;
-}
-
-/* 3️⃣ 分布统计区 */
-.distribution-section {
-  margin-bottom: 24px;
-}
-
-.distribution-card {
-  border-radius: 8px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-.distribution-container {
-  min-height: 400px;
-  padding: 10px 0;
-}
-
-.city-list {
-  padding: 0;
-}
-
-.city-item {
-  display: flex;
-  align-items: center;
-  padding: 16px 0;
-  border-bottom: 1px solid #f0f0f0;
-  transition: all 0.3s;
-}
-
-.city-item:last-child {
-  border-bottom: none;
-}
-
-.city-item:hover {
-  background-color: #f5f7fa;
-  border-radius: 6px;
-  padding-left: 12px;
-  padding-right: 12px;
-}
-
-.city-rank {
-  width: 36px;
-  height: 36px;
+.alert-icon-wrap {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-weight: 700;
-  border-radius: 50%;
+  background: rgba(93, 146, 176, 0.16);
+  color: var(--admin-lake-600);
+}
+
+.alert-icon {
+  font-size: 22px;
+}
+
+.alert-body {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  flex: 1;
+  max-width: min(100%, 920px);
+}
+
+.alert-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.alert-title {
   font-size: 16px;
-  margin-right: 16px;
+  font-weight: 700;
+  color: var(--admin-text);
+  letter-spacing: -0.01em;
+}
+
+.alert-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.st-high {
+  background: rgba(93, 146, 176, 0.2);
+  color: var(--admin-lake-600);
+}
+.st-mid {
+  background: rgba(234, 179, 8, 0.12);
+  color: #a16207;
+}
+.st-low {
+  background: rgba(249, 115, 22, 0.12);
+  color: #c2410c;
+}
+.st-bad {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
+.alert-lead {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--admin-muted);
+  line-height: 1.55;
+}
+
+.alert-suggestions {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  color: var(--admin-text);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.alert-suggestions li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 6px;
+}
+
+.alert-suggestions li:last-child {
+  margin-bottom: 0;
+}
+
+.alert-suggestions li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--admin-lake-400);
+  opacity: 0.85;
+}
+
+.kpi-section {
+  margin-bottom: 64px;
+}
+
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(165deg, #ffffff 0%, rgba(247, 250, 252, 0.65) 100%);
+  border-radius: var(--admin-radius);
+  border: 1px solid var(--admin-border);
+  padding: 22px 22px 20px;
+  box-shadow:
+    var(--admin-shadow),
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  height: 100%;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--admin-lake-400), var(--admin-lake-600));
+  opacity: 0.55;
+  border-radius: var(--admin-radius) var(--admin-radius) 0 0;
+}
+
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  right: -28px;
+  top: -28px;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(93, 146, 176, 0.09) 0%, transparent 72%);
+  pointer-events: none;
+}
+
+.kpi-card:hover:not(.loading) {
+  transform: none;
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    0 12px 28px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset;
+  border-color: rgba(93, 146, 176, 0.28);
+}
+
+.kpi-card.loading {
+  opacity: 0.72;
+}
+
+.kpi-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.kpi-icon {
+  font-size: 22px;
+  color: var(--admin-lake-500);
+  padding: 8px;
+  border-radius: var(--admin-radius-sm);
+  background: rgba(93, 146, 176, 0.1);
+}
+
+.kpi-label {
+  font-size: 13px;
+  color: var(--admin-muted);
+  font-weight: 600;
+}
+
+.kpi-value {
+  position: relative;
+  z-index: 1;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--admin-text);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  min-height: 36px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-foot {
+  position: relative;
+  z-index: 1;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(229, 233, 238, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kpi-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.kpi-trend-ic {
+  font-size: 14px;
+}
+
+.kpi-hint {
+  font-size: 12px;
+  color: var(--admin-muted);
+}
+
+.trend-up {
+  color: #15803d;
+}
+.trend-down {
+  color: #b91c1c;
+}
+.trend-neutral {
+  color: var(--admin-muted);
+}
+
+.charts-section {
+  margin-top: 0;
+  padding-top: 4px;
+  clear: both;
+}
+
+.panel-card {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(252, 253, 254, 0.92) 100%);
+  border-radius: var(--admin-radius);
+  border: 1px solid var(--admin-border);
+  box-shadow:
+    var(--admin-shadow),
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset;
+  height: 100%;
+  min-height: 368px;
+  display: flex;
+  flex-direction: column;
+  transition:
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
+}
+
+.panel-card:hover {
+  border-color: rgba(93, 146, 176, 0.22);
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.05),
+    0 12px 32px rgba(15, 23, 42, 0.07),
+    0 0 0 1px rgba(255, 255, 255, 0.85) inset;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid rgba(229, 233, 238, 0.75);
+}
+
+.panel-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--admin-text);
+  letter-spacing: -0.02em;
+}
+
+.panel-sub {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--admin-muted);
+  line-height: 1.45;
+}
+
+.range-tabs {
   flex-shrink: 0;
 }
 
-.rank-gold {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
+.range-tabs :deep(.el-radio-button__inner) {
+  border-radius: 8px !important;
+  padding: 7px 14px;
+  font-weight: 500;
+  border-color: var(--admin-border) !important;
+  background: var(--admin-surface-2);
+  color: var(--admin-muted);
+  box-shadow: none !important;
 }
 
-.rank-silver {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+.range-tabs :deep(.el-radio-button:first-child .el-radio-button__inner) {
+  border-top-left-radius: 10px !important;
+  border-bottom-left-radius: 10px !important;
 }
 
-.rank-bronze {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  box-shadow: 0 4px 12px rgba(67, 233, 123, 0.3);
+.range-tabs :deep(.el-radio-button:last-child .el-radio-button__inner) {
+  border-top-right-radius: 10px !important;
+  border-bottom-right-radius: 10px !important;
 }
 
-.rank-normal {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.range-tabs :deep(.el-radio-button.is-active .el-radio-button__inner),
+.range-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: linear-gradient(145deg, var(--admin-lake-500), var(--admin-lake-600)) !important;
+  border-color: var(--admin-lake-500) !important;
+  color: #fff !important;
 }
 
-.city-name {
+.range-tabs :deep(.el-radio-button.is-active .el-radio-button__inner:hover),
+.range-tabs :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner:hover) {
+  background: linear-gradient(145deg, var(--admin-lake-500), #3d6d8a) !important;
+  border-color: var(--admin-lake-600) !important;
+}
+
+.panel-body {
   flex: 1;
-  font-size: 16px;
-  color: #303133;
+  padding: 20px 24px 24px;
+}
+
+.chart-placeholder {
+  min-height: 288px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--admin-text);
+}
+
+.chart-placeholder.is-loading {
+  flex-direction: column;
+  gap: 14px;
+  color: var(--admin-muted);
   font-weight: 500;
 }
 
-.city-count {
-  display: flex;
-  align-items: baseline;
-  margin-right: 20px;
-  min-width: 120px;
-  justify-content: flex-end;
-}
-
-.count-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: #409eff;
-  margin-right: 6px;
-}
-
-.count-unit {
-  font-size: 13px;
-  color: #909399;
-}
-
-.city-bar-wrapper {
-  width: 240px;
-  height: 10px;
-  background-color: #f0f0f0;
-  border-radius: 5px;
-  overflow: hidden;
-  margin-left: 20px;
-}
-
-.city-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #409eff 0%, #66b1ff 100%);
-  border-radius: 5px;
-  transition: width 0.5s ease;
-}
-
-/* 4️⃣ 运营辅助区 */
-.operation-section {
-  margin-bottom: 24px;
-}
-
-.operation-module {
-  border-radius: 8px;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s;
-  height: 100%;
-}
-
-.operation-module:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  transform: translateY(-2px);
-}
-
-.module-header {
-  display: flex;
+.loading-dots {
+  display: inline-flex;
+  gap: 7px;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  justify-content: center;
 }
 
-.module-icon {
-  font-size: 24px;
-  margin-right: 10px;
-  color: #409eff;
+.loading-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--admin-lake-500);
+  opacity: 0.35;
+  animation: dash-bounce 0.75s ease-in-out infinite;
 }
 
-.module-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
+.loading-dot:nth-child(2) {
+  animation-delay: 0.12s;
 }
 
-.module-content {
-  padding: 8px 0;
+.loading-dot:nth-child(3) {
+  animation-delay: 0.24s;
 }
 
-.module-desc {
+@keyframes dash-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(-6px);
+    opacity: 1;
+  }
+}
+
+.chart-placeholder.muted {
+  color: var(--admin-muted);
+}
+
+.chart-placeholder.is-empty {
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px 16px;
+  border-radius: var(--admin-radius-sm);
+  margin-top: 4px;
+  background: rgba(246, 248, 250, 0.65);
+  border: 1px dashed rgba(184, 212, 230, 0.65);
+  animation: empty-fade 0.45s ease-out;
+}
+
+@keyframes empty-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chart-placeholder .empty-icon {
+  font-size: 44px;
+  color: var(--admin-lake-400);
+  opacity: 0.45;
+}
+
+.chart-placeholder .empty-text {
   font-size: 14px;
-  color: #606266;
-  line-height: 2;
-  margin: 4px 0;
+  font-weight: 500;
+  color: var(--admin-muted);
+}
+
+.dual-chart {
+  position: relative;
+  padding: 14px 16px 10px;
+  border-radius: var(--admin-radius-sm);
+  background: linear-gradient(
+    165deg,
+    rgba(246, 248, 250, 0.9) 0%,
+    rgba(255, 255, 255, 0.55) 100%
+  );
+  border: 1px solid rgba(229, 233, 238, 0.75);
+}
+
+.chart-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 20px;
+  padding: 6px 6px 12px;
+  font-size: 12px;
+  color: var(--admin-muted);
+}
+
+.lg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot-a {
+  background: var(--admin-lake-400);
+}
+.dot-b {
+  background: var(--admin-lake-600);
+}
+
+.dual-svg {
+  width: 100%;
+  height: 220px;
+  display: block;
+}
+
+.grid line {
+  stroke: var(--admin-border);
+  stroke-width: 1;
+  stroke-dasharray: 4 6;
+  opacity: 0.85;
+}
+
+.line {
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.line-user {
+  stroke: var(--admin-lake-400);
+}
+
+.line-note {
+  stroke: var(--admin-lake-600);
+}
+
+.pt {
+  vector-effect: non-scaling-stroke;
+}
+.pt-user {
+  fill: #fff;
+  stroke: var(--admin-lake-400);
+  stroke-width: 2;
+}
+.pt-note {
+  fill: #fff;
+  stroke: var(--admin-lake-600);
+  stroke-width: 2;
+}
+
+.x-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 8px 0;
+  min-height: 22px;
+}
+
+.x-lbl {
+  font-size: 11px;
+  color: var(--admin-muted);
+}
+
+.bar-body {
+  padding-top: 10px;
+}
+
+.bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 10px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2.2fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  padding: 8px 12px;
+  margin: 0 -12px;
+  border-radius: var(--admin-radius-sm);
+  transition: background 0.18s ease;
+}
+
+.bar-row:hover {
+  background: rgba(93, 146, 176, 0.07);
+}
+
+.bar-name {
+  color: var(--admin-text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--admin-surface-2);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--admin-lake-400), var(--admin-lake-600));
+  transition: width 0.45s ease;
+}
+
+.bar-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--admin-lake-600);
+  min-width: 36px;
+  text-align: right;
 }
 </style>

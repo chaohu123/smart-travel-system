@@ -170,7 +170,7 @@
             <view class="note-meta-row">
               <image
                 class="note-author-avatar"
-                :src="note.authorAvatar || defaultAvatar"
+                :src="getImageUrl(note.authorAvatar) || defaultAvatar"
                 mode="aspectFill"
                 @tap.stop="viewAuthorProfile(note.userId)"
               />
@@ -225,7 +225,7 @@
         <text>没有更多了</text>
       </view>
       <view v-else-if="!loading && noteList.length === 0 && !networkError" class="empty-state">
-        <text class="empty-icon">📝</text>
+        <text class="empty-icon iconfont icon-youji"></text>
         <text class="empty-text">{{ searchKeyword ? '未找到相关游记' : '暂无游记' }}</text>
         <view v-if="!searchKeyword" class="empty-action" @click="publishNote">
           <text>发布游记</text>
@@ -252,11 +252,11 @@
       <view v-if="fabExpanded" class="fab-overlay" @click="toggleFab">
         <view class="fab-menu" @tap.stop>
           <view class="fab-menu-item" @click="handleFabAction('publish')">
-            <text class="fab-menu-icon">✍️</text>
+            <text class="fab-menu-icon iconfont icon-bianji"></text>
             <text class="fab-menu-text">写游记</text>
           </view>
           <view class="fab-menu-item" @click="handleFabAction('image')">
-            <text class="fab-menu-icon">📷</text>
+            <text class="fab-menu-icon iconfont icon-camera"></text>
             <text class="fab-menu-text">发图片</text>
           </view>
         </view>

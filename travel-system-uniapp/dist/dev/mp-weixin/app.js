@@ -27,14 +27,59 @@ if (!Math) {
   "./pages/footprint/footprint.js";
   "./pages/scenic/detail.js";
   "./pages/food/detail.js";
-  "./pages/search/search.js";
   "./pages/activity/detail.js";
+  "./pages/city/select.js";
 }
-const _sfc_main = {};
-function _sfc_render(_ctx, _cache) {
+const isTimeoutError = (msg) => {
+  const text = String(msg || "").toLowerCase();
+  return text.includes("timeout") || text.includes("timedout");
+};
+const _sfc_main = {
+  onUnhandledRejection(e) {
+    var _a, _b;
+    const message = ((_a = e == null ? void 0 : e.reason) == null ? void 0 : _a.errMsg) || ((_b = e == null ? void 0 : e.reason) == null ? void 0 : _b.message) || (e == null ? void 0 : e.reason) || "";
+    if (isTimeoutError(message)) {
+      return;
+    }
+    console.error("UnhandledRejection:", e);
+  },
+  onError(err) {
+    if (isTimeoutError(err)) {
+      return;
+    }
+    console.error("GlobalError:", err);
+  }
+};
+function _sfc_render(_ctx, _cache, $props, $setup, $data, $options) {
   return {};
 }
 var App = /* @__PURE__ */ common_vendor._export_sfc(_sfc_main, [["render", _sfc_render], ["__file", "D:/APPdalley/smart-travel-system/travel-system-uniapp/src/App.vue"]]);
+const isTimeoutMessage = (msg) => {
+  const text = String(msg || "").toLowerCase();
+  return text.includes("timeout") || text.includes("timedout");
+};
+const setupGlobalTimeoutGuards = () => {
+  const wxAny = globalThis.wx;
+  if (wxAny == null ? void 0 : wxAny.onUnhandledRejection) {
+    wxAny.onUnhandledRejection((res) => {
+      var _a, _b;
+      const message = ((_a = res == null ? void 0 : res.reason) == null ? void 0 : _a.errMsg) || ((_b = res == null ? void 0 : res.reason) == null ? void 0 : _b.message) || (res == null ? void 0 : res.reason) || "";
+      if (isTimeoutMessage(message)) {
+        return;
+      }
+      console.error("UnhandledRejection:", res);
+    });
+  }
+  if (wxAny == null ? void 0 : wxAny.onError) {
+    wxAny.onError((err) => {
+      if (isTimeoutMessage(err)) {
+        return;
+      }
+      console.error("GlobalError:", err);
+    });
+  }
+};
+setupGlobalTimeoutGuards();
 function createApp() {
   const app = common_vendor.createSSRApp(App);
   common_vendor.install(app);

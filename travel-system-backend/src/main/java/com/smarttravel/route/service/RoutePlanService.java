@@ -43,5 +43,20 @@ public interface RoutePlanService {
      * 查询我的行程列表
      */
     List<Map<String, Object>> listMyRoutes(Long userId);
+
+    /**
+     * 更新路线名称
+     */
+    boolean updateRouteName(Long routeId, String routeName);
+
+    /**
+     * 弃用/删除路线（逻辑删除，并清理明细数据）
+     */
+    boolean discardRoute(Long routeId);
+
+    /**
+     * 记录路线被浏览（浏览量 +1）
+     */
+    boolean incrementRouteViewCount(Long routeId);
 }
 

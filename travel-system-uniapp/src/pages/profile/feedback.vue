@@ -1,129 +1,172 @@
 <template>
   <view class="feedback-page">
-    <view class="feedback-container">
-      <view class="feedback-header">
-        <text class="page-title">意见反馈</text>
-        <text class="page-subtitle">您的建议是我们前进的动力</text>
+    <!-- 1. 顶部导航栏 -->
+    <view
+      class="nav-bar"
+      :style="{
+        paddingTop: statusBarHeight + 'px',
+        paddingRight: navRightPadding + 'px',
+      }"
+    >
+      <text class="nav-back" @click="goBack">←</text>
+    </view>
+
+    <view class="page-body">
+      <!-- 2. 页面标题区 -->
+      <view class="hero">
+        <text class="hero-title">意见反馈</text>
+        <text class="hero-sub">您的建议是我们前进的动力</text>
       </view>
 
-      <view class="feedback-form">
-        <!-- 反馈类型 -->
-        <view class="form-section">
-          <text class="section-label">反馈类型</text>
-          <view class="type-options">
-            <view
-              v-for="type in feedbackTypes"
-              :key="type.value"
-              class="type-option"
-              :class="{ active: form.type === type.value }"
-              @click="form.type = type.value"
-            >
-              <text class="type-icon">{{ type.icon }}</text>
-              <text class="type-text">{{ type.label }}</text>
-            </view>
+      <!-- 3. 反馈类型 2x2 -->
+      <view class="card soft-shadow">
+        <text class="card-label">反馈类型</text>
+        <view class="type-grid">
+          <view
+            v-for="type in feedbackTypes"
+            :key="type.value"
+            class="type-cell"
+            :class="{ 'type-cell--active': form.type === type.value }"
+            hover-class="type-cell-hover"
+            :hover-stay-time="80"
+            @click="form.type = type.value"
+          >
+            <text class="type-cell-text" :class="{ 'type-cell-text--active': form.type === type.value }">
+              {{ type.label }}
+            </text>
           </view>
         </view>
+      </view>
 
-        <!-- 反馈内容 -->
-        <view class="form-section">
-          <text class="section-label">反馈内容</text>
+      <!-- 4. 反馈内容 -->
+      <view class="card soft-shadow">
+        <text class="card-label">反馈内容</text>
+        <view class="textarea-wrap">
           <textarea
             v-model="form.content"
             class="content-input"
-            placeholder="请详细描述您遇到的问题或建议，我们会认真对待每一条反馈..."
+            placeholder="请描述您遇到的问题或建议，例如：在什么场景下出现、期望如何改进等，便于我们快速处理。"
             maxlength="500"
             :show-confirm-bar="false"
           />
-          <view class="char-count">{{ form.content.length }}/500</view>
+          <text class="char-hint">已输入 {{ form.content.length }}/500</text>
         </view>
+      </view>
 
-        <!-- 联系方式（可选） -->
-        <view class="form-section">
-          <text class="section-label">联系方式（可选）</text>
-          <input
-            v-model="form.contact"
-            class="contact-input"
-            placeholder="邮箱或手机号，方便我们与您联系"
-            type="text"
-          />
-        </view>
+      <!-- 5. 联系方式 -->
+      <view class="card soft-shadow">
+        <text class="card-label">联系方式<text class="optional">（可选）</text></text>
+        <input
+          v-model="form.contact"
+          class="contact-input"
+          placeholder="留下手机号/邮箱，方便我们回复您"
+          type="text"
+        />
+      </view>
 
-        <!-- 上传截图 -->
-        <view class="form-section">
-          <text class="section-label">上传截图（可选）</text>
-          <view class="image-upload">
-            <view
-              v-for="(image, index) in form.images"
-              :key="index"
-              class="image-item"
-            >
-              <image :src="image" class="uploaded-image" mode="aspectFill" />
-              <view class="image-delete" @click="removeImage(index)">×</view>
-            </view>
-            <view
-              v-if="form.images.length < 3"
-              class="upload-btn"
-              @click="chooseImage"
-            >
-              <text class="iconfont icon-tianjia"></text>
-              <text class="upload-text">添加图片</text>
-            </view>
+      <!-- 6. 上传截图 -->
+      <view class="card soft-shadow card-bottom-space">
+        <text class="card-label">上传截图<text class="optional">（可选）</text></text>
+        <view class="image-upload">
+          <view v-for="(image, index) in form.images" :key="index" class="image-item">
+            <image :src="image" class="uploaded-image" mode="aspectFill" />
+            <view class="image-delete" @click.stop="removeImage(index)">×</view>
+          </view>
+          <view
+            v-if="form.images.length < maxImages"
+            class="upload-btn"
+            hover-class="upload-btn-hover"
+            :hover-stay-time="80"
+            @click="chooseImage"
+          >
+            <text class="upload-plus">+</text>
+            <text class="upload-text">添加图片</text>
           </view>
         </view>
-
-        <!-- 提交按钮 -->
-        <button
-          class="submit-btn"
-          :class="{ disabled: !canSubmit }"
-          :disabled="!canSubmit || submitting"
-          :loading="submitting"
-          @click="submitFeedback"
-        >
-          {{ submitting ? '提交中...' : '提交反馈' }}
-        </button>
       </view>
+    </view>
+
+    <!-- 7. 底部固定提交栏 -->
+    <view class="bottom-bar safe-bottom">
+      <button
+        type="default"
+        class="submit-btn"
+        hover-class="submit-btn-hover"
+        :class="{ 'submit-btn--disabled': !canSubmit }"
+        :disabled="!canSubmit || submitting"
+        :loading="submitting"
+        @click="submitFeedback"
+      >
+        {{ submitting ? '提交中...' : '提交反馈' }}
+      </button>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
-import { useUserStore } from '@/store/user'
+import { ref, reactive, computed, onMounted } from 'vue'
 
-const store = useUserStore()
-const user = computed(() => store.state.profile)
+const statusBarHeight = ref(0)
+/** 右侧预留宽度，避免标题与小程序胶囊菜单重叠（非微信端为对称占位） */
+const navRightPadding = ref(0)
+
+onMounted(() => {
+  try {
+    const sys = uni.getSystemInfoSync()
+    statusBarHeight.value = sys.statusBarHeight || 0
+    // #ifdef MP-WEIXIN
+    const menu = uni.getMenuButtonBoundingClientRect()
+    if (menu && sys.windowWidth) {
+      navRightPadding.value = Math.max(0, sys.windowWidth - menu.left)
+    } else {
+      navRightPadding.value = 96
+    }
+    // #endif
+    // #ifndef MP-WEIXIN
+    navRightPadding.value = 0
+    // #endif
+  } catch {
+    statusBarHeight.value = 0
+    navRightPadding.value = 0
+  }
+})
 
 const feedbackTypes = [
-  { value: 'bug', label: '问题反馈', icon: '🐛' },
-  { value: 'suggestion', label: '功能建议', icon: '💡' },
-  { value: 'complaint', label: '投诉建议', icon: '😞' },
-  { value: 'other', label: '其他', icon: '📝' }
+  { value: 'bug', label: '问题反馈' },
+  { value: 'suggestion', label: '功能建议' },
+  { value: 'complaint', label: '投诉建议' },
+  { value: 'other', label: '其他' },
 ]
 
 const form = reactive({
   type: 'bug',
   content: '',
   contact: '',
-  images: [] as string[]
+  images: [] as string[],
 })
 
+const maxImages = 9
 const submitting = ref(false)
 
-const canSubmit = computed(() => {
-  return form.content.trim().length >= 10
-})
+const canSubmit = computed(() => form.content.trim().length >= 10)
+
+const goBack = () => {
+  uni.navigateBack()
+}
 
 const chooseImage = () => {
+  const remain = maxImages - form.images.length
+  if (remain <= 0) return
   uni.chooseImage({
-    count: 3 - form.images.length,
+    count: remain,
     sizeType: ['compressed'],
     sourceType: ['album', 'camera'],
     success: (res) => {
       form.images.push(...res.tempFilePaths)
     },
-    fail: (err) => {
+    fail: () => {
       uni.showToast({ title: '选择图片失败', icon: 'none' })
-    }
+    },
   })
 }
 
@@ -138,31 +181,27 @@ const submitFeedback = async () => {
   }
 
   submitting.value = true
-
   try {
-    // 这里可以调用后端API提交反馈
-    // 暂时使用本地存储模拟
     const feedbackData = {
-      userId: user.value?.id || 0,
       type: form.type,
       content: form.content,
       contact: form.contact,
       images: form.images,
-      createTime: new Date().toISOString()
+      createTime: new Date().toISOString(),
     }
-
-    // 保存到本地存储（实际应该调用API）
-    const feedbacks = uni.getStorageSync('feedbacks') || []
+    const feedbacks = (uni.getStorageSync('feedbacks') || []) as any[]
     feedbacks.push(feedbackData)
     uni.setStorageSync('feedbacks', feedbacks)
 
-    uni.showToast({ title: '反馈提交成功，感谢您的建议！', icon: 'success' })
-
-    // 延迟返回上一页
+    uni.showToast({
+      title: '反馈已提交，感谢您的建议！',
+      icon: 'success',
+      duration: 2000,
+    })
     setTimeout(() => {
       uni.navigateBack()
-    }, 1500)
-  } catch (error) {
+    }, 2000)
+  } catch {
     uni.showToast({ title: '提交失败，请稍后重试', icon: 'none' })
   } finally {
     submitting.value = false
@@ -173,121 +212,168 @@ const submitFeedback = async () => {
 <style scoped>
 .feedback-page {
   min-height: 100vh;
-  background-color: #f8fafb;
+  background: #f2f7f5;
+  /* 底部固定栏占位，避免内容被遮挡；整页仅此处滚动，避免出现双滚动条 */
+  padding-bottom: calc(200rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
 }
 
-.feedback-container {
-  padding: 40rpx;
+/* 薄荷绿导航 */
+.nav-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  height: 96rpx;
+  padding: 0 24rpx;
+  background: #98cfc0;
+  box-sizing: content-box;
 }
 
-.feedback-header {
-  margin-bottom: 40rpx;
+.nav-back {
+  position: relative;
+  z-index: 2;
+  width: 72rpx;
+  font-size: 40rpx;
+  color: #ffffff;
+  line-height: 96rpx;
 }
 
-.page-title {
+.page-body {
+  padding: 24rpx 24rpx 0;
+  box-sizing: border-box;
+}
+
+.soft-shadow {
+  box-shadow: 0 8rpx 24rpx rgba(45, 80, 70, 0.06);
+}
+
+/* 标题区 */
+.hero {
+  padding: 32rpx 8rpx 28rpx;
+  text-align: center;
+}
+
+.hero-title {
   display: block;
-  font-size: 48rpx;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 16rpx;
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #2d3f39;
+  letter-spacing: 2rpx;
 }
 
-.page-subtitle {
+.hero-sub {
   display: block;
+  margin-top: 16rpx;
   font-size: 26rpx;
-  color: #999;
+  color: #7a9088;
+  line-height: 1.5;
 }
 
-.feedback-form {
-  background: #fff;
+.card {
+  background: #ffffff;
   border-radius: 24rpx;
-  padding: 40rpx;
-  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
+  padding: 28rpx 24rpx;
+  margin-bottom: 24rpx;
 }
 
-.form-section {
-  margin-bottom: 40rpx;
+.card-bottom-space {
+  margin-bottom: 8rpx;
 }
 
-.form-section:last-child {
-  margin-bottom: 0;
-}
-
-.section-label {
+.card-label {
   display: block;
   font-size: 28rpx;
   font-weight: 600;
-  color: #333;
+  color: #344843;
   margin-bottom: 20rpx;
 }
 
-.type-options {
+.optional {
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #9aa9a3;
+}
+
+/* 2x2 类型 */
+.type-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 20rpx;
 }
 
-.type-option {
+.type-cell {
+  min-height: 100rpx;
+  padding: 20rpx 16rpx;
+  border-radius: 20rpx;
+  border: 2rpx solid #e5ebe8;
+  background: #ffffff;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 30rpx 20rpx;
-  background: #f8fafb;
-  border-radius: 16rpx;
-  border: 2rpx solid transparent;
-  transition: all 0.3s;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.type-option.active {
-  background: #e4f7ef;
-  border-color: #3ba272;
+.type-cell-hover {
+  transform: translateY(-4rpx);
+  box-shadow: 0 8rpx 20rpx rgba(45, 80, 70, 0.08);
 }
 
-.type-icon {
-  font-size: 48rpx;
-  margin-bottom: 12rpx;
+.type-cell--active {
+  border-color: #7fc4b1;
+  background: #e8f5f1;
+  box-shadow: 0 4rpx 16rpx rgba(127, 196, 177, 0.25);
 }
 
-.type-text {
-  font-size: 26rpx;
-  color: #666;
+.type-cell-text {
+  font-size: 28rpx;
+  color: #5c6f69;
+  text-align: center;
 }
 
-.type-option.active .type-text {
-  color: #3ba272;
+.type-cell-text--active {
+  color: #2d8a6e;
   font-weight: 600;
+}
+
+/* 文本域 */
+.textarea-wrap {
+  position: relative;
 }
 
 .content-input {
   width: 100%;
-  min-height: 300rpx;
-  padding: 24rpx;
-  background: #f8fafb;
-  border-radius: 16rpx;
+  min-height: 280rpx;
+  padding: 22rpx 22rpx 52rpx;
+  background: #f5faf8;
+  border-radius: 18rpx;
   font-size: 28rpx;
-  color: #333;
-  line-height: 1.6;
+  color: #2d3f39;
+  line-height: 1.65;
   box-sizing: border-box;
 }
 
-.char-count {
-  text-align: right;
-  font-size: 24rpx;
-  color: #999;
-  margin-top: 12rpx;
+.char-hint {
+  position: absolute;
+  right: 18rpx;
+  bottom: 14rpx;
+  font-size: 22rpx;
+  color: #9eb3ab;
 }
 
 .contact-input {
   width: 100%;
-  padding: 24rpx;
-  background: #f8fafb;
-  border-radius: 16rpx;
+  height: 88rpx;
+  padding: 0 22rpx;
+  background: #f5faf8;
+  border-radius: 18rpx;
   font-size: 28rpx;
-  color: #333;
+  color: #2d3f39;
   box-sizing: border-box;
 }
 
+/* 上传 */
 .image-upload {
   display: flex;
   flex-wrap: wrap;
@@ -298,8 +384,9 @@ const submitFeedback = async () => {
   position: relative;
   width: 200rpx;
   height: 200rpx;
-  border-radius: 16rpx;
+  border-radius: 18rpx;
   overflow: hidden;
+  background: #eef4f1;
 }
 
 .uploaded-image {
@@ -309,58 +396,89 @@ const submitFeedback = async () => {
 
 .image-delete {
   position: absolute;
-  top: 8rpx;
-  right: 8rpx;
-  width: 48rpx;
-  height: 48rpx;
-  background: rgba(0, 0, 0, 0.6);
+  top: 6rpx;
+  right: 6rpx;
+  width: 44rpx;
+  height: 44rpx;
+  background: rgba(0, 0, 0, 0.55);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 32rpx;
-  font-weight: bold;
+  font-size: 28rpx;
+  line-height: 1;
 }
 
 .upload-btn {
   width: 200rpx;
   height: 200rpx;
-  background: #f8fafb;
-  border: 2rpx dashed #ddd;
-  border-radius: 16rpx;
+  border-radius: 18rpx;
+  border: 2rpx dashed #c5ddd4;
+  background: #fafcfb;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
+  gap: 10rpx;
 }
 
-.upload-btn .iconfont {
-  font-size: 48rpx;
-  color: #999;
+.upload-btn-hover {
+  background: #eef6f3;
+  border-color: #98cfc0;
+}
+
+.upload-plus {
+  font-size: 56rpx;
+  color: #7fc4b1;
+  font-weight: 300;
+  line-height: 1;
 }
 
 .upload-text {
   font-size: 24rpx;
-  color: #999;
+  color: #7a9088;
+}
+
+/* 底部提交 */
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16rpx 28rpx;
+  background: rgba(242, 247, 245, 0.96);
+  border-top: 1rpx solid #e4ece8;
+  z-index: 99;
+}
+
+.safe-bottom {
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
 }
 
 .submit-btn {
+  margin: 0;
   width: 100%;
-  margin-top: 40rpx;
-  background: linear-gradient(135deg, #3ba272, #57c18c);
-  color: #fff;
-  border-radius: 16rpx;
-  padding: 28rpx;
+  height: 92rpx;
+  line-height: 92rpx;
+  border-radius: 999rpx;
+  border: none;
+  background: #7fc4b1;
+  color: #ffffff;
   font-size: 32rpx;
   font-weight: 600;
+}
+
+.submit-btn::after {
   border: none;
 }
 
-.submit-btn.disabled {
-  background: #e0e0e0;
-  color: #999;
+.submit-btn-hover {
+  background: #5fa894 !important;
+}
+
+.submit-btn--disabled {
+  background: #c5ddd4 !important;
+  color: #f5faf8 !important;
 }
 </style>
-

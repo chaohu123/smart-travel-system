@@ -35,12 +35,12 @@ function fixProjectConfig() {
       if (!config.libVersion || config.libVersion === '' || typeof config.libVersion !== 'string') {
         config.libVersion = libVersion;
         fs.writeFileSync(projectConfigPath, JSON.stringify(config, null, 2), 'utf8');
-        console.log(`✅ 已修复 project.config.json 中的 libVersion: ${libVersion}`);
+        console.log(`已修复 project.config.json 中的 libVersion: ${libVersion}`);
       } else if (config.libVersion !== libVersion) {
         // 如果值不一致，也更新它
         config.libVersion = libVersion;
         fs.writeFileSync(projectConfigPath, JSON.stringify(config, null, 2), 'utf8');
-        console.log(`✅ 已更新 project.config.json 中的 libVersion: ${libVersion}`);
+        console.log(`已更新 project.config.json 中的 libVersion: ${libVersion}`);
       } else {
         console.log(`✓ project.config.json 中的 libVersion 已正确: ${libVersion}`);
       }
@@ -49,7 +49,7 @@ function fixProjectConfig() {
       process.exit(1);
     }
   } else {
-    console.warn('⚠️  编译输出文件不存在，跳过修复:', projectConfigPath);
+    console.warn('编译输出文件不存在，跳过修复:', projectConfigPath);
   }
 }
 

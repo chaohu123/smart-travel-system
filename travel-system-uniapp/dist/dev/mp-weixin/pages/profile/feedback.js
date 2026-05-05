@@ -1,16 +1,29 @@
 "use strict";
 var common_vendor = require("../../common/vendor.js");
-var store_user = require("../../store/user.js");
-require("../../utils/storage.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
-    const store = store_user.useUserStore();
-    const user = common_vendor.computed(() => store.state.profile);
+    const statusBarHeight = common_vendor.ref(0);
+    const navRightPadding = common_vendor.ref(0);
+    common_vendor.onMounted(() => {
+      try {
+        const sys = common_vendor.index.getSystemInfoSync();
+        statusBarHeight.value = sys.statusBarHeight || 0;
+        const menu = common_vendor.index.getMenuButtonBoundingClientRect();
+        if (menu && sys.windowWidth) {
+          navRightPadding.value = Math.max(0, sys.windowWidth - menu.left);
+        } else {
+          navRightPadding.value = 96;
+        }
+      } catch {
+        statusBarHeight.value = 0;
+        navRightPadding.value = 0;
+      }
+    });
     const feedbackTypes = [
-      { value: "bug", label: "\u95EE\u9898\u53CD\u9988", icon: "\u{1F41B}" },
-      { value: "suggestion", label: "\u529F\u80FD\u5EFA\u8BAE", icon: "\u{1F4A1}" },
-      { value: "complaint", label: "\u6295\u8BC9\u5EFA\u8BAE", icon: "\u{1F61E}" },
-      { value: "other", label: "\u5176\u4ED6", icon: "\u{1F4DD}" }
+      { value: "bug", label: "\u95EE\u9898\u53CD\u9988" },
+      { value: "suggestion", label: "\u529F\u80FD\u5EFA\u8BAE" },
+      { value: "complaint", label: "\u6295\u8BC9\u5EFA\u8BAE" },
+      { value: "other", label: "\u5176\u4ED6" }
     ];
     const form = common_vendor.reactive({
       type: "bug",
@@ -18,19 +31,24 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       contact: "",
       images: []
     });
+    const maxImages = 9;
     const submitting = common_vendor.ref(false);
-    const canSubmit = common_vendor.computed(() => {
-      return form.content.trim().length >= 10;
-    });
+    const canSubmit = common_vendor.computed(() => form.content.trim().length >= 10);
+    const goBack = () => {
+      common_vendor.index.navigateBack();
+    };
     const chooseImage = () => {
+      const remain = maxImages - form.images.length;
+      if (remain <= 0)
+        return;
       common_vendor.index.chooseImage({
-        count: 3 - form.images.length,
+        count: remain,
         sizeType: ["compressed"],
         sourceType: ["album", "camera"],
         success: (res) => {
           form.images.push(...res.tempFilePaths);
         },
-        fail: (err) => {
+        fail: () => {
           common_vendor.index.showToast({ title: "\u9009\u62E9\u56FE\u7247\u5931\u8D25", icon: "none" });
         }
       });
@@ -39,7 +57,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       form.images.splice(index, 1);
     };
     const submitFeedback = async () => {
-      var _a;
       if (!canSubmit.value) {
         common_vendor.index.showToast({ title: "\u8BF7\u81F3\u5C11\u8F93\u516510\u4E2A\u5B57\u7684\u53CD\u9988\u5185\u5BB9", icon: "none" });
         return;
@@ -47,7 +64,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       submitting.value = true;
       try {
         const feedbackData = {
-          userId: ((_a = user.value) == null ? void 0 : _a.id) || 0,
           type: form.type,
           content: form.content,
           contact: form.contact,
@@ -57,11 +73,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const feedbacks = common_vendor.index.getStorageSync("feedbacks") || [];
         feedbacks.push(feedbackData);
         common_vendor.index.setStorageSync("feedbacks", feedbacks);
-        common_vendor.index.showToast({ title: "\u53CD\u9988\u63D0\u4EA4\u6210\u529F\uFF0C\u611F\u8C22\u60A8\u7684\u5EFA\u8BAE\uFF01", icon: "success" });
+        common_vendor.index.showToast({
+          title: "\u53CD\u9988\u5DF2\u63D0\u4EA4\uFF0C\u611F\u8C22\u60A8\u7684\u5EFA\u8BAE\uFF01",
+          icon: "success",
+          duration: 2e3
+        });
         setTimeout(() => {
           common_vendor.index.navigateBack();
-        }, 1500);
-      } catch (error) {
+        }, 2e3);
+      } catch {
         common_vendor.index.showToast({ title: "\u63D0\u4EA4\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5", icon: "none" });
       } finally {
         submitting.value = false;
@@ -69,36 +89,39 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     return (_ctx, _cache) => {
       return common_vendor.e({
-        a: common_vendor.f(feedbackTypes, (type, k0, i0) => {
+        a: common_vendor.o(goBack),
+        b: statusBarHeight.value + "px",
+        c: navRightPadding.value + "px",
+        d: common_vendor.f(feedbackTypes, (type, k0, i0) => {
           return {
-            a: common_vendor.t(type.icon),
-            b: common_vendor.t(type.label),
+            a: common_vendor.t(type.label),
+            b: common_vendor.unref(form).type === type.value ? 1 : "",
             c: type.value,
             d: common_vendor.unref(form).type === type.value ? 1 : "",
             e: common_vendor.o(($event) => common_vendor.unref(form).type = type.value)
           };
         }),
-        b: common_vendor.unref(form).content,
-        c: common_vendor.o(($event) => common_vendor.unref(form).content = $event.detail.value),
-        d: common_vendor.t(common_vendor.unref(form).content.length),
-        e: common_vendor.unref(form).contact,
-        f: common_vendor.o(($event) => common_vendor.unref(form).contact = $event.detail.value),
-        g: common_vendor.f(common_vendor.unref(form).images, (image, index, i0) => {
+        e: common_vendor.unref(form).content,
+        f: common_vendor.o(($event) => common_vendor.unref(form).content = $event.detail.value),
+        g: common_vendor.t(common_vendor.unref(form).content.length),
+        h: common_vendor.unref(form).contact,
+        i: common_vendor.o(($event) => common_vendor.unref(form).contact = $event.detail.value),
+        j: common_vendor.f(common_vendor.unref(form).images, (image, index, i0) => {
           return {
             a: image,
             b: common_vendor.o(($event) => removeImage(index)),
             c: index
           };
         }),
-        h: common_vendor.unref(form).images.length < 3
-      }, common_vendor.unref(form).images.length < 3 ? {
-        i: common_vendor.o(chooseImage)
+        k: common_vendor.unref(form).images.length < maxImages
+      }, common_vendor.unref(form).images.length < maxImages ? {
+        l: common_vendor.o(chooseImage)
       } : {}, {
-        j: common_vendor.t(submitting.value ? "\u63D0\u4EA4\u4E2D..." : "\u63D0\u4EA4\u53CD\u9988"),
-        k: !common_vendor.unref(canSubmit) ? 1 : "",
-        l: !common_vendor.unref(canSubmit) || submitting.value,
-        m: submitting.value,
-        n: common_vendor.o(submitFeedback)
+        m: common_vendor.t(submitting.value ? "\u63D0\u4EA4\u4E2D..." : "\u63D0\u4EA4\u53CD\u9988"),
+        n: !common_vendor.unref(canSubmit) ? 1 : "",
+        o: !common_vendor.unref(canSubmit) || submitting.value,
+        p: submitting.value,
+        q: common_vendor.o(submitFeedback)
       });
     };
   }

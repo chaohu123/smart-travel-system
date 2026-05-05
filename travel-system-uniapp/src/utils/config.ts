@@ -23,7 +23,7 @@ const DEV_CONFIG = {
 // ========== 微信小程序配置 ==========
 // 微信小程序由于平台限制，不能访问 localhost，需要使用局域网 IP
 // 请将下面的 LOCAL_IP 替换为你的本机局域网 IP 地址
-const LOCAL_IP = '192.168.142.1' // ⚠️ 微信小程序需要：请修改为你的本机 IP 地址
+const LOCAL_IP = '192.168.142.1' // 微信小程序需要：请修改为你的本机 IP 地址
 
 const MP_WEIXIN_CONFIG = {
   // API 基础地址
@@ -66,3 +66,14 @@ export const config = getConfig()
 export const API_BASE_URL = config.API_BASE_URL
 export const STATIC_BASE_URL = config.STATIC_BASE_URL
 
+/**
+ * 高德 Web 服务 Key（行政区域查询 / 边界 polyline）
+ * 请在 https://lbs.amap.com 申请「Web 服务」类型 Key，并勾选「行政区域查询」能力；
+ * 微信小程序后台 request 合法域名需添加：https://restapi.amap.com
+ * manifest.json → mp-weixin.map.key 请填写同一开放平台应用下的「微信小程序」Key（地图组件）
+ */
+export const AMAP_WEB_KEY = 'b49d114eb175a158b25db7bf30156a3d'
+
+// 默认图片URL
+export const defaultFoodImage = 'https://ts1.tc.mm.bing.net/th/id/R-C.6f2c45f0e1970f362d4cb5e4e39a985f487cc?rik=y5WZ1SI%2fQsLR%2fA&riu=http%3a%2f%2fimg.daimg.com%2fuploads%2fallimg%2f190325%2f1-1Z325231625.jpg&ehk=O4I2%2bCxYfa8flgaMO4bok8%2fOAc8lDH1fs8%2fhpgKoBZ0%3d&risl=&pid=ImgRaw&r=0'
+export const defaultScenicImage = 'https://bpic.588ku.com/art_origin_min_pic/19/03/30/910fc9dd6202cca55e4e39a985f487cc.jpg'

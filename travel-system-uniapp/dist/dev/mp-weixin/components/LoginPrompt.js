@@ -8,8 +8,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   },
   setup(__props, { emit }) {
     const props = __props;
-    common_vendor.watch(() => props.visible, (newVal) => {
-      console.log("LoginPrompt visible changed:", newVal);
+    common_vendor.watch(() => props.visible, () => {
     }, { immediate: true });
     const handleConfirm = () => {
       emit("confirm");

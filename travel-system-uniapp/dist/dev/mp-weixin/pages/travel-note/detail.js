@@ -2,6 +2,7 @@
 var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
 var store_user = require("../../store/user.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
@@ -38,17 +39,17 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const coverImage = common_vendor.computed(() => {
       var _a;
       if (((_a = noteDetail.value) == null ? void 0 : _a.images) && noteDetail.value.images.length > 0) {
-        return noteDetail.value.images[0].url;
+        return utils_image.getImageUrl(noteDetail.value.images[0].url);
       }
       return null;
     });
     const authorAvatar = common_vendor.computed(() => {
       var _a, _b, _c, _d;
       if ((_b = (_a = noteDetail.value) == null ? void 0 : _a.author) == null ? void 0 : _b.avatar) {
-        return noteDetail.value.author.avatar;
+        return utils_image.getImageUrl(noteDetail.value.author.avatar);
       }
       if ((_d = (_c = noteDetail.value) == null ? void 0 : _c.note) == null ? void 0 : _d.authorAvatar) {
-        return noteDetail.value.note.authorAvatar;
+        return utils_image.getImageUrl(noteDetail.value.note.authorAvatar);
       }
       return "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
     });
@@ -66,7 +67,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       var _a;
       if (!((_a = noteDetail.value) == null ? void 0 : _a.images))
         return;
-      const urls = noteDetail.value.images.map((img) => img.url);
+      const urls = noteDetail.value.images.map((img) => utils_image.getImageUrl(img.url));
       common_vendor.index.previewImage({
         current: typeof index === "string" ? parseInt(index) : index,
         urls
@@ -386,7 +387,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }, noteDetail.value.images && noteDetail.value.images.length > 0 ? {
         o: common_vendor.f(noteDetail.value.images, (img, index, i0) => {
           return {
-            a: img.url,
+            a: common_vendor.unref(utils_image.getImageUrl)(img.url),
             b: index > 2,
             c: common_vendor.o(($event) => previewImage(index)),
             d: index
@@ -396,7 +397,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         p: common_vendor.t(common_vendor.unref(commentCount)),
         q: common_vendor.f(comments.value, (comment, k0, i0) => {
           return common_vendor.e({
-            a: comment.avatar || comment.userAvatar || common_vendor.unref(authorAvatar),
+            a: common_vendor.unref(utils_image.getImageUrl)(comment.avatar || comment.userAvatar) || common_vendor.unref(authorAvatar),
             b: common_vendor.t(comment.nickname || "\u533F\u540D\u7528\u6237"),
             c: common_vendor.t(comment.content),
             d: comment.replies && comment.replies.length > 0

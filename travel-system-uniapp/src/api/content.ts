@@ -352,6 +352,25 @@ export const foodApi = {
 
 // 打卡API
 export const checkinApi = {
+  // 新增打卡
+  addCheckin: (data: {
+    userId: number
+    targetType: 'scenic' | 'food'
+    targetId: number
+    photoUrl?: string
+    content?: string
+    latitude?: number
+    longitude?: number
+  }) => {
+    return request({
+      url: '/checkin/add',
+      method: 'POST',
+      data,
+      showLoading: true,
+      needAuth: true,
+    })
+  },
+
   // 获取我的打卡列表
   getMyCheckins: (userId: number, pageNum: number = 1, pageSize: number = 100) => {
     return request({
@@ -360,6 +379,21 @@ export const checkinApi = {
       data: { userId, pageNum, pageSize },
       showLoading: false,
       needAuth: true,
+    })
+  },
+  // 获取某个景点/美食的打卡列表（他人打卡展示）
+  getTargetCheckins: (
+    targetType: 'scenic' | 'food',
+    targetId: number,
+    pageNum: number = 1,
+    pageSize: number = 10,
+  ) => {
+    return request({
+      url: '/checkin/target',
+      method: 'GET',
+      data: { targetType, targetId, pageNum, pageSize },
+      showLoading: false,
+      needAuth: false,
     })
   },
   // 获取用户足迹统计（城市、省份、美食数量等）

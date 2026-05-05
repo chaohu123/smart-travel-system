@@ -8,14 +8,16 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.util.AntPathMatcher;
 
 import javax.servlet.http.HttpServletRequest;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 /**
  * 图片访问控制器
@@ -25,6 +27,7 @@ import java.nio.file.Paths;
 @RequestMapping("/uploads")
 @CrossOrigin
 public class ImageController {
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     @Value("${upload.dir:uploads}")
     private String uploadDir;
@@ -55,26 +58,36 @@ public class ImageController {
             String requestPath = getRequestPath(request);
             
             if (requestPath == null || requestPath.isEmpty()) {
-                System.err.println("无法获取请求路径");
                 return ResponseEntity.notFound().build();
             }
+
+            // 规范化路径，避免前导分隔符和目录穿越
+            requestPath = requestPath.replace("\\", "/");
+            while (requestPath.startsWith("/")) {
+                requestPath = requestPath.substring(1);
+            }
+            if (requestPath.contains("..")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            }
             
-            // 构建文件的绝对路径
+            // 构建文件的可能路径（兼容从不同工作目录启动服务的情况）
             String uploadBasePath = getUploadAbsolutePath();
-            String filePath = uploadBasePath + File.separator + requestPath.replace("/", File.separator);
+
+            File imageFile = resolveImageFile(uploadBasePath, requestPath);
+            if (imageFile == null || !imageFile.exists() || !imageFile.isFile()) {
+                // 兼容：如果以仓库根目录启动，但上传目录位于 travel-system-backend/uploads
+                String projectRoot = System.getProperty("user.dir");
+                String altBasePath = projectRoot + File.separator + "travel-system-backend" + File.separator + uploadDir;
+                imageFile = resolveImageFile(altBasePath, requestPath);
+            }
             
-            Path imagePath = Paths.get(filePath);
-            File imageFile = imagePath.toFile();
-            
-            // 检查文件是否存在
-            if (!imageFile.exists() || !imageFile.isFile()) {
-                System.err.println("文件不存在: " + filePath);
+            // 解析失败或文件不存在时直接返回404，避免NPE导致500
+            if (imageFile == null || !imageFile.exists() || !imageFile.isFile()) {
                 return ResponseEntity.notFound().build();
             }
             
             // 检查文件是否可读
             if (!imageFile.canRead()) {
-                System.err.println("文件不可读: " + filePath);
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
             
@@ -97,14 +110,27 @@ public class ImageController {
             headers.setPragma("no-cache");
             headers.setExpires(0);
             
-            return ResponseEntity.ok()
+            ResponseEntity<Resource> response = ResponseEntity.ok()
                     .headers(headers)
                     .body(resource);
+            return response;
                     
         } catch (Exception e) {
-            System.err.println("获取图片失败: " + e.getMessage());
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * 基于上传根目录和相对路径解析文件，返回 File（不会抛出异常）
+     */
+    private File resolveImageFile(String uploadBasePath, String requestPath) {
+        try {
+            Path base = Paths.get(uploadBasePath);
+            Path resolved = base.resolve(requestPath.replace("/", File.separator));
+            File f = resolved.toFile();
+            return f;
+        } catch (Exception ex) {
+            return null;
         }
     }
     
@@ -112,22 +138,39 @@ public class ImageController {
      * 获取请求路径（从 /uploads 之后的部分）
      */
     private String getRequestPath(HttpServletRequest request) {
-        // 获取完整的请求 URI，例如: /uploads/2026/01/03/c766dd19cf4544c6912ee0edea3b41e4.jpg
-        String requestURI = request.getRequestURI();
-        
-        // 去掉查询参数（如果有）
-        if (requestURI.contains("?")) {
-            requestURI = requestURI.substring(0, requestURI.indexOf("?"));
+        // 先使用 Spring 的路径匹配属性提取 /** 的相对路径，兼容 context-path 与不同部署方式
+        String relativePath = null;
+        Object pathAttr = request.getAttribute(HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
+        Object patternAttr = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        if (pathAttr instanceof String && patternAttr instanceof String) {
+            relativePath = PATH_MATCHER.extractPathWithinPattern((String) patternAttr, (String) pathAttr);
         }
-        
-        // 去掉 /uploads 前缀
-        if (requestURI.startsWith("/uploads/")) {
-            return requestURI.substring("/uploads/".length());
-        } else if (requestURI.startsWith("/uploads")) {
-            return requestURI.substring("/uploads".length());
+
+        // 兜底：手动从 requestURI 去掉 /uploads 前缀
+        if (relativePath == null || relativePath.isEmpty()) {
+            String requestURI = request.getRequestURI();
+            String contextPath = request.getContextPath();
+            if (contextPath != null && !contextPath.isEmpty() && requestURI.startsWith(contextPath)) {
+                requestURI = requestURI.substring(contextPath.length());
+            }
+            if (requestURI.contains("?")) {
+                requestURI = requestURI.substring(0, requestURI.indexOf("?"));
+            }
+            if (requestURI.startsWith("/uploads/")) {
+                relativePath = requestURI.substring("/uploads/".length());
+            } else if (requestURI.startsWith("/uploads")) {
+                relativePath = requestURI.substring("/uploads".length());
+            } else {
+                relativePath = requestURI;
+            }
         }
-        
-        return requestURI;
+
+        // 对URL编码做解码（例如中文、空格），解码失败则使用原值
+        try {
+            return URLDecoder.decode(relativePath, StandardCharsets.UTF_8.name());
+        } catch (Exception ex) {
+            return relativePath;
+        }
     }
     
     /**

@@ -439,6 +439,20 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
     }
 
     @Override
+    @Transactional
+    public int setNotePrivate(Long userId, Long noteId, boolean isPrivate) {
+        TravelNote existing = travelNoteMapper.selectById(noteId);
+        if (existing == null || !existing.getUserId().equals(userId)) {
+            throw new RuntimeException("无权操作此游记");
+        }
+        TravelNote patch = new TravelNote();
+        patch.setId(noteId);
+        // 私人：仅自己可见；取消私人：进入待审核（与小程序「已设为公开，等待审核」一致）
+        patch.setStatus(isPrivate ? "private" : "pending");
+        return travelNoteMapper.update(patch);
+    }
+
+    @Override
     public void incrementViewCount(Long noteId) {
         travelNoteMapper.incrementViewCount(noteId);
     }

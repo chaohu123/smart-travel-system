@@ -553,7 +553,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }, getNoteTag(note) ? {
             i: common_vendor.t(getNoteTag(note))
           } : {}, {
-            j: note.authorAvatar || defaultAvatar,
+            j: common_vendor.unref(utils_image.getImageUrl)(note.authorAvatar) || defaultAvatar,
             k: common_vendor.o(($event) => viewAuthorProfile(note.userId)),
             l: common_vendor.t(note.authorName || "\u533F\u540D\u7528\u6237"),
             m: common_vendor.t(formatTime(note.createTime)),

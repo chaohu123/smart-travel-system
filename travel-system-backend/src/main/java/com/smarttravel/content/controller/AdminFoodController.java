@@ -49,11 +49,6 @@ public class AdminFoodController {
             query.setName(null);
         }
         
-        // 调试日志
-        System.out.println("[美食查询] 查询参数: name=" + query.getName() + ", province=" + query.getProvince() + 
-                          ", city=" + query.getCity() + ", foodType=" + query.getFoodType() + 
-                          ", pageNum=" + pageNum + ", pageSize=" + pageSize);
-
         // 计算offset
         Integer offset = (pageNum - 1) * pageSize;
 
@@ -199,11 +194,9 @@ public class AdminFoodController {
 
             // 如果找到了城市，设置cityId
             if (city != null && city.getId() != null) {
-                System.out.println("[创建美食] 找到城市: id=" + city.getId() + ", cityName=" + city.getCityName() + ", province=" + city.getProvince());
                 food.setCityId(city.getId());
             } else {
                 // 如果找不到对应的城市，返回错误
-                System.out.println("[创建美食] 未找到城市: cityName=" + cityName + ", province=" + province);
                 Map<String, Object> result = new HashMap<>();
                 result.put("code", 400);
                 result.put("msg", String.format("未找到对应的城市（城市：%s，省份：%s），请先在城市管理中创建该城市", cityName, province));
@@ -284,11 +277,9 @@ public class AdminFoodController {
 
             // 如果找到了城市，设置cityId
             if (city != null && city.getId() != null) {
-                System.out.println("[更新美食] 找到城市: id=" + city.getId() + ", cityName=" + city.getCityName() + ", province=" + city.getProvince());
                 food.setCityId(city.getId());
             } else {
                 // 如果找不到对应的城市，返回错误
-                System.out.println("[更新美食] 未找到城市: cityName=" + cityName + ", province=" + province);
                 Map<String, Object> result = new HashMap<>();
                 result.put("code", 400);
                 result.put("msg", String.format("未找到对应的城市（城市：%s，省份：%s），请先在城市管理中创建该城市", cityName, province));

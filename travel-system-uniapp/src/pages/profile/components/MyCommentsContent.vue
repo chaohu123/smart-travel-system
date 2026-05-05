@@ -21,7 +21,7 @@
 
       <!-- 空状态 -->
       <view v-else-if="!loading && commentList.length === 0" class="empty-state">
-        <text class="empty-icon">💬</text>
+        <text class="empty-icon iconfont icon-pinglun"></text>
         <text class="empty-text">还没有发表过评论</text>
         <text class="empty-tip">去分享你的想法吧~</text>
       </view>

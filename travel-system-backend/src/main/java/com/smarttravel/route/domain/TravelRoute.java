@@ -17,6 +17,10 @@ public class TravelRoute {
     private Long viewCount;
     private Long favoriteCount;
     private Long useCount;
+    /**
+     * 本次路线是否使用 AI 文案（1=是，0=否）
+     */
+    private Integer aiUsed;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
     private Integer delFlag;
@@ -108,6 +112,14 @@ public class TravelRoute {
 
     public void setUseCount(Long useCount) {
         this.useCount = useCount;
+    }
+
+    public Integer getAiUsed() {
+        return aiUsed;
+    }
+
+    public void setAiUsed(Integer aiUsed) {
+        this.aiUsed = aiUsed;
     }
 
     public LocalDateTime getCreateTime() {

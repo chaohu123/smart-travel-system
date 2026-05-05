@@ -4,8 +4,9 @@ var api_content = require("../../api/content.js");
 var utils_storage = require("../../utils/storage.js");
 var store_user = require("../../store/user.js");
 var utils_router = require("../../utils/router.js");
+var utils_config = require("../../utils/config.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/http.js");
-require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const foodId = common_vendor.ref(null);
@@ -22,6 +23,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const CACHE_EXPIRE = 5 * 60;
     let nearbyScenicsTimer = null;
     let isPageActive = true;
+    const checkinList = common_vendor.ref([]);
     const FAVORITE_KEY = "food_favorites";
     const loadFavoriteStatus = () => {
       if (!foodId.value)
@@ -101,7 +103,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           nearbyScenics.value = res.data.data || [];
         }
       } catch (e) {
-        console.warn("\u52A0\u8F7D\u9644\u8FD1\u666F\u70B9\u5931\u8D25:", e);
       }
     };
     const onViewScenic = (scenicId) => {
@@ -112,9 +113,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       lastClickTime = now;
       if (!scenicId)
         return;
-      utils_router.safeNavigateTo(`/pages/scenic/detail?id=${scenicId}`).catch((err) => {
+      utils_router.safeNavigateTo(`/pages/scenic/detail?id=${scenicId}`).catch(() => {
         if (isPageActive) {
-          console.error("\u9875\u9762\u8DF3\u8F6C\u5931\u8D25:", err);
           common_vendor.index.showToast({ title: "\u9875\u9762\u8DF3\u8F6C\u5931\u8D25", icon: "none" });
         }
       });
@@ -162,7 +162,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
       utils_router.safeSwitchTab("/pages/checkin/checkin").catch((err) => {
         if (isPageActive) {
-          console.error("\u9875\u9762\u8DF3\u8F6C\u5931\u8D25:", err);
           common_vendor.index.showToast({ title: "\u9875\u9762\u8DF3\u8F6C\u5931\u8D25", icon: "none" });
         }
       });
@@ -205,6 +204,19 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
       }
     };
+    const loadFoodCheckins = async () => {
+      if (!foodId.value)
+        return;
+      try {
+        const res = await api_content.checkinApi.getTargetCheckins("food", foodId.value, 1, 10);
+        const data = res.data;
+        if (res.statusCode === 200 && data.code === 200) {
+          const list = data.data && data.data.list || [];
+          checkinList.value = list || [];
+        }
+      } catch (e) {
+      }
+    };
     common_vendor.onLoad(() => {
       utils_router.resetNavigationState();
       isPageActive = true;
@@ -221,6 +233,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         if (!isNaN(numId) && numId > 0) {
           foodId.value = numId;
           loadDetail();
+          loadFoodCheckins();
         }
       }
     });
@@ -237,61 +250,76 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       utils_router.resetNavigationState();
     });
     return (_ctx, _cache) => {
-      var _a, _b;
+      var _a;
       return common_vendor.e({
-        a: (_a = detail.value) == null ? void 0 : _a.imageUrl
-      }, ((_b = detail.value) == null ? void 0 : _b.imageUrl) ? {
-        b: detail.value.imageUrl
-      } : {}, {
-        c: loading.value
+        a: ((_a = detail.value) == null ? void 0 : _a.imageUrl) ? common_vendor.unref(utils_image.getImageUrl)(detail.value.imageUrl) : common_vendor.unref(utils_config.defaultFoodImage),
+        b: loading.value
       }, loading.value ? {} : detail.value ? common_vendor.e({
-        e: common_vendor.t(detail.value.name),
-        f: detail.value.foodType
+        d: common_vendor.t(detail.value.name),
+        e: detail.value.foodType
       }, detail.value.foodType ? {
-        g: common_vendor.t(detail.value.foodType)
+        f: common_vendor.t(detail.value.foodType)
       } : {}, {
-        h: common_vendor.t(detail.value.cityName || "\u672A\u77E5\u57CE\u5E02"),
-        i: common_vendor.t(detail.value.score ? typeof detail.value.score === "number" ? detail.value.score.toFixed(1) : Number(detail.value.score).toFixed(1) : "--"),
-        j: common_vendor.t(detail.value.hotScore || 0),
-        k: common_vendor.t(detail.value.avgPrice ? `\xA5${detail.value.avgPrice}` : "--"),
-        l: detail.value.address
+        g: common_vendor.t(detail.value.cityName || "\u672A\u77E5\u57CE\u5E02"),
+        h: common_vendor.t(detail.value.score ? typeof detail.value.score === "number" ? detail.value.score.toFixed(1) : Number(detail.value.score).toFixed(1) : "--"),
+        i: common_vendor.t(detail.value.hotScore || 0),
+        j: common_vendor.t(detail.value.avgPrice ? `\xA5${detail.value.avgPrice}` : "--"),
+        k: detail.value.address
       }, detail.value.address ? {
-        m: common_vendor.t(detail.value.address)
+        l: common_vendor.t(detail.value.address)
       } : {}, {
-        n: detail.value.foodType
+        m: detail.value.foodType
       }, detail.value.foodType ? {
-        o: common_vendor.t(detail.value.foodType)
+        n: common_vendor.t(detail.value.foodType)
       } : {}, {
-        p: detail.value.intro
+        o: detail.value.intro
       }, detail.value.intro ? {
-        q: common_vendor.t(detail.value.intro)
+        p: common_vendor.t(detail.value.intro)
       } : {}, {
-        r: nearbyScenics.value.length > 0
+        q: nearbyScenics.value.length > 0
       }, nearbyScenics.value.length > 0 ? {
-        s: common_vendor.f(nearbyScenics.value, (scenic, k0, i0) => {
+        r: common_vendor.f(nearbyScenics.value, (scenic, k0, i0) => {
           return common_vendor.e({
-            a: scenic.imageUrl
-          }, scenic.imageUrl ? {
-            b: scenic.imageUrl
-          } : {}, {
-            c: common_vendor.t(scenic.name),
-            d: scenic.score
+            a: scenic.imageUrl ? common_vendor.unref(utils_image.getImageUrl)(scenic.imageUrl) : common_vendor.unref(utils_config.defaultScenicImage),
+            b: common_vendor.t(scenic.name),
+            c: scenic.score
           }, scenic.score ? {
-            e: common_vendor.t(scenic.score)
+            d: common_vendor.t(scenic.score)
           } : {}, {
-            f: scenic.id,
-            g: common_vendor.o(($event) => onViewScenic(scenic.id))
+            e: scenic.id,
+            f: common_vendor.o(($event) => onViewScenic(scenic.id))
           });
         })
-      } : {}) : {}, {
-        d: detail.value,
-        t: isFavorite.value ? 1 : "",
-        v: common_vendor.o(toggleFavorite),
-        w: common_vendor.o(goCheckin),
-        x: common_vendor.t(isInPendingList.value ? "\u2713" : "+"),
-        y: common_vendor.t(isInPendingList.value ? "\u5DF2\u6DFB\u52A0\u5230\u8DEF\u7EBF" : "\u6DFB\u52A0\u5230\u8DEF\u7EBF"),
-        z: isInPendingList.value ? 1 : "",
-        A: common_vendor.o(addToRoute)
+      } : {}, {
+        s: checkinList.value.length > 0
+      }, checkinList.value.length > 0 ? {
+        t: common_vendor.f(checkinList.value, (item, k0, i0) => {
+          return common_vendor.e({
+            a: item.userAvatar || _ctx.defaultAvatar,
+            b: common_vendor.t(item.userNickname || "\u6E38\u5BA2"),
+            c: common_vendor.t(item.checkinTime),
+            d: item.content
+          }, item.content ? {
+            e: common_vendor.t(item.content)
+          } : {}, {
+            f: item.photoUrl
+          }, item.photoUrl ? {
+            g: common_vendor.unref(utils_image.getImageUrl)(item.photoUrl)
+          } : {}, {
+            h: item.id
+          });
+        })
+      } : {}, {
+        v: common_vendor.o(goCheckin)
+      }) : {}, {
+        c: detail.value,
+        w: isFavorite.value ? 1 : "",
+        x: common_vendor.o(toggleFavorite),
+        y: common_vendor.o(goCheckin),
+        z: common_vendor.t(isInPendingList.value ? "\u2713" : "+"),
+        A: common_vendor.t(isInPendingList.value ? "\u5DF2\u6DFB\u52A0\u5230\u8DEF\u7EBF" : "\u6DFB\u52A0\u5230\u8DEF\u7EBF"),
+        B: isInPendingList.value ? 1 : "",
+        C: common_vendor.o(addToRoute)
       });
     };
   }

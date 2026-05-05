@@ -59,10 +59,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // 确保目录存在
         File uploadsDir = new File(uploadsPath);
         if (!uploadsDir.exists()) {
-            boolean created = uploadsDir.mkdirs();
-            if (!created) {
-                System.err.println("警告: 无法创建上传目录: " + uploadsPath);
-            }
+            uploadsDir.mkdirs();
         }
 
         // 处理路径格式，确保 Spring ResourceHandler 能正确识别

@@ -23,9 +23,6 @@
   background-color: #F5F6F7;
   border-radius: 48rpx;
 }
-.search-icon.data-v-6e5fa1f7 {
-  margin-right: 12rpx;
-}
 .search-input.data-v-6e5fa1f7 {
   flex: 1;
   font-size: 28rpx;
@@ -34,6 +31,11 @@
 .clear-icon.data-v-6e5fa1f7 {
   margin-left: 12rpx;
   padding: 4rpx;
+}
+.search-icon-right.data-v-6e5fa1f7 {
+  font-size: 32rpx;
+  color: #9EA7B0;
+  margin-left: 12rpx;
 }
 .filter-btn.data-v-6e5fa1f7 {
   width: 88rpx;
@@ -46,6 +48,41 @@
 }
 .filter-icon.data-v-6e5fa1f7 {
   font-size: 24rpx;
+}
+
+/* 当前位置 / 切换城市 */
+.location-bar.data-v-6e5fa1f7 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 24rpx 0;
+  background-color: #ffffff;
+}
+.location-left.data-v-6e5fa1f7 {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+.location-map-icon.data-v-6e5fa1f7 {
+  font-size: 32rpx;
+  color: #2FA66A;
+}
+.location-city-text.data-v-6e5fa1f7 {
+  font-size: 26rpx;
+  color: #333333;
+}
+.location-right.data-v-6e5fa1f7 {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+.location-city-icon.data-v-6e5fa1f7 {
+  font-size: 30rpx;
+  color: #2FA66A;
+}
+.location-switch-text.data-v-6e5fa1f7 {
+  font-size: 26rpx;
+  color: #2FA66A;
 }
 
 /* Tabs 样式 */
@@ -298,6 +335,35 @@ to {
   padding: 60rpx 40rpx;
   color: #9EA7B0;
   font-size: 28rpx;
+}
+
+/* 分页组件 */
+.pagination-wrapper.data-v-6e5fa1f7 {
+  padding: 24rpx 24rpx 40rpx;
+  display: flex;
+  justify-content: center;
+}
+.pagination.data-v-6e5fa1f7 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24rpx;
+}
+.page-btn.data-v-6e5fa1f7 {
+  padding: 16rpx 32rpx;
+  border-radius: 40rpx;
+  font-size: 26rpx;
+  border: none;
+  background-color: #2FA66A;
+  color: #ffffff;
+}
+.page-btn[disabled].data-v-6e5fa1f7 {
+  background-color: #d0d5dd;
+  color: #ffffff;
+}
+.page-info.data-v-6e5fa1f7 {
+  font-size: 26rpx;
+  color: #666666;
 }
 
 /* 筛选弹窗样式 */

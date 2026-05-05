@@ -277,6 +277,7 @@ to {
 
 /* 步骤内容 */
 .step-content.data-v-f6d30d9a {
+	margin-top: 24px;
   padding: 24rpx 24rpx 32rpx;
   min-height: calc(100vh - 200rpx);
 }
@@ -940,6 +941,87 @@ to {
   font-size: 28rpx;
   font-weight: 600;
   border: none;
+}
+
+/* 生成后返回弹窗 */
+.postgen-mask.data-v-f6d30d9a {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 300;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40rpx 32rpx;
+  box-sizing: border-box;
+}
+.postgen-popup.data-v-f6d30d9a {
+  width: 100%;
+  max-width: 660rpx;
+  background: #ffffff;
+  border-radius: 24rpx;
+  padding: 28rpx 28rpx 24rpx;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.14);
+}
+.postgen-title.data-v-f6d30d9a {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+  margin-bottom: 10rpx;
+}
+.postgen-desc.data-v-f6d30d9a {
+  font-size: 24rpx;
+  color: #72807a;
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+.postgen-actions.data-v-f6d30d9a {
+  display: flex;
+  gap: 16rpx;
+}
+.postgen-btn.data-v-f6d30d9a {
+  flex: 1;
+  text-align: center;
+  padding: 22rpx 0;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  user-select: none;
+}
+.postgen-btn.primary.data-v-f6d30d9a {
+  background: linear-gradient(135deg, #3ba272 0%, #57c18c 100%);
+  color: #ffffff;
+  font-weight: 600;
+}
+.postgen-btn.danger.data-v-f6d30d9a {
+  background: #fff4f4;
+  border: 1rpx solid #ffd6d6;
+  color: #d64545;
+  font-weight: 600;
+}
+.postgen-btn.ghost.data-v-f6d30d9a {
+  background: #f5f7f6;
+  border: 1rpx solid #e8eeea;
+  color: #5a6762;
+}
+.postgen-name .name-label.data-v-f6d30d9a {
+  font-size: 24rpx;
+  color: #72807a;
+  margin-bottom: 12rpx;
+}
+.postgen-name .name-input.data-v-f6d30d9a {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 18rpx 20rpx;
+  background: #f7fbf9;
+  border-radius: 16rpx;
+  border: 1rpx solid #e5eee8;
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 18rpx;
 }
 .tab-badge.data-v-f6d30d9a {
   display: inline-block;

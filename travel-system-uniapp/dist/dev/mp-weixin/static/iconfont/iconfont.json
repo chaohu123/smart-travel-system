@@ -6,6 +6,13 @@
   "description": "",
   "glyphs": [
     {
+      "icon_id": "7961747",
+      "name": "分享",
+      "font_class": "fenxiang",
+      "unicode": "e6a7",
+      "unicode_decimal": 59047
+    },
+    {
       "icon_id": "957399",
       "name": "景点介绍",
       "font_class": "jingdianjieshao",

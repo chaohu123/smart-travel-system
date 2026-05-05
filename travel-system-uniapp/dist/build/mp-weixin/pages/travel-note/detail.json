@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "游记详情",
+  "navigationBarBackgroundColor": "#3BA272",
+  "navigationBarTextStyle": "white",
+  "usingComponents": {
+    "login-prompt": "../../components/LoginPrompt"
+  }
+}

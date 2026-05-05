@@ -285,19 +285,9 @@ const loadNoteDetail = async (id: number) => {
       // 后端返回的数据结构：{ note: {...}, images: [...], tags: [...], scenics: [...] }
       const note = detail.note || detail // 兼容不同的数据结构
       
-      console.log('=== 加载游记详情 ===')
-      console.log('完整数据:', detail)
-      console.log('游记基本信息:', note)
-      console.log('图片列表:', detail.images)
-      console.log('景点列表:', detail.scenics)
-      console.log('标签列表:', detail.tags)
-      
       // 填充基本信息
       title.value = note.title || note.title || ''
       content.value = note.content || note.content || ''
-      
-      console.log('填充后的标题:', title.value, '长度:', title.value.length)
-      console.log('填充后的正文:', content.value.substring(0, 50) + '...', '长度:', content.value.length)
       
       // 处理图片：后端返回的是 images 数组，每个元素有 url 和 sort 属性
       // 需要使用 getImageUrl 将相对路径转换为完整 URL，确保小程序端能正确加载
@@ -334,7 +324,6 @@ const loadNoteDetail = async (id: number) => {
         const city = cityList.value.find(c => c.id === cityId || c.id === Number(cityId))
         if (city) {
           selectedCity.value = city
-          console.log('设置城市:', city)
           // 加载该城市的景点列表
           await loadScenic(city.id)
         } else {
@@ -343,14 +332,11 @@ const loadNoteDetail = async (id: number) => {
           if (cityName) {
             // 创建一个临时城市对象
             selectedCity.value = { id: Number(cityId), name: cityName }
-            console.log('使用临时城市对象:', selectedCity.value)
             await loadScenic(Number(cityId))
           } else {
-            console.warn('未找到城市信息，cityId:', cityId)
+            // 未找到城市信息时保持为空，由用户自行选择
           }
         }
-      } else {
-        console.warn('游记没有城市ID')
       }
       
       // 处理景点ID：后端返回的是 scenics 数组，每个元素有 id 属性
@@ -359,30 +345,22 @@ const loadNoteDetail = async (id: number) => {
           const id = scenic.id || scenic.scenicId || scenic.scenic_id
           return id != null ? Number(id) : null
         }).filter((id: any) => id != null)
-        console.log('填充景点ID:', scenicIds.value)
       } else if (note.scenicIds || note.scenic_ids) {
         const ids = note.scenicIds || note.scenic_ids
         scenicIds.value = Array.isArray(ids) ? ids.map((id: any) => Number(id)) : []
-        console.log('从note中填充景点ID:', scenicIds.value)
       } else {
         scenicIds.value = []
-        console.log('没有景点ID')
       }
       
       // 处理标签ID：后端返回的是 tags 数组，直接是 ID 列表
       if (detail.tags && Array.isArray(detail.tags)) {
         tagIds.value = detail.tags.map((id: any) => Number(id)).filter((id: any) => id != null && !isNaN(id))
-        console.log('填充标签ID:', tagIds.value)
       } else if (note.tagIds || note.tag_ids) {
         const ids = note.tagIds || note.tag_ids
         tagIds.value = Array.isArray(ids) ? ids.map((id: any) => Number(id)) : []
-        console.log('从note中填充标签ID:', tagIds.value)
       } else {
         tagIds.value = []
-        console.log('没有标签ID')
       }
-      
-      console.log('数据填充完成 - 标题:', title.value, '正文长度:', content.value.length, '图片数:', imageUrls.value.length)
     } else {
       uni.showToast({ title: data.msg || '加载失败', icon: 'none' })
       setTimeout(() => {
@@ -390,7 +368,6 @@ const loadNoteDetail = async (id: number) => {
       }, 1500)
     }
   } catch (error) {
-    console.error('加载游记详情失败:', error)
     uni.showToast({ title: '加载失败', icon: 'none' })
     setTimeout(() => {
       uni.navigateBack()
@@ -469,12 +446,8 @@ const onSubmit = async () => {
 
 // 使用 onLoad 获取页面参数（更可靠的方式）
 onLoad((options: any) => {
-  console.log('onLoad 获取到的参数:', options)
   if (options && options.id) {
     noteId.value = parseInt(options.id)
-    console.log('检测到编辑模式，游记ID:', noteId.value)
-  } else {
-    console.log('非编辑模式，没有ID参数')
   }
 })
 
@@ -485,19 +458,14 @@ onMounted(() => {
     loadTags(),
     loadScenic()
   ]).then(() => {
-    console.log('基础数据加载完成 - 城市数:', cityList.value.length, '标签数:', tagOptions.value.length, '景点数:', scenicOptions.value.length)
     // 如果是编辑模式，等待基础数据加载完成后再加载游记详情
     if (noteId.value) {
-      console.log('开始加载游记详情，ID:', noteId.value)
       loadNoteDetail(noteId.value)
     } else {
-      console.log('非编辑模式，不加载详情')
     }
   }).catch((error) => {
-    console.error('加载基础数据失败:', error)
     // 即使基础数据加载失败，如果是编辑模式也尝试加载详情
     if (noteId.value) {
-      console.log('基础数据加载失败，但仍尝试加载游记详情，ID:', noteId.value)
       loadNoteDetail(noteId.value)
     }
   })

@@ -3,13 +3,12 @@
     <!-- HeaderBar：搜索 + 筛选 -->
     <view class="header-bar">
       <view class="search-wrapper">
-        <Search class="search-icon" theme="outline" size="24" fill="#9EA7B0" />
         <input
           class="search-input"
           v-model="searchKeyword"
           type="text"
           confirm-type="search"
-          :placeholder="activeTab === 'attraction' ? '搜索景点...' : '搜索美食...'"
+          :placeholder="activeTab === 'attraction' ? '例如：天安门广场' : '例如：北京烤鸭'"
           @confirm="handleSearch"
         />
         <CloseSmall
@@ -21,8 +20,22 @@
           fill="#9EA7B0"
         />
       </view>
-      <view class="filter-btn" @click="showFilterModal = true">
-        <Filter class="filter-icon" theme="outline" size="24" fill="#2FA66A" />
+      <view class="filter-btn" @click="handleSearch">
+        <Search class="filter-icon" theme="outline" size="24" fill="#2FA66A" />
+      </view>
+    </view>
+
+    <!-- 当前位置 / 切换城市 -->
+    <view class="location-bar">
+      <view class="location-left" @click="handleLocationClick">
+        <text class="iconfont icon-map location-map-icon"></text>
+        <text class="location-city-text">
+          {{ currentCity || '定位中...' }}
+        </text>
+      </view>
+      <view class="location-right" @click="openCitySelector">
+        <text class="iconfont icon-chengshi location-city-icon"></text>
+        <text class="location-switch-text">切换城市</text>
       </view>
     </view>
 
@@ -146,6 +159,29 @@
       <view v-if="!loading && filteredList.length === 0" class="empty-state">
         <text>暂无数据</text>
       </view>
+
+      <!-- 分页组件：始终在有数据时显示，用于提示当前页 -->
+      <view v-if="!loading && total > 0" class="pagination-wrapper">
+        <view class="pagination">
+          <button
+            class="page-btn"
+            :disabled="pageNum === 1"
+            @click="goPrevPage"
+          >
+            上一页
+          </button>
+          <text class="page-info">
+            第 {{ pageNum }} / {{ totalPages }} 页
+          </text>
+          <button
+            class="page-btn"
+            :disabled="pageNum === totalPages"
+            @click="goNextPage"
+          >
+            下一页
+          </button>
+        </view>
+      </view>
     </scroll-view>
 
     <!-- 筛选弹窗 -->
@@ -258,9 +294,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { LocalPin, KnifeFork, CloseSmall, Add, Search, Filter } from '@icon-park/vue-next'
+import { LocalPin, KnifeFork, CloseSmall, Add, Search } from '@icon-park/vue-next'
 import { activityApi } from '@/api/activity'
+import { scenicSpotApi, foodApi, cityApi, checkinApi, type ApiResponse } from '@/api/content'
+import { defaultFoodImage, defaultScenicImage } from '@/utils/config'
 import { getImageUrl } from '@/utils/image'
+import { useUserStore } from '@/store/user'
 
 type TabType = 'attraction' | 'food'
 type SortType = 'default' | 'distance' | 'hot' | 'checkin'
@@ -280,8 +319,14 @@ interface CheckinItem {
   isChecked?: boolean
 }
 
+const store = useUserStore()
+const currentUser = computed(() => store.state.profile)
+
 const activeTab = ref<TabType>('attraction')
 const checkinList = ref<CheckinItem[]>([])
+const pageNum = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
 const loading = ref(false)
 const noMore = ref(false)
 const showModal = ref(false)
@@ -298,6 +343,12 @@ const cardAnimate = ref(false)
 const userLocation = ref<{ latitude: number; longitude: number } | null>(null)
 const activityList = ref<Array<{ id: number; name: string; imageUrl?: string; highlight?: string; linkUrl?: string }>>([])
 const refreshing = ref(false)
+const currentCity = ref<string>('定位中...')
+const currentCityId = ref<number | null>(null)
+const locationStatus = ref<'idle' | 'loading' | 'success' | 'fail'>('idle')
+const manualCitySelected = ref(false)
+
+let locationTimer: number | null = null
 
 // 排序选项
 const sortOptions: Array<{ label: string; value: SortType }> = [
@@ -314,58 +365,16 @@ const filterOptions: Array<{ label: string; value: FilterType }> = [
   { label: '附近', value: 'nearby' },
 ]
 
-// Mock 数据
+// 默认打卡数据（当接口异常时作为兜底）
 const mockAttractions: CheckinItem[] = [
   {
     id: 1,
     name: '宽窄巷子',
-    cover: 'https://images.pexels.com/photos/1581384/pexels-photo-1581384.jpeg?auto=compress&cs=tinysrgb&w=800',
+    cover: defaultScenicImage,
     location: '成都市青羊区',
     checkinCount: 1234,
     type: 'attraction',
     tag: 'hot',
-    distance: '2.5km',
-    latitude: 30.6624,
-    longitude: 104.0633,
-    isChecked: false,
-  },
-  {
-    id: 2,
-    name: '锦里古街',
-    cover: 'https://images.pexels.com/photos/3581368/pexels-photo-3581368.jpeg?auto=compress&cs=tinysrgb&w=800',
-    location: '成都市武侯区',
-    checkinCount: 987,
-    type: 'attraction',
-    tag: 'new',
-    distance: '5.8km',
-    latitude: 30.6500,
-    longitude: 104.0500,
-    isChecked: true,
-  },
-  {
-    id: 3,
-    name: '大熊猫基地',
-    cover: 'https://images.pexels.com/photos/461198/pexels-photo-461198.jpeg?auto=compress&cs=tinysrgb&w=800',
-    location: '成都市成华区',
-    checkinCount: 2156,
-    type: 'attraction',
-    distance: '12.3km',
-    latitude: 30.7400,
-    longitude: 104.1400,
-    isChecked: false,
-  },
-  {
-    id: 4,
-    name: '武侯祠',
-    cover: 'https://images.pexels.com/photos/3581368/pexels-photo-3581368.jpeg?auto=compress&cs=tinysrgb&w=800',
-    location: '成都市武侯区',
-    checkinCount: 1567,
-    type: 'attraction',
-    tag: 'hot',
-    distance: '6.2km',
-    latitude: 30.6480,
-    longitude: 104.0480,
-    isChecked: false,
   },
 ]
 
@@ -373,55 +382,20 @@ const mockFoods: CheckinItem[] = [
   {
     id: 101,
     name: '火锅',
-    cover: 'https://images.pexels.com/photos/315755/pexels-photo-315755.jpeg?auto=compress&cs=tinysrgb&w=800',
+    cover: defaultFoodImage,
     location: '成都各大商圈',
     checkinCount: 3456,
     type: 'food',
     tag: 'hot',
-    distance: '1.2km',
-    latitude: 30.6624,
-    longitude: 104.0633,
-    isChecked: false,
-  },
-  {
-    id: 102,
-    name: '串串香',
-    cover: 'https://images.pexels.com/photos/699953/pexels-photo-699953.jpeg?auto=compress&cs=tinysrgb&w=800',
-    location: '成都各大商圈',
-    checkinCount: 2890,
-    type: 'food',
-    distance: '3.5km',
-    latitude: 30.6500,
-    longitude: 104.0500,
-    isChecked: true,
-  },
-  {
-    id: 103,
-    name: '担担面',
-    cover: 'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=800',
-    location: '成都各大商圈',
-    checkinCount: 1876,
-    type: 'food',
-    tag: 'new',
-    distance: '4.8km',
-    latitude: 30.6400,
-    longitude: 104.0400,
-    isChecked: false,
-  },
-  {
-    id: 104,
-    name: '麻婆豆腐',
-    cover: 'https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=800',
-    location: '成都各大商圈',
-    checkinCount: 2345,
-    type: 'food',
-    tag: 'hot',
-    distance: '2.1km',
-    latitude: 30.6700,
-    longitude: 104.0700,
-    isChecked: false,
   },
 ]
+
+interface CityItem {
+  id: number
+  name: string
+  latitude: number
+  longitude: number
+}
 
 // 计算距离（简化版，实际应使用地图API）
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
@@ -440,11 +414,34 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 
 // 获取用户位置
 const getUserLocation = () => {
+  // 启动定位流程和超时控制
+  locationStatus.value = 'loading'
+  if (!manualCitySelected.value) {
+    currentCity.value = '定位中...'
+  }
+  if (locationTimer !== null) {
+    clearTimeout(locationTimer)
+  }
+  locationTimer = setTimeout(() => {
+    if (locationStatus.value === 'loading') {
+      locationStatus.value = 'fail'
+      if (!manualCitySelected.value) {
+        currentCity.value = '定位失败，点击重试'
+      }
+    }
+  }, 5000)
+
   uni.getLocation({
     type: 'gcj02',
-    altitude: false, // 不需要高度信息，提高获取速度
-    geocode: false, // 不需要地址解析，提高获取速度
+    altitude: false,
+    geocode: true, // 开启地址解析，用于显示当前城市
+    timeout: 5000,
     success: (res) => {
+      if (locationTimer !== null) {
+        clearTimeout(locationTimer)
+        locationTimer = null
+      }
+      locationStatus.value = 'success'
       userLocation.value = {
         latitude: res.latitude,
         longitude: res.longitude,
@@ -461,9 +458,103 @@ const getUserLocation = () => {
           item.distance = distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`
         }
       })
+
+      // 解析城市名称
+      const addr = (res as any).address || {}
+      let cityName = ''
+      if (addr.city) {
+        cityName = addr.city.replace(/市$/, '')
+      } else if (addr.province) {
+        cityName = addr.province.replace(/省$/, '')
+      } else if (addr.district) {
+        cityName = addr.district.replace(/(区|县)$/, '')
+      }
+      if (cityName && !manualCitySelected.value) {
+        currentCity.value = cityName
+      } else {
+        // 后端未返回可用的城市名时，尝试用经纬度匹配最近城市
+        // /city/list 返回的 City 中 latitude/longitude 为 BigDecimal，经 JSON 可能是 number 或字符串
+        try {
+          cityApi
+            .list()
+            .then((resp) => {
+              const response = resp.data as ApiResponse<any[]>
+              if (resp.statusCode === 200 && response.code === 200) {
+                const rawCities = (response.data || []) as any[]
+                // 只保留有有效经纬度并且有城市名的城市
+                const withLocation: CityItem[] = rawCities
+                  .map((c: any) => {
+                    const name: string | undefined = c.cityName || c.name
+                    if (!name) return null
+
+                    const latRaw = c.latitude
+                    const lngRaw = c.longitude
+
+                    const lat =
+                      typeof latRaw === 'number'
+                        ? latRaw
+                        : typeof latRaw === 'string'
+                        ? parseFloat(latRaw)
+                        : NaN
+                    const lng =
+                      typeof lngRaw === 'number'
+                        ? lngRaw
+                        : typeof lngRaw === 'string'
+                        ? parseFloat(lngRaw)
+                        : NaN
+
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+
+                    return {
+                      id: c.id as number,
+                      name,
+                      latitude: lat,
+                      longitude: lng,
+                    } as CityItem
+                  })
+                  .filter((c): c is CityItem => !!c)
+
+                if (!withLocation.length) return
+
+                let nearest: CityItem | null = null
+                let minDist = Number.POSITIVE_INFINITY
+                withLocation.forEach((city) => {
+                  const d = calculateDistance(
+                    res.latitude,
+                    res.longitude,
+                    city.latitude,
+                    city.longitude
+                  )
+                  if (d < minDist) {
+                    minDist = d
+                    nearest = city
+                  }
+                })
+
+                if (nearest && nearest.name && !manualCitySelected.value) {
+                  // 展示最近城市名，去掉末尾“市”
+                  currentCity.value = nearest.name.replace(/市$/, '')
+                }
+              }
+            })
+            .catch(() => {
+              // 静默失败，保持“定位中...”或上一次城市
+            })
+        } catch {
+          // 忽略匹配失败
+        }
+      }
+      // 自动按距离排序，优先展示附近景点/美食
+      if (userLocation.value) {
+        currentSort.value = 'distance'
+      }
     },
     fail: (err) => {
-      console.error('获取位置失败:', err)
+      if (locationTimer !== null) {
+        clearTimeout(locationTimer)
+        locationTimer = null
+      }
+      locationStatus.value = 'fail'
       // 根据错误类型给出提示
       let errorMsg = '获取位置失败'
       if (err.errMsg) {
@@ -484,6 +575,9 @@ const getUserLocation = () => {
           errorMsg = '定位服务不可用，请检查设备定位设置'
         }
       }
+      if (!manualCitySelected.value) {
+        currentCity.value = '定位失败，点击重试'
+      }
       uni.showToast({
         title: errorMsg,
         icon: 'none',
@@ -493,7 +587,13 @@ const getUserLocation = () => {
   })
 }
 
-// 过滤后的列表
+const handleLocationClick = () => {
+  // 用户点击定位区域时，失败或空闲状态下重新尝试定位
+  if (locationStatus.value === 'loading') return
+  getUserLocation()
+}
+
+// 过滤后的列表（包含本地分页）
 const filteredList = computed(() => {
   let list = [...checkinList.value]
 
@@ -553,28 +653,138 @@ const filteredList = computed(() => {
     list.sort((a, b) => b.checkinCount - a.checkinCount)
   }
 
-  return list
+  // 基于过滤后的结果做本地分页
+  const totalCount = list.length
+  if (total.value !== totalCount) {
+    total.value = totalCount
+  }
+  const start = (pageNum.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return list.slice(start, end)
+})
+
+const totalPages = computed(() => {
+  if (!total.value || total.value <= 0) return 1
+  return Math.max(1, Math.ceil(total.value / pageSize.value))
 })
 
 const switchTab = (tab: TabType) => {
   activeTab.value = tab
   checkinList.value = []
+  pageNum.value = 1
+  total.value = 0
   noMore.value = false
   cardAnimate.value = false
   searchKeyword.value = ''
   loadCheckinList()
 }
 
-const loadCheckinList = () => {
+const loadCheckinList = async () => {
   loading.value = true
-  // 模拟加载数据
-  setTimeout(() => {
+  noMore.value = false
+  try {
+    if (activeTab.value === 'attraction') {
+      // 为保证搜索时不过滤掉其他页的数据，这里一次性拉取较多数据，前端自行分页
+      const scenicParams: {
+        pageNum: number
+        pageSize: number
+        cityId?: number
+      } = {
+        pageNum: 1,
+        pageSize: 1000,
+      }
+      if (currentCityId.value !== null) {
+        scenicParams.cityId = currentCityId.value
+      }
+      const res = await scenicSpotApi.list(scenicParams)
+      const response = res.data as ApiResponse<any>
+      if (res.statusCode === 200 && response.code === 200) {
+        const raw = response.data
+        const rows: any[] = Array.isArray(raw?.rows)
+          ? raw.rows
+          : Array.isArray(raw?.list)
+          ? raw.list
+          : Array.isArray(raw)
+          ? raw
+          : []
+        checkinList.value = rows.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          cover: getImageUrl(item.imageUrl) || defaultScenicImage,
+          location: item.address || `${item.province || ''}${item.city || ''}`,
+          checkinCount: item.hotScore || 0,
+          type: 'attraction' as TabType,
+          tag: item.hotScore && item.hotScore > 10000 ? 'hot' : undefined,
+          latitude: item.latitude,
+          longitude: item.longitude,
+          isChecked: false,
+        }))
+        total.value = checkinList.value.length
+      } else {
+        checkinList.value = [...mockAttractions]
+        total.value = mockAttractions.length
+      }
+    } else {
+      const foodParams: {
+        pageNum: number
+        pageSize: number
+        cityId?: number
+      } = {
+        pageNum: 1,
+        pageSize: 1000,
+      }
+      if (currentCityId.value !== null) {
+        foodParams.cityId = currentCityId.value
+      }
+      const res = await foodApi.list(foodParams)
+      const response = res.data as ApiResponse<any>
+      if (res.statusCode === 200 && response.code === 200) {
+        const raw = response.data
+        const rows: any[] = Array.isArray(raw?.rows)
+          ? raw.rows
+          : Array.isArray(raw?.list)
+          ? raw.list
+          : Array.isArray(raw)
+          ? raw
+          : []
+        checkinList.value = rows.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          cover: getImageUrl(item.imageUrl) || defaultFoodImage,
+          location: item.address || item.cityName || '',
+          checkinCount: item.hotScore || 0,
+          type: 'food' as TabType,
+          tag: item.hotScore && item.hotScore > 10000 ? 'hot' : undefined,
+          latitude: item.latitude,
+          longitude: item.longitude,
+          isChecked: false,
+        }))
+        total.value = checkinList.value.length
+      } else {
+        checkinList.value = [...mockFoods]
+        total.value = mockFoods.length
+      }
+    }
+  } catch (error) {
     checkinList.value = activeTab.value === 'attraction' ? [...mockAttractions] : [...mockFoods]
+  } finally {
     loading.value = false
     cardAnimate.value = true
-    // 获取用户位置以计算距离
+    // 获取用户位置以计算距离和当前城市
     getUserLocation()
-  }, 300)
+  }
+}
+
+const goPrevPage = () => {
+  if (pageNum.value <= 1 || loading.value) return
+  pageNum.value -= 1
+  loadCheckinList()
+}
+
+const goNextPage = () => {
+  if (pageNum.value >= totalPages.value || loading.value) return
+  pageNum.value += 1
+  loadCheckinList()
 }
 
 const loadMore = () => {
@@ -583,11 +793,11 @@ const loadMore = () => {
 }
 
 const viewDetail = (item: CheckinItem) => {
-  // 跳转到详情页
+  // 跳转到详情页，同时带上来源标记，方便详情页显示打卡评价区域
   if (item.type === 'attraction') {
-    uni.navigateTo({ url: `/pages/scenic/detail?id=${item.id}` })
+    uni.navigateTo({ url: `/pages/scenic/detail?id=${item.id}&from=checkin` })
   } else {
-    uni.navigateTo({ url: `/pages/food/detail?id=${item.id}` })
+    uni.navigateTo({ url: `/pages/food/detail?id=${item.id}&from=checkin` })
   }
 }
 
@@ -627,19 +837,42 @@ const loadActivities = async () => {
       activityList.value = []
     }
   } catch (error) {
-    console.error('加载活动列表失败', error)
     // 出错时不显示轮播图
     activityList.value = []
   }
 }
 
 const handleSearch = () => {
-  // 搜索逻辑已在 computed 中处理
-  console.log('搜索:', searchKeyword.value)
+  const kw = searchKeyword.value.trim()
+  if (!kw) {
+    searchKeyword.value = ''
+    return
+  }
+  searchKeyword.value = kw
+  pageNum.value = 1
 }
 
 const clearSearch = () => {
   searchKeyword.value = ''
+}
+
+// 选择城市（跳转到城市选择页）
+const openCitySelector = async () => {
+  uni.navigateTo({
+    url: '/pages/city/select',
+    events: {
+      citySelected: (data: any) => {
+        if (!data || !data.id || !data.name) return
+        currentCity.value = data.name
+        currentCityId.value = data.id
+        manualCitySelected.value = true
+        pageNum.value = 1
+        total.value = 0
+        noMore.value = false
+        loadCheckinList()
+      },
+    },
+  })
 }
 
 const toggleFilter = (value: FilterType) => {
@@ -672,7 +905,28 @@ const applyFilter = () => {
   showFilterModal.value = false
 }
 
+// 未登录提示
+const showLoginPromptDialog = () => {
+  uni.showModal({
+    title: '需要登录',
+    content: '打卡前需要先登录账号',
+    confirmText: '去登录',
+    cancelText: '取消',
+    success: (res) => {
+      if (res.confirm) {
+        uni.switchTab({ url: '/pages/profile/profile' })
+      }
+    }
+  })
+}
+
 const openCheckinModal = (item: CheckinItem) => {
+  // 打卡前先检查登录状态，未登录则提示去登录
+  if (!currentUser.value) {
+    showLoginPromptDialog()
+    return
+  }
+
   currentItem.value = item
   uploadImages.value = []
   checkinComment.value = ''
@@ -698,35 +952,59 @@ const removeImage = (index: number) => {
   uploadImages.value.splice(index, 1)
 }
 
-const submitCheckin = () => {
+const submitCheckin = async () => {
+  const userId = currentUser.value?.id
+  if (!userId) {
+    showLoginPromptDialog()
+    return
+  }
+
   if (!locationOk.value) {
     uni.showToast({ title: '请先开启定位权限', icon: 'none' })
     return
   }
-  if (uploadImages.value.length === 0) {
+  if (!currentItem.value) {
     uni.showToast({
-      title: '请至少上传一张照片',
+      title: '打卡目标异常，请重试',
       icon: 'none',
     })
     return
   }
 
-  // 这里调用后端接口提交打卡
-  uni.showToast({
-    title: '打卡成功',
-    icon: 'success',
-  })
+  try {
+    const targetType = currentItem.value.type === 'attraction' ? 'scenic' : 'food'
+    const latitude = currentItem.value.latitude
+    const longitude = currentItem.value.longitude
 
-  // 更新打卡状态
-  if (currentItem.value) {
+    await checkinApi.addCheckin({
+      userId,
+      targetType,
+      targetId: currentItem.value.id,
+      // 暂时只上报文字内容和坐标，图片可后续扩展为上传后再传 photoUrl
+      content: checkinComment.value.trim() || undefined,
+      latitude,
+      longitude,
+    })
+
+    uni.showToast({
+      title: '打卡成功',
+      icon: 'success',
+    })
+
+    // 更新本地打卡状态，提升体验
     const item = checkinList.value.find((i) => i.id === currentItem.value!.id)
     if (item) {
       item.isChecked = true
       item.checkinCount += 1
     }
-  }
 
-  closeModal()
+    closeModal()
+  } catch (error: any) {
+    uni.showToast({
+      title: error?.data?.msg || error?.message || '打卡失败，请稍后重试',
+      icon: 'none',
+    })
+  }
 }
 
 const ensureLocation = () => {
@@ -740,7 +1018,6 @@ const ensureLocation = () => {
     },
     fail: (err) => {
       locationOk.value = false
-      console.error('定位失败:', err)
       
       let errorMsg = '定位失败，请检查网络或授权定位'
       if (err.errMsg) {
@@ -798,7 +1075,6 @@ const onRefresh = async () => {
       duration: 1500
     })
   } catch (error) {
-    console.error('刷新失败', error)
     uni.hideLoading()
     uni.showToast({
       title: '刷新失败',
@@ -847,10 +1123,6 @@ onMounted(() => {
   border-radius: 48rpx;
 }
 
-.search-icon {
-  margin-right: 12rpx;
-}
-
 .search-input {
   flex: 1;
   font-size: 28rpx;
@@ -860,6 +1132,12 @@ onMounted(() => {
 .clear-icon {
   margin-left: 12rpx;
   padding: 4rpx;
+}
+
+.search-icon-right {
+  font-size: 32rpx;
+  color: #9EA7B0;
+  margin-left: 12rpx;
 }
 
 .filter-btn {
@@ -874,6 +1152,47 @@ onMounted(() => {
 
 .filter-icon {
   font-size: 24rpx;
+}
+
+/* 当前位置 / 切换城市 */
+.location-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12rpx 24rpx 0;
+  background-color: #ffffff;
+}
+
+.location-left {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.location-map-icon {
+  font-size: 32rpx;
+  color: #2FA66A;
+}
+
+.location-city-text {
+  font-size: 26rpx;
+  color: #333333;
+}
+
+.location-right {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.location-city-icon {
+  font-size: 30rpx;
+  color: #2FA66A;
+}
+
+.location-switch-text {
+  font-size: 26rpx;
+  color: #2FA66A;
 }
 
 /* Tabs 样式 */
@@ -1158,6 +1477,39 @@ onMounted(() => {
   padding: 60rpx 40rpx;
   color: #9EA7B0;
   font-size: 28rpx;
+}
+
+/* 分页组件 */
+.pagination-wrapper {
+  padding: 24rpx 24rpx 40rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24rpx;
+}
+
+.page-btn {
+  padding: 16rpx 32rpx;
+  border-radius: 40rpx;
+  font-size: 26rpx;
+  border: none;
+  background-color: #2FA66A;
+  color: #ffffff;
+}
+
+.page-btn[disabled] {
+  background-color: #d0d5dd;
+  color: #ffffff;
+}
+
+.page-info {
+  font-size: 26rpx;
+  color: #666666;
 }
 
 /* 筛选弹窗样式 */

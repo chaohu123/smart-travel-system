@@ -20,7 +20,7 @@
           <image
             v-if="formData.avatar"
             class="avatar-preview"
-            :src="formData.avatar"
+            :src="avatarPreviewSrc"
             mode="aspectFill"
           />
           <view v-else class="avatar-placeholder">
@@ -76,11 +76,12 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { userApi } from '@/api/user'
 import { uploadApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
+import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
 
-// 表单数据
+// 表单数据（avatar 保存后端返回的路径，如 /uploads/...）
 const formData = reactive({
   avatar: '',
   nickname: '',
@@ -91,6 +92,14 @@ const formData = reactive({
 // 用户信息
 const userInfo = ref<any>({})
 const saving = ref(false)
+
+// 头像预览地址：将相对路径转换为完整 URL，避免小程序端加载 /uploads 本地资源时报错
+const avatarPreviewSrc = computed(() => {
+  if (!formData.avatar) {
+    return ''
+  }
+  return getImageUrl(formData.avatar)
+})
 
 // 加载用户信息
 const loadUserInfo = async () => {

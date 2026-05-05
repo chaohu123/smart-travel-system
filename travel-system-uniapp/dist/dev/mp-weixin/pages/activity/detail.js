@@ -2,9 +2,9 @@
 var common_vendor = require("../../common/vendor.js");
 var api_activity = require("../../api/activity.js");
 var utils_image = require("../../utils/image.js");
+var utils_config = require("../../utils/config.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
-require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const activityId = common_vendor.ref(null);
@@ -178,7 +178,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           };
         }
       } catch (error) {
-        console.warn("\u6D3B\u52A8API\u672A\u5C31\u7EEA\uFF0C\u4F7F\u7528\u6A21\u62DF\u6570\u636E", error);
         await new Promise((resolve) => setTimeout(resolve, 500));
         detail.value = {
           id: activityId.value,
@@ -317,7 +316,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         q: common_vendor.o(viewAllRoutes),
         r: common_vendor.f(common_vendor.unref(relatedRoutes), (route, k0, i0) => {
           return {
-            a: route.coverImage || "/static/default-route.jpg",
+            a: route.coverImage || "https://ts2.tc.mm.bing.net/th/id/OIP-C.D0FxyIfldS08x95YBJdFQAHaFj?rs=1&pid=ImgDetMain&o=7&rm=3",
             b: common_vendor.t(route.routeName),
             c: common_vendor.t(route.days),
             d: common_vendor.t(formatCount(route.favoriteCount)),
@@ -331,7 +330,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         t: common_vendor.o(viewAllScenics),
         v: common_vendor.f(common_vendor.unref(relatedScenics), (scenic, k0, i0) => {
           return {
-            a: scenic.imageUrl || "/static/default-scenic.jpg",
+            a: common_vendor.unref(utils_image.getImageUrl)(scenic.imageUrl) || common_vendor.unref(utils_config.defaultScenicImage),
             b: common_vendor.t(scenic.name),
             c: common_vendor.t(scenic.score ? Number(scenic.score).toFixed(1) : "--"),
             d: common_vendor.t(scenic.city || ""),
@@ -345,7 +344,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         x: common_vendor.o(viewAllFoods),
         y: common_vendor.f(common_vendor.unref(relatedFoods), (food, k0, i0) => {
           return common_vendor.e({
-            a: common_vendor.unref(utils_image.getImageUrl)(food.imageUrl) || "/static/default-food.jpg",
+            a: common_vendor.unref(utils_image.getImageUrl)(food.imageUrl) || common_vendor.unref(utils_config.defaultFoodImage),
             b: common_vendor.t(food.name),
             c: common_vendor.t(food.foodType || ""),
             d: food.avgPrice

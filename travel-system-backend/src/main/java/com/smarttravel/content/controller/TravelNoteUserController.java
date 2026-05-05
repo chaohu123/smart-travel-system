@@ -166,6 +166,28 @@ public class TravelNoteUserController {
     }
 
     /**
+     * 设置私人游记 / 取消私人（公开后待审核）
+     */
+    @PutMapping("/{id}/private")
+    public Map<String, Object> setPrivate(@PathVariable Long id, @RequestBody Map<String, Object> request) {
+        try {
+            Long userId = Long.valueOf(request.get("userId").toString());
+            boolean isPrivate = Boolean.TRUE.equals(request.get("isPrivate"))
+                    || "true".equalsIgnoreCase(String.valueOf(request.get("isPrivate")));
+            travelNoteUserService.setNotePrivate(userId, id, isPrivate);
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 200);
+            response.put("msg", "success");
+            return response;
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 500);
+            response.put("msg", e.getMessage() != null ? e.getMessage() : "操作失败");
+            return response;
+        }
+    }
+
+    /**
      * 我收藏的游记列表
      */
     @GetMapping("/my/favorites")

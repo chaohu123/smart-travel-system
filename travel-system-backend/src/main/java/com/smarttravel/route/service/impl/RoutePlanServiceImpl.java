@@ -80,6 +80,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
         route.setViewCount(0L);
         route.setFavoriteCount(0L);
         route.setUseCount(0L);
+        route.setAiUsed(0);
         route.setCreateTime(LocalDateTime.now());
         route.setDelFlag(0);
 
@@ -240,7 +241,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
         // 6. 按天数分配景点和美食
         // 确保至少每天有1个景点，如果景点数量不足，则平均分配
         int scenicPerDay = scenicCandidates.isEmpty() ? 0 : Math.max(1, scenicCandidates.size() / days);
-        int foodPerDay = foodCandidates.isEmpty() ? 0 : Math.max(1, foodCandidates.size() / days);
+        // foodPerDay 当前未使用，保留 scenicPerDay 逻辑即可
 
 
         int scenicIndex = 0;
@@ -259,7 +260,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
 
             int sort = 1;
             int dayScenicCount = 0;
-            int dayFoodCount = 0;
+            // dayFoodCount 仅用于统计，但当前未被使用
             
             // 统计已添加的美食时间段
             int breakfastCount = 0;
@@ -310,7 +311,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                     poi.setCreateTime(LocalDateTime.now());
                     poi.setDelFlag(0);
                     routePoiMapper.insert(poi);
-                    dayFoodCount++;
+                    
                     breakfastCount++;
                 }
             }
@@ -385,7 +386,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                                 poi.setCreateTime(LocalDateTime.now());
                                 poi.setDelFlag(0);
                                 routePoiMapper.insert(poi);
-                                dayFoodCount++;
+                                
                             }
                         }
                     }
@@ -527,7 +528,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                     poi.setCreateTime(LocalDateTime.now());
                     poi.setDelFlag(0);
                     routePoiMapper.insert(poi);
-                    dayFoodCount++;
+                    
                     lunchCount++;
                     
                     // 调整后续POI的sort值
@@ -550,7 +551,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                     poi.setCreateTime(LocalDateTime.now());
                     poi.setDelFlag(0);
                     routePoiMapper.insert(poi);
-                    dayFoodCount++;
+                    
                     lunchCount++;
                 }
             }
@@ -570,7 +571,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                     poi.setCreateTime(LocalDateTime.now());
                     poi.setDelFlag(0);
                     routePoiMapper.insert(poi);
-                    dayFoodCount++;
+                    
                     dinnerCount++;
                 }
             }
@@ -587,6 +588,8 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                 Map<String, String> aiText = aiService.generateRouteText(routeSummary, userPreference);
 
                 route.setSummary(aiText.get("summary"));
+                boolean aiUsed = "true".equalsIgnoreCase(aiText.get("_ai_used"));
+                route.setAiUsed(aiUsed ? 1 : 0);
                 routeMapper.update(route);
 
                 // 更新每日简介（包含早中晚计划），并根据intro调整POI顺序
@@ -627,10 +630,12 @@ public class RoutePlanServiceImpl implements RoutePlanService {
             } catch (Exception e) {
                 // AI失败时使用规则生成的简要说明
                 route.setSummary("为您精心规划的" + days + "天行程，包含热门景点和美食推荐");
+                route.setAiUsed(0);
                 routeMapper.update(route);
             }
         } else {
             route.setSummary("为您精心规划的" + days + "天行程，包含热门景点和美食推荐");
+            route.setAiUsed(0);
             routeMapper.update(route);
         }
 
@@ -767,7 +772,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                     currentPoi.setNote(noteJson.toString());
                     routePoiMapper.update(currentPoi);
                 } catch (Exception e) {
-                    System.err.println("保存路线信息失败: " + e.getMessage());
+                    // 单个 POI 更新失败时不影响整体流程
                 }
             }
         }
@@ -956,6 +961,56 @@ public class RoutePlanServiceImpl implements RoutePlanService {
     @Override
     public List<Map<String, Object>> listMyRoutes(Long userId) {
         return userRouteFavoriteMapper.selectByUserId(userId);
+    }
+
+    @Override
+    @Transactional
+    public boolean updateRouteName(Long routeId, String routeName) {
+        if (routeId == null) return false;
+        if (routeName == null) return false;
+        String name = routeName.trim();
+        if (name.isEmpty()) return false;
+        // 简单长度保护（避免过长导致UI或DB异常）
+        if (name.length() > 50) {
+            name = name.substring(0, 50);
+        }
+        TravelRoute route = new TravelRoute();
+        route.setId(routeId);
+        route.setRouteName(name);
+        return routeMapper.update(route) > 0;
+    }
+
+    @Override
+    @Transactional
+    public boolean discardRoute(Long routeId) {
+        if (routeId == null) return false;
+        // 先逻辑删除主表，再清理明细（POI/Day），避免“历史详情”继续可见
+        TravelRoute route = new TravelRoute();
+        route.setId(routeId);
+        route.setDelFlag(1);
+        int updated = routeMapper.update(route);
+        // 清理明细（这些是物理删除/标记删除，以 mapper.xml 为准）
+        try {
+            routePoiMapper.deleteByRouteId(routeId);
+        } catch (Exception ignored) {
+        }
+        try {
+            routeDayMapper.deleteByRouteId(routeId);
+        } catch (Exception ignored) {
+        }
+        return updated > 0;
+    }
+
+    @Override
+    public boolean incrementRouteViewCount(Long routeId) {
+        if (routeId == null) {
+            return false;
+        }
+        TravelRoute existing = routeMapper.selectById(routeId);
+        if (existing == null || (existing.getDelFlag() != null && existing.getDelFlag() != 0)) {
+            return false;
+        }
+        return routeMapper.incrementViewCount(routeId) > 0;
     }
 
     private String buildRouteSummary(Long routeId, List<Long> tagIds,

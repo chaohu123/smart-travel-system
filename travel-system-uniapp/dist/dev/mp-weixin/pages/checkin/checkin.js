@@ -1,17 +1,24 @@
 "use strict";
 var common_vendor = require("../../common/vendor.js");
 var api_activity = require("../../api/activity.js");
+var api_content = require("../../api/content.js");
+var utils_config = require("../../utils/config.js");
 var utils_image = require("../../utils/image.js");
+var store_user = require("../../store/user.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
-require("../../utils/config.js");
 if (!Math) {
-  (common_vendor.unref(common_vendor.Search) + common_vendor.unref(common_vendor.CloseSmall) + common_vendor.unref(common_vendor.Filter) + common_vendor.unref(common_vendor.LocalPin) + common_vendor.unref(common_vendor.KnifeFork) + common_vendor.unref(common_vendor.Add))();
+  (common_vendor.unref(common_vendor.CloseSmall) + common_vendor.unref(common_vendor.Search) + common_vendor.unref(common_vendor.LocalPin) + common_vendor.unref(common_vendor.KnifeFork) + common_vendor.unref(common_vendor.Add))();
 }
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
+    const store = store_user.useUserStore();
+    const currentUser = common_vendor.computed(() => store.state.profile);
     const activeTab = common_vendor.ref("attraction");
     const checkinList = common_vendor.ref([]);
+    const pageNum = common_vendor.ref(1);
+    const pageSize = common_vendor.ref(10);
+    const total = common_vendor.ref(0);
     const loading = common_vendor.ref(false);
     const noMore = common_vendor.ref(false);
     const showModal = common_vendor.ref(false);
@@ -28,6 +35,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const userLocation = common_vendor.ref(null);
     const activityList = common_vendor.ref([]);
     const refreshing = common_vendor.ref(false);
+    const currentCity = common_vendor.ref("\u5B9A\u4F4D\u4E2D...");
+    const currentCityId = common_vendor.ref(null);
+    const locationStatus = common_vendor.ref("idle");
+    const manualCitySelected = common_vendor.ref(false);
+    let locationTimer = null;
     const sortOptions = [
       { label: "\u9ED8\u8BA4", value: "default" },
       { label: "\u8DDD\u79BB\u6700\u8FD1", value: "distance" },
@@ -43,106 +55,22 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       {
         id: 1,
         name: "\u5BBD\u7A84\u5DF7\u5B50",
-        cover: "https://images.pexels.com/photos/1581384/pexels-photo-1581384.jpeg?auto=compress&cs=tinysrgb&w=800",
+        cover: utils_config.defaultScenicImage,
         location: "\u6210\u90FD\u5E02\u9752\u7F8A\u533A",
         checkinCount: 1234,
         type: "attraction",
-        tag: "hot",
-        distance: "2.5km",
-        latitude: 30.6624,
-        longitude: 104.0633,
-        isChecked: false
-      },
-      {
-        id: 2,
-        name: "\u9526\u91CC\u53E4\u8857",
-        cover: "https://images.pexels.com/photos/3581368/pexels-photo-3581368.jpeg?auto=compress&cs=tinysrgb&w=800",
-        location: "\u6210\u90FD\u5E02\u6B66\u4FAF\u533A",
-        checkinCount: 987,
-        type: "attraction",
-        tag: "new",
-        distance: "5.8km",
-        latitude: 30.65,
-        longitude: 104.05,
-        isChecked: true
-      },
-      {
-        id: 3,
-        name: "\u5927\u718A\u732B\u57FA\u5730",
-        cover: "https://images.pexels.com/photos/461198/pexels-photo-461198.jpeg?auto=compress&cs=tinysrgb&w=800",
-        location: "\u6210\u90FD\u5E02\u6210\u534E\u533A",
-        checkinCount: 2156,
-        type: "attraction",
-        distance: "12.3km",
-        latitude: 30.74,
-        longitude: 104.14,
-        isChecked: false
-      },
-      {
-        id: 4,
-        name: "\u6B66\u4FAF\u7960",
-        cover: "https://images.pexels.com/photos/3581368/pexels-photo-3581368.jpeg?auto=compress&cs=tinysrgb&w=800",
-        location: "\u6210\u90FD\u5E02\u6B66\u4FAF\u533A",
-        checkinCount: 1567,
-        type: "attraction",
-        tag: "hot",
-        distance: "6.2km",
-        latitude: 30.648,
-        longitude: 104.048,
-        isChecked: false
+        tag: "hot"
       }
     ];
     const mockFoods = [
       {
         id: 101,
         name: "\u706B\u9505",
-        cover: "https://images.pexels.com/photos/315755/pexels-photo-315755.jpeg?auto=compress&cs=tinysrgb&w=800",
+        cover: utils_config.defaultFoodImage,
         location: "\u6210\u90FD\u5404\u5927\u5546\u5708",
         checkinCount: 3456,
         type: "food",
-        tag: "hot",
-        distance: "1.2km",
-        latitude: 30.6624,
-        longitude: 104.0633,
-        isChecked: false
-      },
-      {
-        id: 102,
-        name: "\u4E32\u4E32\u9999",
-        cover: "https://images.pexels.com/photos/699953/pexels-photo-699953.jpeg?auto=compress&cs=tinysrgb&w=800",
-        location: "\u6210\u90FD\u5404\u5927\u5546\u5708",
-        checkinCount: 2890,
-        type: "food",
-        distance: "3.5km",
-        latitude: 30.65,
-        longitude: 104.05,
-        isChecked: true
-      },
-      {
-        id: 103,
-        name: "\u62C5\u62C5\u9762",
-        cover: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=800",
-        location: "\u6210\u90FD\u5404\u5927\u5546\u5708",
-        checkinCount: 1876,
-        type: "food",
-        tag: "new",
-        distance: "4.8km",
-        latitude: 30.64,
-        longitude: 104.04,
-        isChecked: false
-      },
-      {
-        id: 104,
-        name: "\u9EBB\u5A46\u8C46\u8150",
-        cover: "https://images.pexels.com/photos/258154/pexels-photo-258154.jpeg?auto=compress&cs=tinysrgb&w=800",
-        location: "\u6210\u90FD\u5404\u5927\u5546\u5708",
-        checkinCount: 2345,
-        type: "food",
-        tag: "hot",
-        distance: "2.1km",
-        latitude: 30.67,
-        longitude: 104.07,
-        isChecked: false
+        tag: "hot"
       }
     ];
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -154,11 +82,32 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return R * c;
     };
     const getUserLocation = () => {
+      locationStatus.value = "loading";
+      if (!manualCitySelected.value) {
+        currentCity.value = "\u5B9A\u4F4D\u4E2D...";
+      }
+      if (locationTimer !== null) {
+        clearTimeout(locationTimer);
+      }
+      locationTimer = setTimeout(() => {
+        if (locationStatus.value === "loading") {
+          locationStatus.value = "fail";
+          if (!manualCitySelected.value) {
+            currentCity.value = "\u5B9A\u4F4D\u5931\u8D25\uFF0C\u70B9\u51FB\u91CD\u8BD5";
+          }
+        }
+      }, 5e3);
       common_vendor.index.getLocation({
         type: "gcj02",
         altitude: false,
-        geocode: false,
+        geocode: true,
+        timeout: 5e3,
         success: (res) => {
+          if (locationTimer !== null) {
+            clearTimeout(locationTimer);
+            locationTimer = null;
+          }
+          locationStatus.value = "success";
           userLocation.value = {
             latitude: res.latitude,
             longitude: res.longitude
@@ -174,9 +123,75 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               item.distance = distance < 1 ? `${Math.round(distance * 1e3)}m` : `${distance.toFixed(1)}km`;
             }
           });
+          const addr = res.address || {};
+          let cityName = "";
+          if (addr.city) {
+            cityName = addr.city.replace(/市$/, "");
+          } else if (addr.province) {
+            cityName = addr.province.replace(/省$/, "");
+          } else if (addr.district) {
+            cityName = addr.district.replace(/(区|县)$/, "");
+          }
+          if (cityName && !manualCitySelected.value) {
+            currentCity.value = cityName;
+          } else {
+            try {
+              api_content.cityApi.list().then((resp) => {
+                const response = resp.data;
+                if (resp.statusCode === 200 && response.code === 200) {
+                  const rawCities = response.data || [];
+                  const withLocation = rawCities.map((c) => {
+                    const name = c.cityName || c.name;
+                    if (!name)
+                      return null;
+                    const latRaw = c.latitude;
+                    const lngRaw = c.longitude;
+                    const lat = typeof latRaw === "number" ? latRaw : typeof latRaw === "string" ? parseFloat(latRaw) : NaN;
+                    const lng = typeof lngRaw === "number" ? lngRaw : typeof lngRaw === "string" ? parseFloat(lngRaw) : NaN;
+                    if (!Number.isFinite(lat) || !Number.isFinite(lng))
+                      return null;
+                    return {
+                      id: c.id,
+                      name,
+                      latitude: lat,
+                      longitude: lng
+                    };
+                  }).filter((c) => !!c);
+                  if (!withLocation.length)
+                    return;
+                  let nearest = null;
+                  let minDist = Number.POSITIVE_INFINITY;
+                  withLocation.forEach((city) => {
+                    const d = calculateDistance(
+                      res.latitude,
+                      res.longitude,
+                      city.latitude,
+                      city.longitude
+                    );
+                    if (d < minDist) {
+                      minDist = d;
+                      nearest = city;
+                    }
+                  });
+                  if (nearest && nearest.name && !manualCitySelected.value) {
+                    currentCity.value = nearest.name.replace(/市$/, "");
+                  }
+                }
+              }).catch(() => {
+              });
+            } catch {
+            }
+          }
+          if (userLocation.value) {
+            currentSort.value = "distance";
+          }
         },
         fail: (err) => {
-          console.error("\u83B7\u53D6\u4F4D\u7F6E\u5931\u8D25:", err);
+          if (locationTimer !== null) {
+            clearTimeout(locationTimer);
+            locationTimer = null;
+          }
+          locationStatus.value = "fail";
           let errorMsg = "\u83B7\u53D6\u4F4D\u7F6E\u5931\u8D25";
           if (err.errMsg) {
             if (err.errMsg.includes("auth deny") || err.errMsg.includes("authorize")) {
@@ -194,6 +209,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               errorMsg = "\u5B9A\u4F4D\u670D\u52A1\u4E0D\u53EF\u7528\uFF0C\u8BF7\u68C0\u67E5\u8BBE\u5907\u5B9A\u4F4D\u8BBE\u7F6E";
             }
           }
+          if (!manualCitySelected.value) {
+            currentCity.value = "\u5B9A\u4F4D\u5931\u8D25\uFF0C\u70B9\u51FB\u91CD\u8BD5";
+          }
           common_vendor.index.showToast({
             title: errorMsg,
             icon: "none",
@@ -201,6 +219,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         }
       });
+    };
+    const handleLocationClick = () => {
+      if (locationStatus.value === "loading")
+        return;
+      getUserLocation();
     };
     const filteredList = common_vendor.computed(() => {
       let list = [...checkinList.value];
@@ -257,24 +280,113 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       } else if (currentSort.value === "checkin") {
         list.sort((a, b) => b.checkinCount - a.checkinCount);
       }
-      return list;
+      const totalCount = list.length;
+      if (total.value !== totalCount) {
+        total.value = totalCount;
+      }
+      const start = (pageNum.value - 1) * pageSize.value;
+      const end = start + pageSize.value;
+      return list.slice(start, end);
+    });
+    const totalPages = common_vendor.computed(() => {
+      if (!total.value || total.value <= 0)
+        return 1;
+      return Math.max(1, Math.ceil(total.value / pageSize.value));
     });
     const switchTab = (tab) => {
       activeTab.value = tab;
       checkinList.value = [];
+      pageNum.value = 1;
+      total.value = 0;
       noMore.value = false;
       cardAnimate.value = false;
       searchKeyword.value = "";
       loadCheckinList();
     };
-    const loadCheckinList = () => {
+    const loadCheckinList = async () => {
       loading.value = true;
-      setTimeout(() => {
+      noMore.value = false;
+      try {
+        if (activeTab.value === "attraction") {
+          const scenicParams = {
+            pageNum: 1,
+            pageSize: 1e3
+          };
+          if (currentCityId.value !== null) {
+            scenicParams.cityId = currentCityId.value;
+          }
+          const res = await api_content.scenicSpotApi.list(scenicParams);
+          const response = res.data;
+          if (res.statusCode === 200 && response.code === 200) {
+            const raw = response.data;
+            const rows = Array.isArray(raw == null ? void 0 : raw.rows) ? raw.rows : Array.isArray(raw == null ? void 0 : raw.list) ? raw.list : Array.isArray(raw) ? raw : [];
+            checkinList.value = rows.map((item) => ({
+              id: item.id,
+              name: item.name,
+              cover: utils_image.getImageUrl(item.imageUrl) || utils_config.defaultScenicImage,
+              location: item.address || `${item.province || ""}${item.city || ""}`,
+              checkinCount: item.hotScore || 0,
+              type: "attraction",
+              tag: item.hotScore && item.hotScore > 1e4 ? "hot" : void 0,
+              latitude: item.latitude,
+              longitude: item.longitude,
+              isChecked: false
+            }));
+            total.value = checkinList.value.length;
+          } else {
+            checkinList.value = [...mockAttractions];
+            total.value = mockAttractions.length;
+          }
+        } else {
+          const foodParams = {
+            pageNum: 1,
+            pageSize: 1e3
+          };
+          if (currentCityId.value !== null) {
+            foodParams.cityId = currentCityId.value;
+          }
+          const res = await api_content.foodApi.list(foodParams);
+          const response = res.data;
+          if (res.statusCode === 200 && response.code === 200) {
+            const raw = response.data;
+            const rows = Array.isArray(raw == null ? void 0 : raw.rows) ? raw.rows : Array.isArray(raw == null ? void 0 : raw.list) ? raw.list : Array.isArray(raw) ? raw : [];
+            checkinList.value = rows.map((item) => ({
+              id: item.id,
+              name: item.name,
+              cover: utils_image.getImageUrl(item.imageUrl) || utils_config.defaultFoodImage,
+              location: item.address || item.cityName || "",
+              checkinCount: item.hotScore || 0,
+              type: "food",
+              tag: item.hotScore && item.hotScore > 1e4 ? "hot" : void 0,
+              latitude: item.latitude,
+              longitude: item.longitude,
+              isChecked: false
+            }));
+            total.value = checkinList.value.length;
+          } else {
+            checkinList.value = [...mockFoods];
+            total.value = mockFoods.length;
+          }
+        }
+      } catch (error) {
         checkinList.value = activeTab.value === "attraction" ? [...mockAttractions] : [...mockFoods];
+      } finally {
         loading.value = false;
         cardAnimate.value = true;
         getUserLocation();
-      }, 300);
+      }
+    };
+    const goPrevPage = () => {
+      if (pageNum.value <= 1 || loading.value)
+        return;
+      pageNum.value -= 1;
+      loadCheckinList();
+    };
+    const goNextPage = () => {
+      if (pageNum.value >= totalPages.value || loading.value)
+        return;
+      pageNum.value += 1;
+      loadCheckinList();
     };
     const loadMore = () => {
       if (loading.value || noMore.value)
@@ -282,9 +394,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const viewDetail = (item) => {
       if (item.type === "attraction") {
-        common_vendor.index.navigateTo({ url: `/pages/scenic/detail?id=${item.id}` });
+        common_vendor.index.navigateTo({ url: `/pages/scenic/detail?id=${item.id}&from=checkin` });
       } else {
-        common_vendor.index.navigateTo({ url: `/pages/food/detail?id=${item.id}` });
+        common_vendor.index.navigateTo({ url: `/pages/food/detail?id=${item.id}&from=checkin` });
       }
     };
     const viewActivity = (activity) => {
@@ -318,15 +430,38 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           activityList.value = [];
         }
       } catch (error) {
-        console.error("\u52A0\u8F7D\u6D3B\u52A8\u5217\u8868\u5931\u8D25", error);
         activityList.value = [];
       }
     };
     const handleSearch = () => {
-      console.log("\u641C\u7D22:", searchKeyword.value);
+      const kw = searchKeyword.value.trim();
+      if (!kw) {
+        searchKeyword.value = "";
+        return;
+      }
+      searchKeyword.value = kw;
+      pageNum.value = 1;
     };
     const clearSearch = () => {
       searchKeyword.value = "";
+    };
+    const openCitySelector = async () => {
+      common_vendor.index.navigateTo({
+        url: "/pages/city/select",
+        events: {
+          citySelected: (data) => {
+            if (!data || !data.id || !data.name)
+              return;
+            currentCity.value = data.name;
+            currentCityId.value = data.id;
+            manualCitySelected.value = true;
+            pageNum.value = 1;
+            total.value = 0;
+            noMore.value = false;
+            loadCheckinList();
+          }
+        }
+      });
     };
     const toggleFilter = (value) => {
       if (value === "all") {
@@ -354,7 +489,24 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const applyFilter = () => {
       showFilterModal.value = false;
     };
+    const showLoginPromptDialog = () => {
+      common_vendor.index.showModal({
+        title: "\u9700\u8981\u767B\u5F55",
+        content: "\u6253\u5361\u524D\u9700\u8981\u5148\u767B\u5F55\u8D26\u53F7",
+        confirmText: "\u53BB\u767B\u5F55",
+        cancelText: "\u53D6\u6D88",
+        success: (res) => {
+          if (res.confirm) {
+            common_vendor.index.switchTab({ url: "/pages/profile/profile" });
+          }
+        }
+      });
+    };
     const openCheckinModal = (item) => {
+      if (!currentUser.value) {
+        showLoginPromptDialog();
+        return;
+      }
       currentItem.value = item;
       uploadImages.value = [];
       checkinComment.value = "";
@@ -376,30 +528,52 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const removeImage = (index) => {
       uploadImages.value.splice(index, 1);
     };
-    const submitCheckin = () => {
+    const submitCheckin = async () => {
+      var _a, _b;
+      const userId = (_a = currentUser.value) == null ? void 0 : _a.id;
+      if (!userId) {
+        showLoginPromptDialog();
+        return;
+      }
       if (!locationOk.value) {
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u5F00\u542F\u5B9A\u4F4D\u6743\u9650", icon: "none" });
         return;
       }
-      if (uploadImages.value.length === 0) {
+      if (!currentItem.value) {
         common_vendor.index.showToast({
-          title: "\u8BF7\u81F3\u5C11\u4E0A\u4F20\u4E00\u5F20\u7167\u7247",
+          title: "\u6253\u5361\u76EE\u6807\u5F02\u5E38\uFF0C\u8BF7\u91CD\u8BD5",
           icon: "none"
         });
         return;
       }
-      common_vendor.index.showToast({
-        title: "\u6253\u5361\u6210\u529F",
-        icon: "success"
-      });
-      if (currentItem.value) {
+      try {
+        const targetType = currentItem.value.type === "attraction" ? "scenic" : "food";
+        const latitude = currentItem.value.latitude;
+        const longitude = currentItem.value.longitude;
+        await api_content.checkinApi.addCheckin({
+          userId,
+          targetType,
+          targetId: currentItem.value.id,
+          content: checkinComment.value.trim() || void 0,
+          latitude,
+          longitude
+        });
+        common_vendor.index.showToast({
+          title: "\u6253\u5361\u6210\u529F",
+          icon: "success"
+        });
         const item = checkinList.value.find((i) => i.id === currentItem.value.id);
         if (item) {
           item.isChecked = true;
           item.checkinCount += 1;
         }
+        closeModal();
+      } catch (error) {
+        common_vendor.index.showToast({
+          title: ((_b = error == null ? void 0 : error.data) == null ? void 0 : _b.msg) || (error == null ? void 0 : error.message) || "\u6253\u5361\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5",
+          icon: "none"
+        });
       }
-      closeModal();
     };
     const ensureLocation = () => {
       common_vendor.index.getLocation({
@@ -412,7 +586,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         },
         fail: (err) => {
           locationOk.value = false;
-          console.error("\u5B9A\u4F4D\u5931\u8D25:", err);
           let errorMsg = "\u5B9A\u4F4D\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u6216\u6388\u6743\u5B9A\u4F4D";
           if (err.errMsg) {
             if (err.errMsg.includes("auth deny") || err.errMsg.includes("authorize")) {
@@ -465,7 +638,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           duration: 1500
         });
       } catch (error) {
-        console.error("\u5237\u65B0\u5931\u8D25", error);
         common_vendor.index.hideLoading();
         common_vendor.index.showToast({
           title: "\u5237\u65B0\u5931\u8D25",
@@ -486,33 +658,31 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     return (_ctx, _cache) => {
       var _a;
       return common_vendor.e({
-        a: common_vendor.p({
-          theme: "outline",
-          size: "24",
-          fill: "#9EA7B0"
-        }),
-        b: activeTab.value === "attraction" ? "\u641C\u7D22\u666F\u70B9..." : "\u641C\u7D22\u7F8E\u98DF...",
-        c: common_vendor.o(handleSearch),
-        d: searchKeyword.value,
-        e: common_vendor.o(($event) => searchKeyword.value = $event.detail.value),
-        f: searchKeyword.value
+        a: activeTab.value === "attraction" ? "\u4F8B\u5982\uFF1A\u5929\u5B89\u95E8\u5E7F\u573A" : "\u4F8B\u5982\uFF1A\u5317\u4EAC\u70E4\u9E2D",
+        b: common_vendor.o(handleSearch),
+        c: searchKeyword.value,
+        d: common_vendor.o(($event) => searchKeyword.value = $event.detail.value),
+        e: searchKeyword.value
       }, searchKeyword.value ? {
-        g: common_vendor.o(clearSearch),
-        h: common_vendor.p({
+        f: common_vendor.o(clearSearch),
+        g: common_vendor.p({
           theme: "outline",
           size: "20",
           fill: "#9EA7B0"
         })
       } : {}, {
-        i: common_vendor.p({
+        h: common_vendor.p({
           theme: "outline",
           size: "24",
           fill: "#2FA66A"
         }),
-        j: common_vendor.o(($event) => showFilterModal.value = true),
-        k: activityList.value.length > 0
+        i: common_vendor.o(handleSearch),
+        j: common_vendor.t(currentCity.value || "\u5B9A\u4F4D\u4E2D..."),
+        k: common_vendor.o(handleLocationClick),
+        l: common_vendor.o(openCitySelector),
+        m: activityList.value.length > 0
       }, activityList.value.length > 0 ? {
-        l: common_vendor.f(activityList.value, (activity, k0, i0) => {
+        n: common_vendor.f(activityList.value, (activity, k0, i0) => {
           return {
             a: common_vendor.unref(utils_image.getImageUrl)(activity.imageUrl) || "https://images.pexels.com/photos/3581368/pexels-photo-3581368.jpeg?auto=compress&cs=tinysrgb&w=800",
             b: common_vendor.t(activity.name),
@@ -522,21 +692,21 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           };
         })
       } : {}, {
-        m: common_vendor.p({
+        o: common_vendor.p({
           theme: "outline",
           size: "28",
           fill: "#2FA66A"
         }),
-        n: activeTab.value === "attraction" ? 1 : "",
-        o: common_vendor.o(($event) => switchTab("attraction")),
-        p: common_vendor.p({
+        p: activeTab.value === "attraction" ? 1 : "",
+        q: common_vendor.o(($event) => switchTab("attraction")),
+        r: common_vendor.p({
           theme: "outline",
           size: "28",
           fill: "#2FA66A"
         }),
-        q: activeTab.value === "food" ? 1 : "",
-        r: common_vendor.o(($event) => switchTab("food")),
-        s: common_vendor.f(common_vendor.unref(filteredList), (item, k0, i0) => {
+        s: activeTab.value === "food" ? 1 : "",
+        t: common_vendor.o(($event) => switchTab("food")),
+        v: common_vendor.f(common_vendor.unref(filteredList), (item, k0, i0) => {
           return common_vendor.e({
             a: item.cover,
             b: item.tag
@@ -545,7 +715,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             d: common_vendor.n(`tag-${item.tag}`)
           } : {}, {
             e: common_vendor.t(item.name),
-            f: "6e5fa1f7-5-" + i0,
+            f: "6e5fa1f7-4-" + i0,
             g: common_vendor.t(item.location),
             h: common_vendor.t(item.checkinCount),
             i: item.distance
@@ -559,30 +729,39 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             n: common_vendor.o(($event) => viewDetail(item))
           });
         }),
-        t: common_vendor.p({
+        w: common_vendor.p({
           theme: "outline",
           size: "18",
           fill: "#9EA7B0"
         }),
-        v: cardAnimate.value ? 1 : "",
-        w: loading.value
+        x: cardAnimate.value ? 1 : "",
+        y: loading.value
       }, loading.value ? {} : {}, {
-        x: noMore.value && common_vendor.unref(filteredList).length > 0
+        z: noMore.value && common_vendor.unref(filteredList).length > 0
       }, noMore.value && common_vendor.unref(filteredList).length > 0 ? {} : {}, {
-        y: !loading.value && common_vendor.unref(filteredList).length === 0
+        A: !loading.value && common_vendor.unref(filteredList).length === 0
       }, !loading.value && common_vendor.unref(filteredList).length === 0 ? {} : {}, {
-        z: common_vendor.o(loadMore),
-        A: refreshing.value,
-        B: common_vendor.o(onRefresh),
-        C: showFilterModal.value
+        B: !loading.value && total.value > 0
+      }, !loading.value && total.value > 0 ? {
+        C: pageNum.value === 1,
+        D: common_vendor.o(goPrevPage),
+        E: common_vendor.t(pageNum.value),
+        F: common_vendor.t(common_vendor.unref(totalPages)),
+        G: pageNum.value === common_vendor.unref(totalPages),
+        H: common_vendor.o(goNextPage)
+      } : {}, {
+        I: common_vendor.o(loadMore),
+        J: refreshing.value,
+        K: common_vendor.o(onRefresh),
+        L: showFilterModal.value
       }, showFilterModal.value ? {
-        D: common_vendor.o(($event) => showFilterModal.value = false),
-        E: common_vendor.p({
+        M: common_vendor.o(($event) => showFilterModal.value = false),
+        N: common_vendor.p({
           theme: "outline",
           size: "24",
           fill: "#9EA7B0"
         }),
-        F: common_vendor.f(sortOptions, (sort, k0, i0) => {
+        O: common_vendor.f(sortOptions, (sort, k0, i0) => {
           return {
             a: common_vendor.t(sort.label),
             b: sort.value,
@@ -590,7 +769,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             d: common_vendor.o(($event) => currentSort.value = sort.value)
           };
         }),
-        G: common_vendor.f(filterOptions, (filter, k0, i0) => {
+        P: common_vendor.f(filterOptions, (filter, k0, i0) => {
           return {
             a: common_vendor.t(filter.label),
             b: filter.value,
@@ -598,54 +777,54 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             d: common_vendor.o(($event) => toggleFilter(filter.value))
           };
         }),
-        H: common_vendor.o(resetFilter),
-        I: common_vendor.o(applyFilter),
-        J: common_vendor.o(() => {
+        Q: common_vendor.o(resetFilter),
+        R: common_vendor.o(applyFilter),
+        S: common_vendor.o(() => {
         }),
-        K: common_vendor.o(($event) => showFilterModal.value = false)
+        T: common_vendor.o(($event) => showFilterModal.value = false)
       } : {}, {
-        L: showModal.value
+        U: showModal.value
       }, showModal.value ? common_vendor.e({
-        M: common_vendor.t((_a = currentItem.value) == null ? void 0 : _a.name),
-        N: common_vendor.o(closeModal),
-        O: common_vendor.p({
+        V: common_vendor.t((_a = currentItem.value) == null ? void 0 : _a.name),
+        W: common_vendor.o(closeModal),
+        X: common_vendor.p({
           theme: "outline",
           size: "26",
           fill: "#8a94a3"
         }),
-        P: locationMsg.value
+        Y: locationMsg.value
       }, locationMsg.value ? {
-        Q: common_vendor.t(locationMsg.value)
+        Z: common_vendor.t(locationMsg.value)
       } : {}, {
-        R: common_vendor.f(uploadImages.value, (img, index, i0) => {
+        aa: common_vendor.f(uploadImages.value, (img, index, i0) => {
           return {
             a: img,
             b: common_vendor.o(($event) => removeImage(index)),
-            c: "6e5fa1f7-8-" + i0,
+            c: "6e5fa1f7-7-" + i0,
             d: index
           };
         }),
-        S: common_vendor.p({
+        ab: common_vendor.p({
           theme: "outline",
           size: "24",
           fill: "#ffffff"
         }),
-        T: uploadImages.value.length < 9
+        ac: uploadImages.value.length < 9
       }, uploadImages.value.length < 9 ? {
-        U: common_vendor.p({
+        ad: common_vendor.p({
           theme: "outline",
           size: "28",
           fill: "#3ba272"
         }),
-        V: common_vendor.o(chooseImage)
+        ae: common_vendor.o(chooseImage)
       } : {}, {
-        W: checkinComment.value,
-        X: common_vendor.o(($event) => checkinComment.value = $event.detail.value),
-        Y: common_vendor.t(checkinComment.value.length),
-        Z: common_vendor.o(submitCheckin),
-        aa: common_vendor.o(() => {
+        af: checkinComment.value,
+        ag: common_vendor.o(($event) => checkinComment.value = $event.detail.value),
+        ah: common_vendor.t(checkinComment.value.length),
+        ai: common_vendor.o(submitCheckin),
+        aj: common_vendor.o(() => {
         }),
-        ab: common_vendor.o(closeModal)
+        ak: common_vendor.o(closeModal)
       }) : {});
     };
   }

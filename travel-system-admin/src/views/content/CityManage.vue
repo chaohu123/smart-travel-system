@@ -45,6 +45,17 @@
         <el-table-column prop="cityName" label="城市名称" />
         <el-table-column prop="province" label="省份" />
         <el-table-column prop="country" label="国家" />
+        <el-table-column label="城市图片" width="120">
+          <template #default="{ row }">
+            <el-image
+              v-if="row.imageUrl"
+              :src="getImageUrl(row.imageUrl)"
+              fit="cover"
+              style="width: 56px; height: 40px; border-radius: 6px;"
+            />
+            <span v-else style="color: #909399;">暂无</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'info'">
@@ -73,27 +84,33 @@
       </div>
     </el-card>
 
-    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="900px">
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="560px" class="city-form-dialog">
       <el-form :model="form" label-width="120px" ref="formRef" :rules="formRules">
-        <el-form-item
-          label="城市ID"
-          prop="id"
-          :rules="[{ required: true, message: '请输入城市ID', trigger: 'blur' }]"
-        >
-          <el-input-number
-            v-model="form.id"
-            :disabled="dialogTitle === '编辑城市'"
-            :min="1"
-            :placeholder="dialogTitle === '编辑城市' ? '城市ID（不可修改）' : '请输入城市ID'"
-            style="width: 100%;"
-          />
-          <div style="color: #909399; font-size: 12px; margin-top: 4px;">
-            {{ dialogTitle === '编辑城市' ? '城市唯一标识ID，不可修改' : '城市唯一标识ID（必填）' }}
-          </div>
-        </el-form-item>
-        <el-form-item label="城市名称" prop="cityName" :rules="[{ required: true, message: '请输入城市名称', trigger: 'blur' }]">
-          <el-input v-model="form.cityName" placeholder="请输入城市名称" />
-        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item
+              label="城市ID"
+              prop="id"
+              :rules="[{ required: true, message: '请输入城市ID', trigger: 'blur' }]"
+            >
+              <el-input-number
+                v-model="form.id"
+                :disabled="dialogTitle === '编辑城市'"
+                :min="1"
+                :placeholder="dialogTitle === '编辑城市' ? '城市ID（不可修改）' : '请输入城市ID'"
+                style="width: 100%;"
+              />
+              <div style="color: #909399; font-size: 12px; margin-top: 4px;">
+                {{ dialogTitle === '编辑城市' ? '城市唯一标识ID，不可修改' : '城市唯一标识ID（必填）' }}
+              </div>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="城市名称" prop="cityName" :rules="[{ required: true, message: '请输入城市名称', trigger: 'blur' }]">
+              <el-input v-model="form.cityName" placeholder="请输入城市名称" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="位置">
           <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
             <el-radio-group v-model="locationMode">
@@ -102,14 +119,23 @@
             </el-radio-group>
           </div>
         </el-form-item>
-        <el-form-item label="省份" prop="province" :rules="[{ required: true, message: '请输入省份', trigger: 'blur' }]">
-          <el-input
-            v-model="form.province"
-            :placeholder="locationMode === 'map' ? '省份（地图选点后自动填充）' : '请输入省份'"
-            :disabled="locationMode === 'map' && form.province"
-            clearable
-          />
-        </el-form-item>
+        <el-row :gutter="16">
+          <el-col :span="12">
+            <el-form-item label="省份" prop="province" :rules="[{ required: true, message: '请输入省份', trigger: 'blur' }]">
+              <el-input
+                v-model="form.province"
+                :placeholder="locationMode === 'map' ? '省份（地图选点后自动填充）' : '请输入省份'"
+                :disabled="locationMode === 'map' && form.province"
+                clearable
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="国家">
+              <el-input v-model="form.country" placeholder="请输入国家（可选）" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-form-item label="经纬度" v-if="form.latitude && form.longitude" style="margin-top: 12px;">
           <el-row :gutter="16">
             <el-col :span="12">
@@ -126,8 +152,31 @@
             </el-col>
           </el-row>
         </el-form-item>
-        <el-form-item label="国家">
-          <el-input v-model="form.country" placeholder="请输入国家（可选）" />
+        <el-form-item label="城市图片">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <el-upload
+              :action="uploadAction"
+              :show-file-list="false"
+              :before-upload="beforeImageUpload"
+              :on-success="handleImageSuccess"
+            >
+              <el-button type="primary">上传图片</el-button>
+            </el-upload>
+            <el-input
+              v-model="form.imageUrl"
+              placeholder="或手动输入图片URL"
+              clearable
+              style="width: 360px;"
+            />
+          </div>
+          <div v-if="form.imageUrl" style="margin-top: 10px;">
+            <el-image
+              :src="getImageUrl(form.imageUrl)"
+              fit="cover"
+              style="width: 180px; height: 100px; border-radius: 8px; border: 1px solid #ebeef5;"
+            />
+          </div>
+          <div style="color: #909399; font-size: 12px; margin-top: 6px;">支持 jpg/png/webp，大小不超过 2MB</div>
         </el-form-item>
         <el-form-item label="状态">
           <el-radio-group v-model="form.status">
@@ -184,6 +233,7 @@ const dialogTitle = ref('新增城市');
 const formRef = ref();
 const locationMode = ref('manual');
 const mapPickerVisible = ref(false);
+const uploadAction = ref('http://localhost:8080/api/v1/admin/upload/image');
 const mapApiKey = ref(getMapApiKey());
 const mapSecurityKey = ref(getMapSecurityKey());
 const initialMapLocation = computed(() => ({
@@ -202,6 +252,7 @@ const form = reactive<City>({
   cityName: '',
   province: '',
   country: '',
+  imageUrl: '',
   latitude: undefined,
   longitude: undefined,
   status: 1
@@ -264,6 +315,7 @@ const handleAdd = () => {
     cityName: '',
     province: '',
     country: '',
+    imageUrl: '',
     latitude: undefined,
     longitude: undefined,
     status: 1
@@ -339,8 +391,12 @@ const handleSubmit = async () => {
   }
 
   try {
+    const submitData: City = {
+      ...form,
+      imageUrl: (form.imageUrl || '').trim()
+    };
     if (form.id && dialogTitle.value === '编辑城市') {
-      const resp = await updateCity(form);
+      const resp = await updateCity(submitData);
       if (resp.data.code === 200) {
         ElMessage.success('更新成功');
         dialogVisible.value = false;
@@ -349,7 +405,7 @@ const handleSubmit = async () => {
         ElMessage.error(resp.data.msg || '更新失败');
       }
     } else {
-      const resp = await createCity(form);
+      const resp = await createCity(submitData);
       if (resp.data.code === 200) {
         ElMessage.success('创建成功');
         dialogVisible.value = false;
@@ -361,6 +417,36 @@ const handleSubmit = async () => {
   } catch (e) {
     ElMessage.error('请求失败');
   }
+};
+
+const beforeImageUpload = (file: File) => {
+  const isImage = file.type.startsWith('image/');
+  const isLt2M = file.size / 1024 / 1024 < 2;
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件');
+    return false;
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB');
+    return false;
+  }
+  return true;
+};
+
+const handleImageSuccess = (response: any) => {
+  if (response?.code === 200 && response?.data?.url) {
+    form.imageUrl = response.data.url;
+    ElMessage.success('图片上传成功');
+    return;
+  }
+  ElMessage.error(response?.msg || '图片上传失败');
+};
+
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) return `http://localhost:8080${url}`;
+  return url;
 };
 
 const handleDelete = (row: City) => {
@@ -442,6 +528,10 @@ onMounted(() => {
 <style scoped>
 .mb-16 {
   margin-bottom: 16px;
+}
+
+.city-form-dialog :deep(.el-dialog) {
+  max-width: calc(100vw - 32px);
 }
 </style>
 

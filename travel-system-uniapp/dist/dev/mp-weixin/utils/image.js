@@ -3,19 +3,28 @@ var utils_config = require("./config.js");
 const BASE_URL = utils_config.STATIC_BASE_URL;
 const getImageUrl = (url, noCache = true) => {
   if (!url) {
-    return "/static/default-image.jpg";
+    return "";
   }
+  const rawUrl = String(url).trim();
+  if (!rawUrl)
+    return "";
   let fullUrl = "";
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    fullUrl = url;
+  if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+    fullUrl = rawUrl;
   } else {
-    if (url.startsWith("/uploads/")) {
-      fullUrl = `${BASE_URL}${url}`;
-    } else if (url.startsWith("uploads/")) {
-      fullUrl = `${BASE_URL}/${url}`;
+    if (rawUrl.startsWith("/uploads/")) {
+      fullUrl = `${BASE_URL}${rawUrl}`;
+    } else if (rawUrl.startsWith("uploads/")) {
+      fullUrl = `${BASE_URL}/${rawUrl}`;
     } else {
-      fullUrl = `${BASE_URL}${url.startsWith("/") ? url : "/" + url}`;
+      fullUrl = `${BASE_URL}${rawUrl.startsWith("/") ? rawUrl : "/" + rawUrl}`;
     }
+  }
+  try {
+    const base = new URL(BASE_URL);
+    const targetOrigin = `${base.protocol}//${base.host}`;
+    fullUrl = fullUrl.replace(/^https?:\/\/localhost(?::\d+)?/i, targetOrigin).replace(/^https?:\/\/127\.0\.0\.1(?::\d+)?/i, targetOrigin);
+  } catch (e) {
   }
   if (noCache && fullUrl.includes(BASE_URL)) {
     const separator = fullUrl.includes("?") ? "&" : "?";

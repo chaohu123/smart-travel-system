@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var api_user = require("../../api/user.js");
 var store_user = require("../../store/user.js");
 var utils_router = require("../../utils/router.js");
+var utils_image = require("../../utils/image.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
@@ -15,6 +16,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return (_a = currentUser.value) == null ? void 0 : _a.id;
     });
     const defaultAvatar = "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
+    const getAvatarSrc = (avatar) => {
+      if (!avatar)
+        return defaultAvatar;
+      return utils_image.getImageUrl(avatar);
+    };
     const targetUserId = common_vendor.ref(null);
     const isOwnProfile = common_vendor.computed(() => {
       if (!targetUserId.value)
@@ -143,7 +149,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       } : followingList.value.length > 0 ? {
         e: common_vendor.f(followingList.value, (following, k0, i0) => {
           return common_vendor.e({
-            a: following.avatar || defaultAvatar,
+            a: getAvatarSrc(following.avatar),
             b: common_vendor.t(following.nickname || "\u672A\u8BBE\u7F6E\u6635\u79F0")
           }, common_vendor.unref(isOwnProfile) ? {
             c: common_vendor.o(($event) => toggleFollow(following))

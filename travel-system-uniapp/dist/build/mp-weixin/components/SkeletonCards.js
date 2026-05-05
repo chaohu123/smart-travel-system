@@ -1,0 +1,1 @@
+"use strict";var e=require("../common/vendor.js");const o=e.defineComponent({props:{count:null},setup:o=>(n,t)=>({a:e.f(o.count,((e,o,n)=>({a:e})))})});var n=e._export_sfc(o,[["__scopeId","data-v-98a5817e"]]);wx.createComponent(n);

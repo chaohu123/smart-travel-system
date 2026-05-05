@@ -273,14 +273,14 @@ public class UserApiController {
             if (level >= 1) {
                 Map<String, Object> medal = new HashMap<>();
                 medal.put("name", "新手");
-                medal.put("icon", "🌱");
+                medal.put("icon", "新");
                 medal.put("description", "初来乍到");
                 medals.add(medal);
             }
             if (level >= 5) {
                 Map<String, Object> medal = new HashMap<>();
                 medal.put("name", "达人");
-                medal.put("icon", "⭐");
+                medal.put("icon", "达");
                 medal.put("description", "旅行达人");
                 medals.add(medal);
             }

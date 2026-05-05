@@ -14,6 +14,7 @@
         <result column="view_count" property="viewCount"/>
         <result column="favorite_count" property="favoriteCount"/>
         <result column="use_count" property="useCount"/>
+        <result column="ai_used" property="aiUsed"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="del_flag" property="delFlag"/>
@@ -22,22 +23,22 @@
     <insert id="insert" parameterType="com.smarttravel.route.domain.TravelRoute" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO travel_route
         (route_name, city_id, days, suitable_people, source_type, summary, cover_image,
-         view_count, favorite_count, use_count, create_time, update_time, del_flag)
+         view_count, favorite_count, use_count, ai_used, create_time, update_time, del_flag)
         VALUES
         (#{routeName}, #{cityId}, #{days}, #{suitablePeople}, #{sourceType}, #{summary}, #{coverImage},
-         #{viewCount}, #{favoriteCount}, #{useCount}, NOW(), NOW(), 0)
+         #{viewCount}, #{favoriteCount}, #{useCount}, #{aiUsed}, NOW(), NOW(), 0)
     </insert>
 
     <select id="selectById" parameterType="long" resultMap="TravelRouteResult">
         SELECT id, route_name, city_id, days, suitable_people, source_type, summary, cover_image,
-               view_count, favorite_count, use_count, create_time, update_time, del_flag
+               view_count, favorite_count, use_count, ai_used, create_time, update_time, del_flag
         FROM travel_route
         WHERE id = #{id} AND del_flag = 0
     </select>
 
     <select id="selectList" parameterType="com.smarttravel.route.domain.TravelRoute" resultMap="TravelRouteResult">
         SELECT id, route_name, city_id, days, suitable_people, source_type, summary, cover_image,
-               view_count, favorite_count, use_count, create_time, update_time, del_flag
+               view_count, favorite_count, use_count, ai_used, create_time, update_time, del_flag
         FROM travel_route
         WHERE del_flag = 0
         <if test="routeName != null and routeName != ''">
@@ -54,7 +55,7 @@
 
     <select id="selectListWithPage" resultMap="TravelRouteResult">
         SELECT id, route_name, city_id, days, suitable_people, source_type, summary, cover_image,
-               view_count, favorite_count, use_count, create_time, update_time, del_flag
+               view_count, favorite_count, use_count, ai_used, create_time, update_time, del_flag
         FROM travel_route
         WHERE del_flag = 0
         <if test="query.routeName != null and query.routeName != ''">
@@ -98,6 +99,7 @@
             <if test="viewCount != null">view_count = #{viewCount},</if>
             <if test="favoriteCount != null">favorite_count = #{favoriteCount},</if>
             <if test="useCount != null">use_count = #{useCount},</if>
+            <if test="aiUsed != null">ai_used = #{aiUsed},</if>
             <if test="delFlag != null">del_flag = #{delFlag},</if>
             update_time = NOW()
         </set>

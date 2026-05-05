@@ -6,7 +6,7 @@
         <text class="iconfont icon-arrow-left"></text>
       </view>
       <view class="nav-user" @click="viewUserProfile">
-        <image class="nav-avatar" :src="targetUser.avatar || defaultAvatar" mode="aspectFill" />
+        <image class="nav-avatar" :src="getAvatarSrc(targetUser.avatar)" mode="aspectFill" />
         <text class="nav-name">{{ targetUser.nickname || '未知用户' }}</text>
       </view>
       <view class="nav-placeholder"></view>
@@ -32,7 +32,7 @@
             <image
               v-if="!message.isOwn"
               class="message-avatar"
-              :src="message.avatar || defaultAvatar"
+              :src="getAvatarSrc(message.avatar)"
               mode="aspectFill"
             />
             <view class="message-bubble" :class="{ 'bubble-own': message.isOwn }">
@@ -73,10 +73,17 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
+import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
 const currentUser = computed(() => store.state.profile)
 const defaultAvatar = 'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200'
+
+// 统一头像地址处理，避免 /uploads/... 在小程序里当成本地路径
+const getAvatarSrc = (avatar?: string) => {
+  if (!avatar) return defaultAvatar
+  return getImageUrl(avatar)
+}
 
 // 目标用户信息
 const targetUser = ref({
@@ -86,7 +93,7 @@ const targetUser = ref({
 })
 
 // 当前用户头像
-const currentUserAvatar = computed(() => currentUser.value?.avatar || defaultAvatar)
+const currentUserAvatar = computed(() => getAvatarSrc(currentUser.value?.avatar || ''))
 
 // 消息列表
 const messages = ref<any[]>([])
