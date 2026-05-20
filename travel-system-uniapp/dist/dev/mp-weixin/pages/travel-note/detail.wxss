@@ -165,32 +165,51 @@
 /* 回复列表 */
 .replies-list.data-v-18791242 {
   margin-top: 16rpx;
-  padding-left: 16rpx;
-  border-left: 2rpx solid #f0f0f0;
   margin-bottom: 12rpx;
 }
 .reply-item.data-v-18791242 {
   display: flex;
   align-items: flex-start;
-  gap: 8rpx;
-  margin-bottom: 12rpx;
-  padding: 12rpx;
-  background: #f7f8fa;
-  border-radius: 8rpx;
+  padding: 18rpx 0 18rpx 16rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+.reply-avatar.data-v-18791242 {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 999rpx;
+  background-color: #e5e5e5;
+  margin-right: 14rpx;
+  flex-shrink: 0;
+}
+.reply-content-wrapper.data-v-18791242 {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 .reply-author.data-v-18791242 {
-  font-size: 24rpx;
-  color: #3ba272;
+  font-size: 25rpx;
+  color: #333333;
   font-weight: 600;
-  flex-shrink: 0;
+  margin-bottom: 6rpx;
+  display: block;
 }
 .reply-content.data-v-18791242 {
   font-size: 26rpx;
-  color: #666666;
+  color: #333333;
   line-height: 1.6;
+  margin-bottom: 8rpx;
   word-break: break-all;
   white-space: pre-wrap;
-  flex: 1;
+  display: block;
+}
+.reply-footer-row.data-v-18791242 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8rpx;
+}
+.reply-like.data-v-18791242 {
+  padding: 4rpx 0;
 }
 
 /* 评论操作栏 */

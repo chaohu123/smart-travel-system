@@ -71,6 +71,7 @@ export const activityApi = {
       url: '/activity/list',
       method: 'GET',
       data: params,
+      showLoading: false,
     })
   },
 

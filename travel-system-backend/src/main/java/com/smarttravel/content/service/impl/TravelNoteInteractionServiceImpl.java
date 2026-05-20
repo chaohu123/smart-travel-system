@@ -7,6 +7,7 @@ import com.smarttravel.content.mapper.UserBehaviorMapper;
 import com.smarttravel.content.service.TravelNoteInteractionService;
 import com.smarttravel.user.domain.User;
 import com.smarttravel.user.mapper.UserMapper;
+import com.smarttravel.travel.domain.TravelNote;
 import com.smarttravel.travel.mapper.TravelNoteMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -93,10 +94,11 @@ public class TravelNoteInteractionServiceImpl implements TravelNoteInteractionSe
 
     @Override
     @Transactional
-    public Long publishComment(Long userId, String contentType, Long contentId,
-                               String content, Long parentId) {
+    public Map<String, Object> publishComment(Long userId, String contentType, Long contentId,
+                                              String content, Long parentId) {
+        String normalizedContentType = normalizeContentType(contentType);
         Comment comment = new Comment();
-        comment.setContentType(contentType);
+        comment.setContentType(normalizedContentType);
         comment.setContentId(contentId);
         comment.setUserId(userId);
         comment.setContent(content);
@@ -109,20 +111,60 @@ public class TravelNoteInteractionServiceImpl implements TravelNoteInteractionSe
         commentMapper.insert(comment);
 
         // 如果是游记评论，增加评论数
-        if ("note".equals(contentType)) {
+        Long commentCount = null;
+        if (isNoteContent(normalizedContentType)) {
             travelNoteMapper.incrementCommentCount(contentId);
+            TravelNote note = travelNoteMapper.selectById(contentId);
+            if (note != null) {
+                commentCount = note.getCommentCount();
+            }
         }
 
         // 记录评论行为
-        userBehaviorMapper.insert(userId, BehaviorType.COMMENT.getCode(), contentType, contentId, BehaviorType.COMMENT.getWeight());
+        userBehaviorMapper.insert(userId, BehaviorType.COMMENT.getCode(), normalizedContentType, contentId, BehaviorType.COMMENT.getWeight());
 
-        return comment.getId();
+        Map<String, Object> result = new HashMap<>();
+        result.put("commentId", comment.getId());
+        result.put("comment", buildCommentMap(comment, userId));
+        if (commentCount != null) {
+            result.put("commentCount", commentCount);
+        }
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> toggleCommentLike(Long userId, Long commentId) {
+        Comment comment = commentMapper.selectById(commentId);
+        if (comment == null) {
+            throw new RuntimeException("评论不存在");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        int exists = userBehaviorMapper.checkExists(userId, BehaviorType.LIKE.getCode(), "comment", commentId);
+
+        if (exists > 0) {
+            userBehaviorMapper.delete(userId, BehaviorType.LIKE.getCode(), "comment", commentId);
+            commentMapper.updateLikeCount(commentId, -1L);
+            result.put("isLiked", false);
+            result.put("action", "unlike");
+        } else {
+            userBehaviorMapper.insert(userId, BehaviorType.LIKE.getCode(), "comment", commentId, BehaviorType.LIKE.getWeight());
+            commentMapper.updateLikeCount(commentId, 1L);
+            result.put("isLiked", true);
+            result.put("action", "like");
+        }
+
+        Comment updated = commentMapper.selectById(commentId);
+        result.put("likeCount", updated != null && updated.getLikeCount() != null ? updated.getLikeCount() : 0L);
+        return result;
     }
 
     @Override
     public List<Map<String, Object>> listComments(String contentType, Long contentId,
-                                                   Integer pageNum, Integer pageSize) {
-        List<Comment> comments = commentMapper.selectByContent(contentType, contentId);
+                                                   Integer pageNum, Integer pageSize, Long userId) {
+        String normalizedContentType = normalizeContentType(contentType);
+        List<Comment> comments = selectCommentsByContent(normalizedContentType, contentId);
 
         // 分页处理
         int start = (pageNum - 1) * pageSize;
@@ -133,23 +175,59 @@ public class TravelNoteInteractionServiceImpl implements TravelNoteInteractionSe
         // 转换为Map格式（可以包含用户信息等）
         List<Map<String, Object>> result = new ArrayList<>();
         for (Comment comment : pageList) {
-            Map<String, Object> map = new HashMap<>();
-            map.put("id", comment.getId());
-            map.put("userId", comment.getUserId());
-            map.put("content", comment.getContent());
-            map.put("parentId", comment.getParentId());
-            map.put("likeCount", comment.getLikeCount());
-            map.put("createTime", comment.getCreateTime());
-            User user = userMapper.selectById(comment.getUserId());
-            if (user != null) {
-                map.put("nickname", user.getNickname());
-                map.put("avatar", user.getAvatar());
-                map.put("city", user.getCity());
-            }
-            result.add(map);
+            result.add(buildCommentMap(comment, userId));
         }
 
         return result;
     }
-}
 
+    private String normalizeContentType(String contentType) {
+        if ("travel_note".equals(contentType)) {
+            return "note";
+        }
+        return contentType;
+    }
+
+    private boolean isNoteContent(String contentType) {
+        return "note".equals(contentType);
+    }
+
+    private List<Comment> selectCommentsByContent(String contentType, Long contentId) {
+        List<Comment> comments = new ArrayList<>(commentMapper.selectByContent(contentType, contentId));
+        if (isNoteContent(contentType)) {
+            for (Comment comment : commentMapper.selectByContent("travel_note", contentId)) {
+                boolean exists = comments.stream().anyMatch(item -> item.getId().equals(comment.getId()));
+                if (!exists) {
+                    comments.add(comment);
+                }
+            }
+            comments.sort((a, b) -> {
+                if (a.getCreateTime() == null) return 1;
+                if (b.getCreateTime() == null) return -1;
+                return b.getCreateTime().compareTo(a.getCreateTime());
+            });
+        }
+        return comments;
+    }
+
+    private Map<String, Object> buildCommentMap(Comment comment, Long currentUserId) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", comment.getId());
+        map.put("contentType", comment.getContentType());
+        map.put("contentId", comment.getContentId());
+        map.put("userId", comment.getUserId());
+        map.put("content", comment.getContent());
+        map.put("parentId", comment.getParentId());
+        map.put("likeCount", comment.getLikeCount());
+        map.put("createTime", comment.getCreateTime());
+        map.put("isLiked", currentUserId != null
+                && userBehaviorMapper.checkExists(currentUserId, BehaviorType.LIKE.getCode(), "comment", comment.getId()) > 0);
+        User user = userMapper.selectById(comment.getUserId());
+        if (user != null) {
+            map.put("nickname", user.getNickname());
+            map.put("avatar", user.getAvatar());
+            map.put("city", user.getCity());
+        }
+        return map;
+    }
+}

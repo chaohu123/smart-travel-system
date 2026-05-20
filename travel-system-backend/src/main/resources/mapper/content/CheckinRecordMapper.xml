@@ -64,5 +64,16 @@
         LIMIT 1
     </select>
 
-</mapper>
+    <select id="selectByUserAndTarget" resultMap="CheckinRecordResult">
+        SELECT id, user_id, target_type, target_id, photo_url, content, latitude, longitude,
+               checkin_time, create_time, update_time, del_flag
+        FROM checkin_record
+        WHERE user_id = #{userId}
+          AND target_type = #{targetType}
+          AND target_id = #{targetId}
+          AND del_flag = 0
+        ORDER BY checkin_time DESC
+        LIMIT 1
+    </select>
 
+</mapper>

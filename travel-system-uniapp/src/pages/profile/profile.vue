@@ -199,14 +199,19 @@ watch(user, (newUser) => {
   if (newUser) {
     showLoginForm.value = false
     loadUserStats()
+  } else {
+    userStats.value = {
+      notes: 0,
+      favorites: 0,
+      checkins: 0,
+      likes: 0,
+      comments: 0,
+    }
   }
 }, { immediate: true })
 
 onMounted(() => {
   resetNavigationState()
-  if (user.value) {
-    loadUserStats()
-  }
 })
 
 // 点击防抖
@@ -755,6 +760,5 @@ const logout = () => {
   background: #fff3f3;
 }
 </style>
-
 
 

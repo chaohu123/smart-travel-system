@@ -21,14 +21,19 @@ public interface TravelNoteInteractionService {
     /**
      * 发布评论
      */
-    Long publishComment(Long userId, String contentType, Long contentId,
-                       String content, Long parentId);
+    Map<String, Object> publishComment(Long userId, String contentType, Long contentId,
+                                       String content, Long parentId);
+
+    /**
+     * 评论点赞/取消点赞
+     */
+    Map<String, Object> toggleCommentLike(Long userId, Long commentId);
 
     /**
      * 查询评论列表
      */
     List<Map<String, Object>> listComments(String contentType, Long contentId,
-                                           Integer pageNum, Integer pageSize);
+                                           Integer pageNum, Integer pageSize, Long userId);
 }
 
 

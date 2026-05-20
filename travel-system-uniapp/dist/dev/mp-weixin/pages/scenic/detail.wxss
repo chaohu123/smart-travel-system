@@ -362,18 +362,12 @@
   font-size: 24rpx;
   color: #999999;
 }
-.checkin-self-row.data-v-44e281b9 {
-  margin-top: 16rpx;
-  display: flex;
-  justify-content: flex-end;
+.checkin-btn.checked.data-v-44e281b9 {
+  background: #dfe9e5;
+  box-shadow: none;
 }
-.checkin-self-btn.data-v-44e281b9 {
-  padding: 16rpx 32rpx;
-  background-color: #3ba272;
-  color: #ffffff;
-  border-radius: 32rpx;
-  font-size: 26rpx;
-  border: none;
+.checkin-btn.checked .btn-text.data-v-44e281b9 {
+  color: #6f827c;
 }
 .loading.data-v-44e281b9 {
   padding: 80rpx 32rpx;

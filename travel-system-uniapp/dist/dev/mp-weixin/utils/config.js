@@ -1,5 +1,5 @@
 "use strict";
-const LOCAL_IP = "192.168.142.1";
+const LOCAL_IP = "10.18.41.225";
 const MP_WEIXIN_CONFIG = {
   API_BASE_URL: `http://${LOCAL_IP}:8080/api/v1`,
   STATIC_BASE_URL: `http://${LOCAL_IP}:8080`

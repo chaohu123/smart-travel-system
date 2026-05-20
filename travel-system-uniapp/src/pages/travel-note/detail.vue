@@ -83,8 +83,27 @@
                   :key="reply.id"
                   class="reply-item"
                 >
-                  <text class="reply-author">{{ reply.nickname || '匿名用户' }}</text>
-                  <text class="reply-content">{{ reply.content }}</text>
+                  <image
+                    class="reply-avatar"
+                    :src="getImageUrl(reply.avatar || reply.userAvatar) || authorAvatar"
+                    mode="aspectFill"
+                    :lazy-load="true"
+                  />
+                  <view class="reply-content-wrapper">
+                    <text class="reply-author">{{ reply.nickname || '匿名用户' }}</text>
+                    <text class="reply-content">{{ reply.content }}</text>
+                    <view class="reply-footer-row">
+                      <text class="comment-time">{{ formatTime(reply.createTime) }}</text>
+                      <view
+                        class="action-item reply-like"
+                        :class="{ active: reply.isLiked }"
+                        @tap.stop="toggleCommentLike(reply)"
+                      >
+                        <text class="iconfont action-icon icon-icon" :class="{ 'icon-liked': reply.isLiked }"></text>
+                        <text class="action-count">{{ reply.likeCount || 0 }}</text>
+                      </view>
+                    </view>
+                  </view>
                 </view>
               </view>
               
@@ -153,7 +172,7 @@
         ></text>
         <text class="action-text">收藏</text>
       </view>
-      <view class="action-btn" @tap="openCommentEditor">
+      <view class="action-btn" @tap="openRootCommentEditor">
         <text class="iconfont action-icon icon-pinglun"></text>
         <text class="action-text">{{ commentCount }}</text>
       </view>
@@ -207,6 +226,7 @@ import { travelNoteApi, travelNoteInteractionApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
 import LoginPrompt from '@/components/LoginPrompt.vue'
 import { getImageUrl } from '@/utils/image'
+import CloseSmall from '@icon-park/vue-next/es/icons/CloseSmall'
 
 // API 响应类型定义
 interface ApiResponse<T = any> {
@@ -228,6 +248,7 @@ const submitting = ref(false)
 const showLoginPrompt = ref(false)
 const textareaFocus = ref(false)
 const replyingTo = ref<any>(null) // 正在回复的评论
+const NOTE_CONTENT_TYPE = 'note'
 
 // 评论数量（优先使用后端返回的真实数据）
 const commentCount = computed(() => {
@@ -383,7 +404,7 @@ const toggleFavorite = async () => {
   }
 }
 
-const openCommentEditor = (replyComment?: any) => {
+const openCommentEditor = (replyComment: any = null) => {
   if (!user.value) {
     showLoginPromptDialog()
     return
@@ -410,6 +431,10 @@ const openReplyEditor = (comment: any) => {
 }
 
 // textarea 点击事件处理函数
+const openRootCommentEditor = () => {
+  openCommentEditor(null)
+}
+
 const handleTextareaTap = (e?: any) => {
   // 阻止事件冒泡
   if (e) {
@@ -433,7 +458,8 @@ const closeCommentEditor = () => {
 
 const submitComment = async () => {
   if (!noteId.value) return
-  if (!commentContent.value.trim()) {
+  const submittedContent = commentContent.value.trim()
+  if (!submittedContent) {
     uni.showToast({ title: '请输入评论内容', icon: 'none' })
     return
   }
@@ -447,16 +473,30 @@ const submitComment = async () => {
 
   submitting.value = true
   try {
+    const parentComment = replyingTo.value
     const res = await travelNoteInteractionApi.publishComment({
       userId: user.value.id,
-      contentType: 'note',
+      contentType: NOTE_CONTENT_TYPE,
       contentId: noteId.value,
-      content: commentContent.value.trim(),
-      parentId: replyingTo.value?.id || undefined,
+      content: submittedContent,
+      parentId: parentComment?.id || undefined,
     })
-    const data = res.data as ApiResponse<{ commentId?: number; commentCount?: number }>
+    const data = res.data as ApiResponse<{ commentId?: number; commentCount?: number; comment?: any }>
     if (res.statusCode === 200 && data.code === 200) {
-      uni.showToast({ title: replyingTo.value ? '回复成功' : '评论成功', icon: 'success' })
+      uni.showToast({ title: parentComment ? '回复成功' : '评论成功', icon: 'success' })
+
+      const createdComment = data.data?.comment || {
+        id: data.data?.commentId || Date.now(),
+        userId: user.value.id,
+        content: submittedContent,
+        parentId: parentComment?.id || 0,
+        likeCount: 0,
+        createTime: new Date().toISOString(),
+        nickname: user.value.nickname,
+        avatar: user.value.avatar,
+      }
+      insertComment(createdComment)
+
       commentContent.value = ''
       commentEditorVisible.value = false
       replyingTo.value = null
@@ -492,9 +532,11 @@ const toggleCommentLike = async (comment: any) => {
     return
   }
 
+  const wasLiked = comment.isLiked
+  const previousLikeCount = comment.likeCount || 0
+
   try {
     // 先更新本地状态，提供即时反馈
-    const wasLiked = comment.isLiked
     comment.isLiked = !comment.isLiked
     comment.likeCount = comment.isLiked
       ? (comment.likeCount || 0) + 1
@@ -512,9 +554,7 @@ const toggleCommentLike = async (comment: any) => {
       } else {
         // API失败，恢复原状态
         comment.isLiked = wasLiked
-        comment.likeCount = wasLiked
-          ? (comment.likeCount || 0) + 1
-          : Math.max((comment.likeCount || 0) - 1, 0)
+        comment.likeCount = previousLikeCount
         uni.showToast({
           title: data.msg || '操作失败',
           icon: 'none',
@@ -528,10 +568,11 @@ const toggleCommentLike = async (comment: any) => {
       })
     }
   } catch (error: any) {
-    // 如果后端不支持评论点赞，使用本地状态
+    comment.isLiked = wasLiked
+    comment.likeCount = previousLikeCount
     uni.showToast({
-      title: comment.isLiked ? '点赞成功' : '取消点赞',
-      icon: 'success',
+      title: '操作失败，请检查后端接口',
+      icon: 'none',
     })
   }
 }
@@ -542,6 +583,50 @@ const formatTime = (time: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+const normalizeCommentList = (list: any[] = []) => {
+  const allComments = list.map((comment: any) => ({
+    ...comment,
+    nickname: comment.nickname || comment.userName || comment.nick_name,
+    avatar: comment.avatar || comment.userAvatar || comment.user_avatar,
+    isLiked: comment.isLiked || false,
+    likeCount: comment.likeCount || 0,
+    parentId: comment.parentId || 0,
+    replies: comment.replies || [],
+  }))
+
+  const mainComments = allComments.filter((c: any) => !c.parentId || c.parentId === 0)
+  const replies = allComments.filter((c: any) => c.parentId && c.parentId !== 0)
+
+  mainComments.forEach((comment: any) => {
+    comment.replies = replies.filter((r: any) => r.parentId === comment.id)
+  })
+
+  return mainComments
+}
+
+const insertComment = (comment: any) => {
+  const normalized = normalizeCommentList([comment])[0] || {
+    ...comment,
+    parentId: comment.parentId || 0,
+    replies: [],
+  }
+
+  if (normalized.parentId && normalized.parentId !== 0) {
+    const parent = comments.value.find((item: any) => item.id === normalized.parentId)
+    if (parent) {
+      parent.replies = parent.replies || []
+      if (!parent.replies.some((item: any) => item.id === normalized.id)) {
+        parent.replies.unshift(normalized)
+      }
+      return
+    }
+  }
+
+  if (!comments.value.some((item: any) => item.id === normalized.id)) {
+    comments.value.unshift(normalized)
+  }
+}
+
 const loadDetail = async () => {
   if (!noteId.value) return
 
@@ -550,6 +635,9 @@ const loadDetail = async () => {
     const data = res.data as ApiResponse
     if (res.statusCode === 200 && data.code === 200) {
       noteDetail.value = data.data
+      if (comments.value.length === 0 && Array.isArray(data.data?.comments)) {
+        comments.value = normalizeCommentList(data.data.comments)
+      }
       // 同步收藏状态（从后端返回的数据中获取）
       if (data.data?.isFavorite !== undefined) {
         isFavorite.value = data.data.isFavorite
@@ -577,34 +665,15 @@ const loadComments = async () => {
 
   try {
     const res = await travelNoteInteractionApi.listComments({
-      contentType: 'note',
+      contentType: NOTE_CONTENT_TYPE,
       contentId: noteId.value,
       pageNum: 1,
       pageSize: 1000, // 增加页面大小以获取所有评论
+      userId: user.value?.id,
     })
     const data = res.data as ApiResponse<any[]>
     if (res.statusCode === 200 && data.code === 200) {
-      // 确保字段名正确映射，并处理回复列表
-      const allComments = (data.data || []).map((comment: any) => ({
-        ...comment,
-        // 兼容不同的字段名
-        nickname: comment.nickname || comment.userName || comment.nick_name,
-        avatar: comment.avatar || comment.userAvatar || comment.user_avatar,
-        isLiked: comment.isLiked || false,
-        likeCount: comment.likeCount || 0,
-        replies: comment.replies || [],
-      }))
-      
-      // 分离主评论和回复
-      const mainComments = allComments.filter((c: any) => !c.parentId || c.parentId === 0)
-      const replies = allComments.filter((c: any) => c.parentId && c.parentId !== 0)
-      
-      // 将回复关联到对应的主评论
-      mainComments.forEach((comment: any) => {
-        comment.replies = replies.filter((r: any) => r.parentId === comment.id)
-      })
-      
-      comments.value = mainComments
+      comments.value = normalizeCommentList(data.data || [])
     }
   } catch (error) {
     // 忽略评论加载错误，但不影响页面显示
@@ -816,35 +885,58 @@ onMounted(() => {
 /* 回复列表 */
 .replies-list {
   margin-top: 16rpx;
-  padding-left: 16rpx;
-  border-left: 2rpx solid #f0f0f0;
   margin-bottom: 12rpx;
 }
 
 .reply-item {
   display: flex;
   align-items: flex-start;
-  gap: 8rpx;
-  margin-bottom: 12rpx;
-  padding: 12rpx;
-  background: #f7f8fa;
-  border-radius: 8rpx;
+  padding: 18rpx 0 18rpx 16rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.reply-avatar {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 999rpx;
+  background-color: #e5e5e5;
+  margin-right: 14rpx;
+  flex-shrink: 0;
+}
+
+.reply-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .reply-author {
-  font-size: 24rpx;
-  color: #3ba272;
+  font-size: 25rpx;
+  color: #333333;
   font-weight: 600;
-  flex-shrink: 0;
+  margin-bottom: 6rpx;
+  display: block;
 }
 
 .reply-content {
   font-size: 26rpx;
-  color: #666666;
+  color: #333333;
   line-height: 1.6;
+  margin-bottom: 8rpx;
   word-break: break-all;
   white-space: pre-wrap;
-  flex: 1;
+  display: block;
+}
+
+.reply-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8rpx;
+}
+
+.reply-like {
+  padding: 4rpx 0;
 }
 
 /* 评论操作栏 */
@@ -1095,4 +1187,3 @@ onMounted(() => {
   font-size: 28rpx;
 }
 </style>
-

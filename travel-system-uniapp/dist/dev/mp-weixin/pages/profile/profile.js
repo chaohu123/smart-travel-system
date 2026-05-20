@@ -54,13 +54,18 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       if (newUser) {
         showLoginForm.value = false;
         loadUserStats();
+      } else {
+        userStats.value = {
+          notes: 0,
+          favorites: 0,
+          checkins: 0,
+          likes: 0,
+          comments: 0
+        };
       }
     }, { immediate: true });
     common_vendor.onMounted(() => {
       utils_router.resetNavigationState();
-      if (user.value) {
-        loadUserStats();
-      }
     });
     let lastClickTime = 0;
     const CLICK_DEBOUNCE_TIME = 300;

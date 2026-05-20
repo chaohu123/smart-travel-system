@@ -106,9 +106,8 @@ public class ImageController {
             headers.set("Access-Control-Allow-Methods", "GET, OPTIONS");
             headers.set("Access-Control-Allow-Headers", "*");
             // 禁用缓存，确保图片更新后立即生效
-            headers.setCacheControl("no-cache, no-store, must-revalidate");
-            headers.setPragma("no-cache");
-            headers.setExpires(0);
+            headers.setCacheControl("public, max-age=2592000, immutable");
+            headers.setLastModified(imageFile.lastModified());
             
             ResponseEntity<Resource> response = ResponseEntity.ok()
                     .headers(headers)
@@ -190,4 +189,3 @@ public class ImageController {
         return "application/octet-stream";
     }
 }
-

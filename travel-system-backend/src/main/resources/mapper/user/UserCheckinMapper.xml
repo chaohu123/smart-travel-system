@@ -22,5 +22,11 @@
         LIMIT 1
     </select>
 
+    <select id="sumExperienceByUserId" resultType="java.lang.Integer">
+        SELECT COALESCE(SUM(experience_gained), 0)
+        FROM user_checkin
+        WHERE user_id = #{userId}
+    </select>
+
 </mapper>
 

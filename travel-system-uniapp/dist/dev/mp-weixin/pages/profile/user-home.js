@@ -76,6 +76,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const isFollowing = common_vendor.ref(false);
     const showAvatarPreview = common_vendor.ref(false);
     const hasCheckedInToday = common_vendor.ref(false);
+    const getCheckInCacheKey = (userId) => {
+      return `lastCheckInDate_${userId || "anonymous"}`;
+    };
     const loadUserInfo = async () => {
       var _a, _b, _c;
       const userId = targetUserId.value || ((_a = currentUser.value) == null ? void 0 : _a.id);
@@ -182,10 +185,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       });
     };
     const checkTodayCheckInStatus = () => {
+      var _a, _b;
       if (!isOwnProfile.value)
         return;
+      if (!((_a = currentUser.value) == null ? void 0 : _a.id)) {
+        hasCheckedInToday.value = false;
+        return;
+      }
       const today = new Date().toDateString();
-      const lastCheckInDate = utils_storage.getCache("lastCheckInDate");
+      const lastCheckInDate = utils_storage.getCache(getCheckInCacheKey((_b = currentUser.value) == null ? void 0 : _b.id));
       hasCheckedInToday.value = lastCheckInDate === today;
     };
     const checkIn = async () => {
@@ -196,7 +204,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
       }
       const today = new Date().toDateString();
-      const lastCheckInDate = utils_storage.getCache("lastCheckInDate");
+      const checkInCacheKey = getCheckInCacheKey(userId);
+      const lastCheckInDate = utils_storage.getCache(checkInCacheKey);
       if (lastCheckInDate === today) {
         common_vendor.index.showToast({ title: "\u4ECA\u5929\u5DF2\u7ECF\u7B7E\u5230\u8FC7\u4E86", icon: "none" });
         return;
@@ -204,7 +213,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       try {
         const res = await api_user.userApi.checkIn(userId);
         if (res.statusCode === 200 && res.data.code === 200) {
-          utils_storage.setCache("lastCheckInDate", today, 24 * 60);
+          const checkinData = res.data.data || {};
+          if (checkinData.experience !== void 0) {
+            userInfo.value.experience = checkinData.experience;
+          } else if (checkinData.experienceGained) {
+            userInfo.value.experience = (userInfo.value.experience || 0) + checkinData.experienceGained;
+          }
+          if (checkinData.level !== void 0) {
+            userInfo.value.level = checkinData.level;
+          }
+          utils_storage.setCache(checkInCacheKey, today, 24 * 60);
           hasCheckedInToday.value = true;
           common_vendor.index.showToast({ title: "\u7B7E\u5230\u6210\u529F\uFF01+10\u7ECF\u9A8C", icon: "success" });
           await loadUserInfo();
@@ -214,7 +232,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         }
       } catch (error) {
         if (((_b = error == null ? void 0 : error.data) == null ? void 0 : _b.code) === 400 && ((_d = (_c = error == null ? void 0 : error.data) == null ? void 0 : _c.msg) == null ? void 0 : _d.includes("\u5DF2\u7B7E\u5230"))) {
-          utils_storage.setCache("lastCheckInDate", today, 24 * 60);
+          utils_storage.setCache(checkInCacheKey, today, 24 * 60);
           hasCheckedInToday.value = true;
           checkTodayCheckInStatus();
           common_vendor.index.showToast({ title: "\u4ECA\u5929\u5DF2\u7ECF\u7B7E\u5230\u8FC7\u4E86", icon: "none" });

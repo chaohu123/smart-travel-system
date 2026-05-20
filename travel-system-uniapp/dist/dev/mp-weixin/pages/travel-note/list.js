@@ -39,6 +39,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const placeholderImage = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIyNSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjIyNSIgZmlsbD0iI0U1RTVFNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5RUE3QjAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2FkaW5nLi4uPC90ZXh0Pjwvc3ZnPg==";
     const defaultAvatar = "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
     const scrollTop = common_vendor.ref(0);
+    let initialLoadStarted = false;
     const onCityChange = (e) => {
       selectedCity.value = cityList.value[e.detail.value];
       pageNum.value = 1;
@@ -455,13 +456,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       loadNotes();
     };
     common_vendor.onLoad(() => {
+      initialLoadStarted = true;
       loadCities().then(() => {
         selectedCity.value = cityList.value[0];
         loadNotes();
       });
     });
     common_vendor.onMounted(() => {
-      if (noteList.value.length === 0 && !loading.value) {
+      if (!initialLoadStarted && noteList.value.length === 0 && !loading.value) {
+        initialLoadStarted = true;
         loadCities().then(() => {
           selectedCity.value = cityList.value[0];
           loadNotes();

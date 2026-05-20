@@ -40,8 +40,16 @@ public interface TravelNoteMapper {
     int countByUserId(@Param("userId") Long userId);
 
     List<TravelNote> selectByIds(@Param("ids") List<Long> ids);
-}
 
+    List<TravelNote> selectUserListWithPage(@Param("cityId") Long cityId,
+                                            @Param("tagName") String tagName,
+                                            @Param("sortBy") String sortBy,
+                                            @Param("offset") Integer offset,
+                                            @Param("pageSize") Integer pageSize);
+
+    int countUserList(@Param("cityId") Long cityId,
+                      @Param("tagName") String tagName);
+}
 
 
 

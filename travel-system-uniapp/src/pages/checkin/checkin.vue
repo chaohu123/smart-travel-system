@@ -140,10 +140,11 @@
               </view>
               <button
                 class="checkin-btn"
+                :class="{ checked: item.isChecked }"
                 hover-class="checkin-btn--hover"
                 @click.stop="openCheckinModal(item)"
               >
-                去打卡
+                {{ item.isChecked ? '已打卡' : '去打卡' }}
               </button>
             </view>
           </view>
@@ -233,7 +234,9 @@
       <view class="modal-content" @click.stop>
         <view class="modal-header">
           <text class="modal-title">打卡 {{ currentItem?.name }}</text>
-          <CloseSmall class="modal-close" @click="closeModal" theme="outline" size="26" fill="#8a94a3" />
+          <view class="modal-close" @click.stop="closeModal">
+            <text class="modal-close-icon">×</text>
+          </view>
         </view>
 
         <view class="modal-body">
@@ -261,7 +264,7 @@
                 />
               </view>
               <view
-                v-if="uploadImages.length < 9"
+                v-if="uploadImages.length < 1"
                 class="upload-add"
                 @click="chooseImage"
               >
@@ -293,10 +296,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { LocalPin, KnifeFork, CloseSmall, Add, Search } from '@icon-park/vue-next'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
+import LocalPin from '@icon-park/vue-next/es/icons/LocalPin'
+import KnifeFork from '@icon-park/vue-next/es/icons/KnifeFork'
+import CloseSmall from '@icon-park/vue-next/es/icons/CloseSmall'
+import Add from '@icon-park/vue-next/es/icons/Add'
+import Search from '@icon-park/vue-next/es/icons/Search'
 import { activityApi } from '@/api/activity'
-import { scenicSpotApi, foodApi, cityApi, checkinApi, type ApiResponse } from '@/api/content'
+import { scenicSpotApi, foodApi, cityApi, checkinApi, uploadApi, type ApiResponse } from '@/api/content'
 import { defaultFoodImage, defaultScenicImage } from '@/utils/config'
 import { getImageUrl } from '@/utils/image'
 import { useUserStore } from '@/store/user'
@@ -307,6 +315,7 @@ type FilterType = 'all' | 'checked' | 'nearby'
 
 interface CheckinItem {
   id: number
+  targetId?: number
   name: string
   cover: string
   location: string
@@ -347,6 +356,9 @@ const currentCity = ref<string>('定位中...')
 const currentCityId = ref<number | null>(null)
 const locationStatus = ref<'idle' | 'loading' | 'success' | 'fail'>('idle')
 const manualCitySelected = ref(false)
+const lastCityApplyTs = ref(0)
+const citySelectionPending = ref(false)
+const citySelectorOpenTs = ref(0)
 
 let locationTimer: number | null = null
 
@@ -413,6 +425,65 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 }
 
 // 获取用户位置
+const normalizeCityName = (name?: string) => {
+  return String(name || '')
+    .trim()
+    .replace(/市$/, '')
+    .replace(/省$/, '')
+    .replace(/自治区$/, '')
+    .replace(/特别行政区$/, '')
+}
+
+const mapCityItem = (raw: any): CityItem | null => {
+  const name = raw?.cityName || raw?.name
+  if (!raw?.id || !name) return null
+
+  const latRaw = raw.latitude
+  const lngRaw = raw.longitude
+  const latitude = typeof latRaw === 'number' ? latRaw : typeof latRaw === 'string' ? parseFloat(latRaw) : NaN
+  const longitude = typeof lngRaw === 'number' ? lngRaw : typeof lngRaw === 'string' ? parseFloat(lngRaw) : NaN
+
+  return {
+    id: Number(raw.id),
+    name,
+    latitude,
+    longitude,
+  }
+}
+
+const resolveLocatedCity = async (cityName: string, latitude: number, longitude: number) => {
+  try {
+    const resp = await cityApi.list()
+    const response = resp.data as ApiResponse<any[]>
+    if (resp.statusCode !== 200 || response.code !== 200) return null
+
+    const cities = (response.data || [])
+      .map((item: any) => mapCityItem(item))
+      .filter((item: CityItem | null): item is CityItem => !!item)
+
+    const normalizedName = normalizeCityName(cityName)
+    if (normalizedName) {
+      const matched = cities.find((city) => normalizeCityName(city.name) === normalizedName)
+      if (matched) return matched
+    }
+
+    let nearest: CityItem | null = null
+    let minDist = Number.POSITIVE_INFINITY
+    cities.forEach((city) => {
+      if (!Number.isFinite(city.latitude) || !Number.isFinite(city.longitude)) return
+      const distance = calculateDistance(latitude, longitude, city.latitude, city.longitude)
+      if (distance < minDist) {
+        minDist = distance
+        nearest = city
+      }
+    })
+
+    return nearest
+  } catch {
+    return null
+  }
+}
+
 const getUserLocation = () => {
   // 启动定位流程和超时控制
   locationStatus.value = 'loading'
@@ -436,7 +507,7 @@ const getUserLocation = () => {
     altitude: false,
     geocode: true, // 开启地址解析，用于显示当前城市
     timeout: 5000,
-    success: (res) => {
+    success: async (res) => {
       if (locationTimer !== null) {
         clearTimeout(locationTimer)
         locationTimer = null
@@ -545,6 +616,23 @@ const getUserLocation = () => {
         }
       }
       // 自动按距离排序，优先展示附近景点/美食
+      if (!manualCitySelected.value) {
+        const locatedCity = await resolveLocatedCity(cityName, res.latitude, res.longitude)
+        if (locatedCity) {
+          currentCity.value = normalizeCityName(locatedCity.name)
+          currentCityId.value = locatedCity.id
+        } else if (cityName) {
+          currentCity.value = cityName
+          currentCityId.value = null
+        }
+        checkinList.value = []
+        pageNum.value = 1
+        total.value = 0
+        noMore.value = false
+        cardAnimate.value = false
+        loadCheckinList()
+      }
+
       if (userLocation.value) {
         currentSort.value = 'distance'
       }
@@ -577,6 +665,8 @@ const getUserLocation = () => {
       }
       if (!manualCitySelected.value) {
         currentCity.value = '定位失败，点击重试'
+        currentCityId.value = null
+        loadCheckinList()
       }
       uni.showToast({
         title: errorMsg,
@@ -590,6 +680,8 @@ const getUserLocation = () => {
 const handleLocationClick = () => {
   // 用户点击定位区域时，失败或空闲状态下重新尝试定位
   if (locationStatus.value === 'loading') return
+  manualCitySelected.value = false
+  currentCityId.value = null
   getUserLocation()
 }
 
@@ -709,6 +801,7 @@ const loadCheckinList = async () => {
           : []
         checkinList.value = rows.map((item: any) => ({
           id: item.id,
+          targetId: item.targetId || item.id,
           name: item.name,
           cover: getImageUrl(item.imageUrl) || defaultScenicImage,
           location: item.address || `${item.province || ''}${item.city || ''}`,
@@ -749,6 +842,7 @@ const loadCheckinList = async () => {
           : []
         checkinList.value = rows.map((item: any) => ({
           id: item.id,
+          targetId: item.targetId || item.id,
           name: item.name,
           cover: getImageUrl(item.imageUrl) || defaultFoodImage,
           location: item.address || item.cityName || '',
@@ -765,13 +859,36 @@ const loadCheckinList = async () => {
         total.value = mockFoods.length
       }
     }
+    await markCheckedItems()
   } catch (error) {
     checkinList.value = activeTab.value === 'attraction' ? [...mockAttractions] : [...mockFoods]
   } finally {
     loading.value = false
     cardAnimate.value = true
-    // 获取用户位置以计算距离和当前城市
-    getUserLocation()
+  }
+}
+
+const markCheckedItems = async () => {
+  const userId = currentUser.value?.id
+  if (!userId || checkinList.value.length === 0) return
+  try {
+    const res = await checkinApi.getMyCheckins(userId, 1, 1000)
+    const response = res.data as ApiResponse<{ list: any[] }>
+    if (res.statusCode !== 200 || response.code !== 200) return
+
+    const records = response.data?.list || []
+    const currentTargetType = activeTab.value === 'attraction' ? 'scenic' : 'food'
+    const checkedIds = new Set(
+      records
+        .filter((record: any) => record.targetType === currentTargetType)
+        .map((record: any) => Number(record.targetId))
+    )
+
+    checkinList.value.forEach((item) => {
+      item.isChecked = checkedIds.has(Number(item.targetId || item.id))
+    })
+  } catch (error) {
+    // 不影响列表展示
   }
 }
 
@@ -794,10 +911,11 @@ const loadMore = () => {
 
 const viewDetail = (item: CheckinItem) => {
   // 跳转到详情页，同时带上来源标记，方便详情页显示打卡评价区域
+  const targetId = item.targetId || item.id
   if (item.type === 'attraction') {
-    uni.navigateTo({ url: `/pages/scenic/detail?id=${item.id}&from=checkin` })
+    uni.navigateTo({ url: `/pages/scenic/detail?id=${targetId}&from=checkin` })
   } else {
-    uni.navigateTo({ url: `/pages/food/detail?id=${item.id}&from=checkin` })
+    uni.navigateTo({ url: `/pages/food/detail?id=${targetId}&from=checkin` })
   }
 }
 
@@ -856,21 +974,55 @@ const clearSearch = () => {
   searchKeyword.value = ''
 }
 
+const applySelectedCity = (data: any, shouldReload = true) => {
+  const cityId = Number(data?.id)
+  const cityName = String(data?.name || '').trim()
+  const ts = Number(data?.ts || Date.now())
+  if (!cityId || !cityName) return false
+
+  const unchanged = currentCityId.value === cityId && currentCity.value === cityName
+  currentCity.value = cityName
+  currentCityId.value = cityId
+  manualCitySelected.value = true
+  lastCityApplyTs.value = Math.max(lastCityApplyTs.value, ts)
+
+  if (shouldReload && !unchanged) {
+    checkinList.value = []
+    pageNum.value = 1
+    total.value = 0
+    noMore.value = false
+    cardAnimate.value = false
+    loadCheckinList()
+  }
+
+  return true
+}
+
+const applyCityFromStorage = () => {
+  const selected = uni.getStorageSync('ticket_selected_city') as { id?: number; name?: string; ts?: number } | null
+  if (!selected || !selected.id || !selected.name) return false
+  const ts = Number(selected.ts || 0)
+  if (citySelectorOpenTs.value && ts <= citySelectorOpenTs.value) return false
+  if (ts && ts <= lastCityApplyTs.value) return false
+  return applySelectedCity(selected, true)
+}
+
 // 选择城市（跳转到城市选择页）
 const openCitySelector = async () => {
+  citySelectionPending.value = true
+  citySelectorOpenTs.value = Date.now()
+  const handleCitySelected = (data: any) => {
+    citySelectionPending.value = false
+    applySelectedCity(data, true)
+  }
+
   uni.navigateTo({
     url: '/pages/city/select',
     events: {
-      citySelected: (data: any) => {
-        if (!data || !data.id || !data.name) return
-        currentCity.value = data.name
-        currentCityId.value = data.id
-        manualCitySelected.value = true
-        pageNum.value = 1
-        total.value = 0
-        noMore.value = false
-        loadCheckinList()
-      },
+      citySelected: handleCitySelected,
+    },
+    success: (res) => {
+      res.eventChannel.on('citySelected', handleCitySelected)
     },
   })
 }
@@ -926,6 +1078,10 @@ const openCheckinModal = (item: CheckinItem) => {
     showLoginPromptDialog()
     return
   }
+  if (item.isChecked) {
+    uni.showToast({ title: '你已经打卡过啦', icon: 'none' })
+    return
+  }
 
   currentItem.value = item
   uploadImages.value = []
@@ -941,7 +1097,7 @@ const closeModal = () => {
 
 const chooseImage = () => {
   uni.chooseImage({
-    count: 9 - uploadImages.value.length,
+    count: 1 - uploadImages.value.length,
     success: (res) => {
       uploadImages.value.push(...res.tempFilePaths)
     },
@@ -950,6 +1106,22 @@ const chooseImage = () => {
 
 const removeImage = (index: number) => {
   uploadImages.value.splice(index, 1)
+}
+
+const getUploadedPhotoUrl = async () => {
+  const firstImage = uploadImages.value[0]
+  if (!firstImage) return undefined
+
+  const uploadRes = await uploadApi.upload(firstImage)
+  const uploadData = uploadRes.data
+  if (uploadRes.statusCode !== 200 || uploadData?.code !== 200) {
+    throw new Error(uploadData?.msg || '图片上传失败')
+  }
+
+  if (typeof uploadData?.data === 'string') {
+    return uploadData.data
+  }
+  return uploadData?.data?.url
 }
 
 const submitCheckin = async () => {
@@ -975,12 +1147,13 @@ const submitCheckin = async () => {
     const targetType = currentItem.value.type === 'attraction' ? 'scenic' : 'food'
     const latitude = currentItem.value.latitude
     const longitude = currentItem.value.longitude
+    const photoUrl = await getUploadedPhotoUrl()
 
     await checkinApi.addCheckin({
       userId,
       targetType,
-      targetId: currentItem.value.id,
-      // 暂时只上报文字内容和坐标，图片可后续扩展为上传后再传 photoUrl
+      targetId: currentItem.value.targetId || currentItem.value.id,
+      photoUrl,
       content: checkinComment.value.trim() || undefined,
       latitude,
       longitude,
@@ -1090,9 +1263,22 @@ const onRefresh = async () => {
 }
 
 onMounted(() => {
-  loadCheckinList()
   getUserLocation()
   loadActivities()
+})
+
+onShow(() => {
+  if (citySelectionPending.value) {
+    citySelectionPending.value = false
+    applyCityFromStorage()
+  }
+})
+
+onUnmounted(() => {
+  if (locationTimer !== null) {
+    clearTimeout(locationTimer)
+    locationTimer = null
+  }
 })
 </script>
 
@@ -1465,6 +1651,11 @@ onMounted(() => {
   white-space: nowrap;
 }
 
+.checkin-btn.checked {
+  background-color: #dfe9e5;
+  color: #6f827c;
+}
+
 .checkin-btn--hover {
   background-color: #2a8f5a;
   transform: scale(0.96);
@@ -1670,6 +1861,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
   animation: scaleIn 0.3s ease;
 }
 
@@ -1688,7 +1880,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 32rpx;
+  padding: 32rpx 88rpx 32rpx 32rpx;
   border-bottom: 1rpx solid #eeeeee;
 }
 
@@ -1696,16 +1888,26 @@ onMounted(() => {
   font-size: 32rpx;
   font-weight: 600;
   color: #333333;
+  line-height: 1.4;
 }
 
 .modal-close {
-  font-size: 36rpx;
-  color: #999999;
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
   width: 48rpx;
   height: 48rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  color: #8a94a3;
+  z-index: 2;
+}
+
+.modal-close-icon {
+  font-size: 40rpx;
+  line-height: 48rpx;
 }
 
 .modal-body {
@@ -1834,6 +2036,3 @@ onMounted(() => {
   transform: scale(0.98);
 }
 </style>
-
-
-

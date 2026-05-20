@@ -196,11 +196,69 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     });
     const mapMarkers = common_vendor.ref([]);
     const mapPolyline = common_vendor.ref([]);
+    const mapScale = common_vendor.ref(12);
     const routeMapMode = common_vendor.ref("day");
     const markerIconCache = common_vendor.ref({});
     let mapUpdateGen = 0;
     const DAY_LINE_COLORS = ["#3BA272", "#2F7DDB", "#F59E0B", "#EF4444", "#8B5CF6", "#14B8A6", "#EC4899"];
     const getDayLineColor = (dayNo) => DAY_LINE_COLORS[(Math.max(1, dayNo) - 1) % DAY_LINE_COLORS.length];
+    const getSortedDayPois = (dayItem) => {
+      return [...(dayItem == null ? void 0 : dayItem.pois) || []].sort((a, b) => {
+        var _a, _b;
+        const sortA = ((_a = a.poi) == null ? void 0 : _a.sort) || 0;
+        const sortB = ((_b = b.poi) == null ? void 0 : _b.sort) || 0;
+        return sortA - sortB;
+      });
+    };
+    const getValidPoiCoords = (pois) => {
+      return pois.map((poiItem) => extractPoiCoord(poiItem == null ? void 0 : poiItem.detail)).filter((coord) => !!coord);
+    };
+    const getUniqueCoords = (coords) => {
+      const seen = /* @__PURE__ */ new Set();
+      return coords.filter((coord) => {
+        if (!Number.isFinite(coord == null ? void 0 : coord.latitude) || !Number.isFinite(coord == null ? void 0 : coord.longitude))
+          return false;
+        const key = `${coord.latitude},${coord.longitude}`;
+        if (seen.has(key))
+          return false;
+        seen.add(key);
+        return true;
+      });
+    };
+    const updateMapViewport = (coords) => {
+      const validCoords = getUniqueCoords(coords);
+      if (!validCoords.length)
+        return;
+      let sumLat = 0;
+      let sumLng = 0;
+      let minLat = validCoords[0].latitude;
+      let maxLat = validCoords[0].latitude;
+      let minLng = validCoords[0].longitude;
+      let maxLng = validCoords[0].longitude;
+      validCoords.forEach((coord) => {
+        sumLat += coord.latitude;
+        sumLng += coord.longitude;
+        minLat = Math.min(minLat, coord.latitude);
+        maxLat = Math.max(maxLat, coord.latitude);
+        minLng = Math.min(minLng, coord.longitude);
+        maxLng = Math.max(maxLng, coord.longitude);
+      });
+      mapCenter.value = {
+        latitude: sumLat / validCoords.length,
+        longitude: sumLng / validCoords.length
+      };
+      const span = Math.max(maxLat - minLat, maxLng - minLng);
+      mapScale.value = span > 1.2 ? 7 : span > 0.5 ? 9 : span > 0.18 ? 11 : span > 0.06 ? 12 : span > 0.025 ? 13 : span > 0.01 ? 14 : 15;
+    };
+    const currentMapSummary = common_vendor.computed(() => {
+      var _a;
+      const dayItem = currentDayData.value;
+      const pois = getSortedDayPois(dayItem);
+      return {
+        dayNo: ((_a = dayItem == null ? void 0 : dayItem.day) == null ? void 0 : _a.dayNo) || selectedDayIndex.value + 1,
+        poiCount: getValidPoiCoords(pois).length
+      };
+    });
     const fullMapLegends = common_vendor.computed(() => {
       var _a, _b;
       if (activeTab.value !== "map" || routeMapMode.value !== "full" || !((_b = (_a = routeData.value) == null ? void 0 : _a.days) == null ? void 0 : _b.length))
@@ -360,12 +418,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
       const markers = [];
       const polylines = [];
-      const sortedPois = [...dayItem.pois].sort((a, b) => {
-        var _a2, _b2;
-        const sortA = ((_a2 = a.poi) == null ? void 0 : _a2.sort) || 0;
-        const sortB = ((_b2 = b.poi) == null ? void 0 : _b2.sort) || 0;
-        return sortA - sortB;
-      });
+      const sortedPois = getSortedDayPois(dayItem);
       const dayCoordinates = [];
       const dayNo = ((_b = dayItem.day) == null ? void 0 : _b.dayNo) || selectedDayIndex.value + 1;
       let poiOrder = 1;
@@ -393,8 +446,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               latitude: lat,
               longitude: lng,
               title: markerTitle,
-              width: 40,
-              height: 40,
+              width: 46,
+              height: 46,
               callout: {
                 content: markerTitle,
                 color: "#333",
@@ -404,6 +457,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
                 padding: 8,
                 display: "BYCLICK",
                 textAlign: "center"
+              },
+              label: {
+                content: isFood ? "\u9910" : String(poiOrder),
+                color: "#ffffff",
+                fontSize: 14,
+                anchorX: -5,
+                anchorY: -36
               }
             };
             const icon = isFood ? foodIcon : scenicIcon;
@@ -422,11 +482,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         if (dayCoordinates.length > 1) {
           polylines.push({
             points: dayCoordinates,
-            color: "#3BA272",
-            width: 4,
+            color: "#1F8F66",
+            width: 5,
             arrowLine: true,
-            borderColor: "#2d8f5f",
-            borderWidth: 1
+            dottedLine: false,
+            borderColor: "#FFFFFF",
+            borderWidth: 2
           });
         }
         if (dayCoordinates.length > 0) {
@@ -442,6 +503,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           };
         }
         if (gen === mapUpdateGen) {
+          updateMapViewport(dayCoordinates);
           mapMarkers.value = markers;
           mapPolyline.value = polylines;
         }
@@ -465,12 +527,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const allCoords = [];
         days.forEach((dayItem, dayIdx) => {
           var _a2;
-          const sortedPois = [...(dayItem == null ? void 0 : dayItem.pois) || []].sort((a, b) => {
-            var _a3, _b;
-            const sortA = ((_a3 = a.poi) == null ? void 0 : _a3.sort) || 0;
-            const sortB = ((_b = b.poi) == null ? void 0 : _b.sort) || 0;
-            return sortA - sortB;
-          });
+          const sortedPois = getSortedDayPois(dayItem);
           const dayNo = Number(((_a2 = dayItem == null ? void 0 : dayItem.day) == null ? void 0 : _a2.dayNo) || dayIdx + 1);
           const dayCoords = [];
           let scenicSeq = 1;
@@ -481,7 +538,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             if (!coord)
               return;
             const isFood = ((_a3 = poiItem.poi) == null ? void 0 : _a3.poiType) === "food";
-            const markerTitle = `${isFood ? "\u98DF" : "\u666F"} Day${dayNo}-${isFood ? poiIdx + 1 : scenicSeq} ${getPoiName(poiItem)}`;
+            const markerSeq = isFood ? poiIdx + 1 : scenicSeq;
+            const markerTitle = `${isFood ? "\u98DF" : "\u666F"} Day${dayNo}-${markerSeq} ${getPoiName(poiItem)}`;
             if (!isFood)
               scenicSeq++;
             const marker = {
@@ -489,8 +547,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
               latitude: coord.latitude,
               longitude: coord.longitude,
               title: markerTitle,
-              width: 34,
-              height: 34,
+              width: 40,
+              height: 40,
               callout: {
                 content: markerTitle,
                 color: "#2d2d2d",
@@ -500,6 +558,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
                 padding: 6,
                 display: "BYCLICK",
                 textAlign: "center"
+              },
+              label: {
+                content: isFood ? "\u9910" : String(markerSeq),
+                color: "#ffffff",
+                fontSize: 13,
+                anchorX: -5,
+                anchorY: -32
               }
             };
             const icon = isFood ? foodIcon : scenicIcon;
@@ -532,6 +597,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           };
         }
         if (gen === mapUpdateGen) {
+          updateMapViewport(allCoords);
           mapMarkers.value = markers;
           mapPolyline.value = polylines;
         }
@@ -937,6 +1003,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       return `${month}\u6708${date}\u65E5(${weekday})`;
     };
     const handleDayChange = (dayIndex) => {
+      if (selectedDayIndex.value === dayIndex) {
+        updateMapData();
+        return;
+      }
+      selectedDayIndex.value = dayIndex;
+    };
+    const showFullRouteMap = () => {
+      updateFullMapData();
+    };
+    const showMapDay = (dayIndex) => {
       selectedDayIndex.value = dayIndex;
       updateMapData();
     };
@@ -1060,13 +1136,16 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }, activeTab.value === "itinerary" ? {
         r: mapCenter.value.latitude,
         s: mapCenter.value.longitude,
-        t: mapMarkers.value,
-        v: mapPolyline.value,
-        w: common_vendor.o(viewFullMap)
+        t: mapScale.value,
+        v: mapMarkers.value,
+        w: mapPolyline.value,
+        x: common_vendor.t(common_vendor.unref(currentMapSummary).dayNo),
+        y: common_vendor.t(common_vendor.unref(currentMapSummary).poiCount),
+        z: common_vendor.o(viewFullMap)
       } : {}, {
-        x: activeTab.value === "itinerary" && routeData.value.days && routeData.value.days.length > 0
+        A: activeTab.value === "itinerary" && routeData.value.days && routeData.value.days.length > 0
       }, activeTab.value === "itinerary" && routeData.value.days && routeData.value.days.length > 0 ? common_vendor.e({
-        y: common_vendor.f(routeData.value.days, (dayItem, dayIndex, i0) => {
+        B: common_vendor.f(routeData.value.days, (dayItem, dayIndex, i0) => {
           var _a2, _b2;
           return {
             a: common_vendor.t(((_a2 = dayItem.day) == null ? void 0 : _a2.dayNo) || dayIndex + 1),
@@ -1075,13 +1154,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             d: common_vendor.o(($event) => handleDayChange(dayIndex))
           };
         }),
-        z: common_vendor.unref(currentDayData)
+        C: common_vendor.unref(currentDayData)
       }, common_vendor.unref(currentDayData) ? common_vendor.e({
-        A: common_vendor.t(((_d = common_vendor.unref(currentDayData).day) == null ? void 0 : _d.dayNo) || selectedDayIndex.value + 1),
-        B: common_vendor.t(getDayDate(selectedDayIndex.value, (_e = common_vendor.unref(currentDayData).day) == null ? void 0 : _e.dayNo)),
-        C: common_vendor.unref(useAiTimelineOnly)
+        D: common_vendor.t(((_d = common_vendor.unref(currentDayData).day) == null ? void 0 : _d.dayNo) || selectedDayIndex.value + 1),
+        E: common_vendor.t(getDayDate(selectedDayIndex.value, (_e = common_vendor.unref(currentDayData).day) == null ? void 0 : _e.dayNo)),
+        F: common_vendor.unref(useAiTimelineOnly)
       }, common_vendor.unref(useAiTimelineOnly) ? {
-        D: common_vendor.f(common_vendor.unref(aiTimelineBlocks), (block, blockIndex, i0) => {
+        G: common_vendor.f(common_vendor.unref(aiTimelineBlocks), (block, blockIndex, i0) => {
           return common_vendor.e({
             a: common_vendor.t(block.label),
             b: block.fields.rawFallback
@@ -1108,7 +1187,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         })
       } : {
-        E: common_vendor.f(formatDayContent(common_vendor.unref(currentDayData)), (timeGroup, timeIndex, i0) => {
+        H: common_vendor.f(formatDayContent(common_vendor.unref(currentDayData)), (timeGroup, timeIndex, i0) => {
           return common_vendor.e({
             a: common_vendor.t(timeGroup.timeLabel),
             b: timeGroup.description
@@ -1205,9 +1284,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         })
       }, {
-        F: !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayScenics).length > 0
+        I: !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayScenics).length > 0
       }, !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayScenics).length > 0 ? {
-        G: common_vendor.f(common_vendor.unref(currentDayScenics), (scenic, k0, i0) => {
+        J: common_vendor.f(common_vendor.unref(currentDayScenics), (scenic, k0, i0) => {
           return common_vendor.e({
             a: scenic.imageUrl ? common_vendor.unref(utils_image.getImageUrl)(scenic.imageUrl) : common_vendor.unref(utils_config.defaultScenicImage),
             b: common_vendor.t(scenic.name),
@@ -1228,9 +1307,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         })
       } : {}, {
-        H: !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayFoods).length > 0
+        K: !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayFoods).length > 0
       }, !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayFoods).length > 0 ? {
-        I: common_vendor.f(common_vendor.unref(currentDayFoods), (food, k0, i0) => {
+        L: common_vendor.f(common_vendor.unref(currentDayFoods), (food, k0, i0) => {
           return common_vendor.e({
             a: food.imageUrl ? common_vendor.unref(utils_image.getImageUrl)(food.imageUrl) : common_vendor.unref(utils_config.defaultFoodImage),
             b: common_vendor.t(food.name),
@@ -1251,15 +1330,27 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         })
       } : {}) : {}) : {}, {
-        J: activeTab.value === "map"
+        M: activeTab.value === "map"
       }, activeTab.value === "map" ? common_vendor.e({
-        K: mapCenter.value.latitude,
-        L: mapCenter.value.longitude,
-        M: mapMarkers.value,
-        N: mapPolyline.value,
-        O: common_vendor.unref(fullMapLegends).length > 0
+        N: mapCenter.value.latitude,
+        O: mapCenter.value.longitude,
+        P: mapScale.value,
+        Q: mapMarkers.value,
+        R: mapPolyline.value,
+        S: routeMapMode.value === "full" ? 1 : "",
+        T: common_vendor.o(showFullRouteMap),
+        U: common_vendor.f(routeData.value.days, (dayItem, dayIndex, i0) => {
+          var _a2, _b2;
+          return {
+            a: common_vendor.t(((_a2 = dayItem.day) == null ? void 0 : _a2.dayNo) || dayIndex + 1),
+            b: ((_b2 = dayItem.day) == null ? void 0 : _b2.id) || dayIndex,
+            c: routeMapMode.value === "day" && selectedDayIndex.value === dayIndex ? 1 : "",
+            d: common_vendor.o(($event) => showMapDay(dayIndex))
+          };
+        }),
+        V: common_vendor.unref(fullMapLegends).length > 0
       }, common_vendor.unref(fullMapLegends).length > 0 ? {
-        P: common_vendor.f(common_vendor.unref(fullMapLegends), (item, k0, i0) => {
+        W: common_vendor.f(common_vendor.unref(fullMapLegends), (item, k0, i0) => {
           return {
             a: item.color,
             b: common_vendor.t(item.dayNo),
@@ -1267,13 +1358,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           };
         })
       } : {}) : {}) : {}, {
-        Q: loading.value
+        X: loading.value
       }, loading.value ? {} : {}, {
-        R: common_vendor.t(isFavorite.value ? "\u2665" : "\u2661"),
-        S: isFavorite.value ? 1 : "",
-        T: common_vendor.o(toggleFavorite),
-        U: common_vendor.o(startNavigation),
-        V: common_vendor.o(enableItinerary)
+        Y: common_vendor.t(isFavorite.value ? "\u2665" : "\u2661"),
+        Z: isFavorite.value ? 1 : "",
+        aa: common_vendor.o(toggleFavorite),
+        ab: common_vendor.o(startNavigation),
+        ac: common_vendor.o(enableItinerary)
       });
     };
   }

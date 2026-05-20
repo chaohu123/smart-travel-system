@@ -7,10 +7,13 @@ export interface RequestOptions extends UniApp.RequestOptions {
   showLoading?: boolean
   needRetry?: boolean
   enableCache?: boolean // 是否启用缓存
+  disableCache?: boolean // 是否强制禁用缓存
   cacheTime?: number // 缓存时间（秒），默认5分钟
 }
 
 const BASE_URL = API_BASE_URL
+const DEFAULT_TIMEOUT = 15000
+const DEFAULT_CACHE_TIME = 3 * 60
 
 const getToken = () => getCache<string>('token')
 
@@ -82,6 +85,13 @@ const normalizeUploadUrlInData = (value: any): any => {
   return value
 }
 
+const isSuccessfulApiData = (data: any): boolean => {
+  if (!data || typeof data !== 'object') {
+    return true
+  }
+  return data.code === undefined || data.code === 200
+}
+
 export const request = <T = any>(options: RequestOptions) => {
   const {
     url,
@@ -89,6 +99,7 @@ export const request = <T = any>(options: RequestOptions) => {
     showLoading = true,
     needRetry = false,
     enableCache = false,
+    disableCache = false,
     cacheTime = 5 * 60, // 默认5分钟
     header = {},
     data,
@@ -113,15 +124,18 @@ export const request = <T = any>(options: RequestOptions) => {
   // 生成请求键（用于去重和缓存）
   const requestKey = getRequestKey(url, method, cleanedData)
   const cacheKey = `api_cache_${requestKey}`
+  const canCache = method === 'GET' && !disableCache && (enableCache || !showLoading)
 
   // 检查缓存（仅 GET 请求且启用缓存）
-  if (enableCache && method === 'GET') {
+  if (canCache) {
     const cached = getCache<any>(cacheKey)
-    if (cached) {
+    if (cached && isSuccessfulApiData(cached)) {
       return Promise.resolve({
         statusCode: 200,
         data: cached
       } as any)
+    } else if (cached) {
+      removeCache(cacheKey)
     }
   }
 
@@ -137,7 +151,7 @@ export const request = <T = any>(options: RequestOptions) => {
   const run = () =>
     new Promise<UniApp.RequestSuccessCallbackResult & { data: any }>((resolve, reject) => {
       // 设置默认超时时间为60秒，如果options中指定了timeout则使用指定的值
-      const timeout = (rest as any).timeout || 60000
+      const timeout = (rest as any).timeout || DEFAULT_TIMEOUT
       
       const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`
       
@@ -161,8 +175,8 @@ export const request = <T = any>(options: RequestOptions) => {
           }
           
           // 缓存成功的 GET 请求结果
-          if (enableCache && method === 'GET' && res.statusCode === 200 && res.data) {
-            setCache(cacheKey, res.data, cacheTime)
+          if (canCache && res.statusCode === 200 && res.data && isSuccessfulApiData(res.data)) {
+            setCache(cacheKey, res.data, enableCache ? cacheTime : DEFAULT_CACHE_TIME)
           }
           
           resolve(res as any)
@@ -252,10 +266,6 @@ export const uploadFile = (url: string, filePath: string, timeout: number = 6000
     })
   })
 }
-
-
-
-
 
 
 

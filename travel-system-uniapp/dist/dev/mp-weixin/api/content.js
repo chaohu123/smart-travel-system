@@ -40,14 +40,16 @@ const scenicSpotApi = {
       url: "/scenic/list",
       method: "GET",
       data: params || {},
-      showLoading: false
+      showLoading: false,
+      disableCache: true
     });
   },
   getDetail: (id) => {
     return utils_http.request({
       url: `/scenic/${id}`,
       method: "GET",
-      showLoading: true
+      showLoading: true,
+      disableCache: true
     });
   },
   getHot: (cityId, limit = 10) => {
@@ -170,7 +172,8 @@ const travelNoteInteractionApi = {
       url: "/travel/note/interaction/comment/list",
       method: "GET",
       data: params,
-      showLoading: false
+      showLoading: false,
+      disableCache: true
     });
   },
   listMyLikes: (userId, pageNum = 1, pageSize = 10) => {
@@ -250,13 +253,14 @@ const checkinApi = {
       needAuth: true
     });
   },
-  getTargetCheckins: (targetType, targetId, pageNum = 1, pageSize = 10) => {
+  getTargetCheckins: (targetType, targetId, pageNum = 1, pageSize = 10, userId) => {
     return utils_http.request({
       url: "/checkin/target",
       method: "GET",
-      data: { targetType, targetId, pageNum, pageSize },
+      data: { targetType, targetId, pageNum, pageSize, userId },
       showLoading: false,
-      needAuth: false
+      needAuth: false,
+      disableCache: true
     });
   },
   getFootprintStats: (userId) => {

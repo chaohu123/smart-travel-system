@@ -15,9 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 美食服务实现
- */
 @Service
 public class FoodServiceImpl implements FoodService {
 
@@ -33,20 +30,20 @@ public class FoodServiceImpl implements FoodService {
     @Override
     public Map<String, Object> listFoods(Integer pageNum, Integer pageSize, Long cityId,
                                          String tagName, String sortBy) {
+        pageNum = normalizePageNum(pageNum);
+        pageSize = normalizePageSize(pageSize);
+
         Food query = new Food();
         query.setCityId(cityId);
         query.setDelFlag(0);
 
-        List<Food> list = foodMapper.selectList(query);
-
-        // 简化分页处理
-        int start = (pageNum - 1) * pageSize;
-        int end = Math.min(start + pageSize, list.size());
-        List<Food> pageList = list.subList(start, end);
+        int offset = (pageNum - 1) * pageSize;
+        List<Food> pageList = foodMapper.selectListWithPage(query, offset, pageSize);
+        int total = foodMapper.countList(query);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("list", pageList);
-        result.put("total", list.size());
+        result.put("list", pageList != null ? pageList : new ArrayList<>());
+        result.put("total", total);
         result.put("pageNum", pageNum);
         result.put("pageSize", pageSize);
         return result;
@@ -57,47 +54,40 @@ public class FoodServiceImpl implements FoodService {
         Food food = foodMapper.selectById(id);
         Map<String, Object> result = new HashMap<>();
 
-        if (food != null) {
-            // 根据cityId查询城市信息，添加cityName字段
-            if (food.getCityId() != null) {
-                City city = cityMapper.selectById(food.getCityId());
-                if (city != null) {
-                    // 创建一个包含cityName的Map
-                    Map<String, Object> foodMap = new HashMap<>();
-                    foodMap.put("id", food.getId());
-                    foodMap.put("name", food.getName());
-                    foodMap.put("cityId", food.getCityId());
-                    foodMap.put("address", food.getAddress());
-                    foodMap.put("latitude", food.getLatitude());
-                    foodMap.put("longitude", food.getLongitude());
-                    foodMap.put("foodType", food.getFoodType());
-                    foodMap.put("avgPrice", food.getAvgPrice());
-                    foodMap.put("intro", food.getIntro());
-                    foodMap.put("imageUrl", food.getImageUrl());
-                    foodMap.put("score", food.getScore());
-                    foodMap.put("hotScore", food.getHotScore());
-                    foodMap.put("isRecommend", food.getIsRecommend());
-                    foodMap.put("createTime", food.getCreateTime());
-                    foodMap.put("updateTime", food.getUpdateTime());
-                    foodMap.put("delFlag", food.getDelFlag());
-                    foodMap.put("cityName", city.getCityName());
-                    foodMap.put("province", city.getProvince());
-                    result.put("food", foodMap);
-                } else {
-                    result.put("food", food);
-                }
-            } else {
-                result.put("food", food);
+        if (food != null && food.getCityId() != null) {
+            City city = cityMapper.selectById(food.getCityId());
+            if (city != null) {
+                Map<String, Object> foodMap = new HashMap<>();
+                foodMap.put("id", food.getId());
+                foodMap.put("name", food.getName());
+                foodMap.put("cityId", food.getCityId());
+                foodMap.put("address", food.getAddress());
+                foodMap.put("latitude", food.getLatitude());
+                foodMap.put("longitude", food.getLongitude());
+                foodMap.put("foodType", food.getFoodType());
+                foodMap.put("avgPrice", food.getAvgPrice());
+                foodMap.put("intro", food.getIntro());
+                foodMap.put("imageUrl", food.getImageUrl());
+                foodMap.put("score", food.getScore());
+                foodMap.put("hotScore", food.getHotScore());
+                foodMap.put("isRecommend", food.getIsRecommend());
+                foodMap.put("createTime", food.getCreateTime());
+                foodMap.put("updateTime", food.getUpdateTime());
+                foodMap.put("delFlag", food.getDelFlag());
+                foodMap.put("cityName", city.getCityName());
+                foodMap.put("province", city.getProvince());
+                result.put("food", foodMap);
+                return result;
             }
-        } else {
-            result.put("food", null);
         }
 
+        result.put("food", food);
         return result;
     }
 
     @Override
     public List<Food> getHotFoods(Long cityId, Integer limit) {
+        limit = normalizeLimit(limit);
         return foodMapper.selectHotByCityId(cityId, limit);
     }
 
@@ -106,12 +96,11 @@ public class FoodServiceImpl implements FoodService {
         return getMyFavorites(userId, 1, 1000);
     }
 
-    /**
-     * 获取用户收藏的美食列表（支持分页）
-     */
     public Map<String, Object> getMyFavorites(Long userId, Integer pageNum, Integer pageSize) {
+        pageNum = normalizePageNum(pageNum);
+        pageSize = normalizePageSize(pageSize);
         int offset = (pageNum - 1) * pageSize;
-        // 获取用户收藏的美食ID列表
+
         List<Long> favoriteIds = userBehaviorMapper.selectContentIds(
             userId,
             BehaviorType.FAVORITE.getCode(),
@@ -121,12 +110,11 @@ public class FoodServiceImpl implements FoodService {
         );
         int total = userBehaviorMapper.countByUserAndBehavior(userId, BehaviorType.FAVORITE.getCode(), "food");
 
-        // 根据ID列表查询美食详情
         List<Food> favorites = new ArrayList<>();
         if (favoriteIds != null && !favoriteIds.isEmpty()) {
             for (Long id : favoriteIds) {
                 Food food = foodMapper.selectById(id);
-                if (food != null && food.getDelFlag() == 0) {
+                if (food != null && (food.getDelFlag() == null || food.getDelFlag() == 0)) {
                     favorites.add(food);
                 }
             }
@@ -139,5 +127,22 @@ public class FoodServiceImpl implements FoodService {
         result.put("pageSize", pageSize);
         return result;
     }
-}
 
+    private int normalizePageNum(Integer pageNum) {
+        return pageNum == null || pageNum < 1 ? 1 : pageNum;
+    }
+
+    private int normalizePageSize(Integer pageSize) {
+        if (pageSize == null || pageSize < 1) {
+            return 10;
+        }
+        return Math.min(pageSize, 50);
+    }
+
+    private int normalizeLimit(Integer limit) {
+        if (limit == null || limit < 1) {
+            return 10;
+        }
+        return Math.min(limit, 50);
+    }
+}

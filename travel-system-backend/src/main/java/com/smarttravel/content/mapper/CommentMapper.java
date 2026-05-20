@@ -10,6 +10,9 @@ import java.util.List;
 public interface CommentMapper {
     int insert(Comment comment);
     List<Comment> selectByContent(@Param("contentType") String contentType, @Param("contentId") Long contentId);
+    List<Comment> selectByContentWithLimit(@Param("contentType") String contentType,
+                                           @Param("contentId") Long contentId,
+                                           @Param("limit") Integer limit);
     List<Comment> selectList(Comment query);
     Comment selectById(Long id);
     int update(Comment comment);
@@ -28,7 +31,6 @@ public interface CommentMapper {
      */
     int countByUserId(@Param("userId") Long userId);
 }
-
 
 
 

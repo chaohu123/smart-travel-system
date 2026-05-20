@@ -346,7 +346,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onPullDownRefresh, onReachBottom, onShow, onLoad } from '@dcloudio/uni-app'
-import { recommendApi, scenicSpotApi, foodApi, type ApiResponse, travelNoteApi, travelNoteInteractionApi } from '@/api/content'
+import { recommendApi, scenicSpotApi, foodApi, cityApi, type ApiResponse, travelNoteApi, travelNoteInteractionApi } from '@/api/content'
 import { request } from '@/utils/http'
 import { activityApi, type Activity } from '@/api/activity'
 import { useUserStore } from '@/store/user'
@@ -354,10 +354,11 @@ import EmptyState from '@/components/EmptyState.vue'
 import SkeletonCards from '@/components/SkeletonCards.vue'
 import GuideOverlay from '@/components/GuideOverlay.vue'
 import LoginPrompt from '@/components/LoginPrompt.vue'
-import { Search } from '@icon-park/vue-next'
+import Search from '@icon-park/vue-next/es/icons/Search'
 import { safeNavigateTo, safeSwitchTab, resetNavigationState } from '@/utils/router'
 import { defaultFoodImage, defaultScenicImage } from '@/utils/config'
 import { getImageUrl } from '@/utils/image'
+import { preloadTabData } from '@/utils/tabPreload'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -450,6 +451,8 @@ const searchFoodResults = ref<FoodItem[]>([])
 const searchNoteResults = ref<NoteItem[]>([])
 const searchActivityResults = ref<ActivityItem[]>([])
 let searchTimer: ReturnType<typeof setTimeout> | null = null
+const currentCityId = ref<number | null>(null)
+const currentCityName = ref('')
 
 const isSearching = computed(() => searchKeyword.value.trim().length > 0)
 const hasSearchResult = computed(() => {
@@ -533,11 +536,136 @@ const filteredScenicList = computed(() => {
 // 省份选择变化
 const onProvinceChange = (e: any) => {
   selectedProvinceIndex.value = e.detail.value
+  currentCityId.value = null
+  currentCityName.value = ''
+  fetchHomeData()
   // 省份改变时重新加载景点数据
   fetchHomeData()
 }
 
 type ListResponse<T> = UniApp.RequestSuccessCallbackResult & { data: ApiResponse<T[]> }
+
+interface LocatedCity {
+  id: number
+  name: string
+  province?: string
+  latitude: number
+  longitude: number
+}
+
+const normalizeCityName = (name?: string) => {
+  return String(name || '')
+    .trim()
+    .replace(/市$/, '')
+    .replace(/省$/, '')
+    .replace(/自治区$/, '')
+    .replace(/特别行政区$/, '')
+}
+
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+const applyProvinceByName = (provinceName?: string) => {
+  const normalizedProvince = normalizeCityName(provinceName)
+  if (!normalizedProvince) return false
+
+  const index = provinceList.value.findIndex((province) => {
+    return normalizeCityName(province.name) === normalizedProvince || normalizeCityName(province.value) === normalizedProvince
+  })
+
+  if (index <= 0) return false
+  selectedProvinceIndex.value = index
+  return true
+}
+
+const resolveLocatedCity = async (cityName: string, latitude: number, longitude: number) => {
+  try {
+    const res = await cityApi.list()
+    const data = res.data as ApiResponse<any[]>
+    if (res.statusCode !== 200 || data.code !== 200) return null
+
+    const cities = (data.data || [])
+      .map((item: any): LocatedCity | null => {
+        const name = item?.cityName || item?.name
+        if (!item?.id || !name) return null
+        const latRaw = item.latitude
+        const lngRaw = item.longitude
+        const lat = typeof latRaw === 'number' ? latRaw : typeof latRaw === 'string' ? parseFloat(latRaw) : NaN
+        const lng = typeof lngRaw === 'number' ? lngRaw : typeof lngRaw === 'string' ? parseFloat(lngRaw) : NaN
+        return {
+          id: Number(item.id),
+          name,
+          province: item.province,
+          latitude: lat,
+          longitude: lng,
+        }
+      })
+      .filter((item: LocatedCity | null): item is LocatedCity => !!item)
+
+    const normalizedName = normalizeCityName(cityName)
+    if (normalizedName) {
+      const matched = cities.find((city) => normalizeCityName(city.name) === normalizedName)
+      if (matched) return matched
+    }
+
+    let nearest: LocatedCity | null = null
+    let minDist = Number.POSITIVE_INFINITY
+    cities.forEach((city) => {
+      if (!Number.isFinite(city.latitude) || !Number.isFinite(city.longitude)) return
+      const distance = calculateDistance(latitude, longitude, city.latitude, city.longitude)
+      if (distance < minDist) {
+        minDist = distance
+        nearest = city
+      }
+    })
+    return nearest
+  } catch {
+    return null
+  }
+}
+
+const locateCurrentCity = () => {
+  return new Promise<void>((resolve) => {
+    uni.getLocation({
+      type: 'gcj02',
+      altitude: false,
+      geocode: true,
+      timeout: 5000,
+      success: async (res) => {
+        const addr = (res as any).address || {}
+        const cityName = normalizeCityName(addr.city || addr.province || addr.district || '')
+        const provinceName = addr.province || ''
+        const locatedCity = await resolveLocatedCity(cityName, res.latitude, res.longitude)
+        if (locatedCity) {
+          currentCityId.value = locatedCity.id
+          currentCityName.value = normalizeCityName(locatedCity.name)
+          applyProvinceByName(locatedCity.province || provinceName)
+        } else {
+          currentCityId.value = null
+          currentCityName.value = cityName
+          applyProvinceByName(provinceName)
+        }
+        resolve()
+      },
+      fail: () => {
+        currentCityId.value = null
+        currentCityName.value = ''
+        resolve()
+      },
+    })
+  })
+}
 
 const onSearchClick = () => {
 }
@@ -888,6 +1016,11 @@ const fetchHomeData = async (priority: 'high' | 'low' = 'high') => {
     const scenicParams: any = { limit: 3 }
     const foodParams: any = { limit: 6 }
 
+    if (currentCityId.value) {
+      scenicParams.cityId = currentCityId.value
+      foodParams.cityId = currentCityId.value
+    }
+
     // 如果选择了省份（不是"全部省份"），添加省份参数
     if (provinceValue && provinceValue !== '') {
       scenicParams.province = provinceValue
@@ -1022,10 +1155,12 @@ onLoad(() => {
   resetNavigationState()
 })
 
-onMounted(() => {
+onMounted(async () => {
   // 首次加载：优先加载首屏内容
+  await locateCurrentCity()
   fetchHomeData('high')
   loadNotes(true)
+  preloadTabData()
   isInitialLoad.value = false
   lastRefreshTime.value = Date.now()
   // 监听详情页发送的评论数量更新事件
@@ -1061,6 +1196,7 @@ onShow(() => {
 // 下拉刷新
 onPullDownRefresh(async () => {
   // 刷新时加载所有数据
+  await locateCurrentCity()
   await fetchHomeData('low')
   await loadNotes(true)
   lastRefreshTime.value = Date.now()

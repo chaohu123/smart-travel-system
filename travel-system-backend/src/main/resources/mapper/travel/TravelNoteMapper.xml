@@ -16,6 +16,7 @@
         <result column="favorite_count" property="favoriteCount"/>
         <result column="comment_count" property="commentCount"/>
         <result column="is_featured" property="isFeatured"/>
+        <result column="cover_image" property="coverImage"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
         <result column="del_flag" property="delFlag"/>
@@ -198,9 +199,69 @@
         ORDER BY tn.create_time DESC
     </select>
 
+    <select id="selectUserListWithPage" resultMap="TravelNoteResult">
+        SELECT
+            tn.id, tn.user_id, tn.title, tn.content, tn.city_id, tn.city_name, tn.status, tn.audit_remark,
+            tn.view_count, tn.like_count, tn.favorite_count, tn.comment_count, tn.is_featured,
+            tn.create_time, tn.update_time, tn.del_flag,
+            u.nickname AS author_nickname,
+            u.avatar AS author_avatar,
+            (
+                SELECT tni.url
+                FROM travel_note_image tni
+                WHERE tni.note_id = tn.id AND tni.del_flag = 0
+                ORDER BY tni.sort ASC
+                LIMIT 1
+            ) AS cover_image
+        FROM travel_note tn
+        LEFT JOIN user u ON tn.user_id = u.id
+        <if test="tagName != null and tagName != ''">
+            INNER JOIN content_tag ct
+                ON ct.content_type = 'note'
+               AND ct.content_id = tn.id
+               AND ct.del_flag = 0
+            INNER JOIN tag t
+                ON t.id = ct.tag_id
+               AND t.tag_name = #{tagName}
+               AND t.tag_type = 'content'
+        </if>
+        WHERE tn.del_flag = 0
+          AND tn.status = 'pass'
+        <if test="cityId != null">
+            AND tn.city_id = #{cityId}
+        </if>
+        <choose>
+            <when test="sortBy != null and sortBy == 'hot'">
+                ORDER BY (COALESCE(tn.like_count, 0) * 2 + COALESCE(tn.view_count, 0)) DESC, tn.create_time DESC
+            </when>
+            <otherwise>
+                ORDER BY tn.create_time DESC
+            </otherwise>
+        </choose>
+        LIMIT #{offset}, #{pageSize}
+    </select>
+
+    <select id="countUserList" resultType="int">
+        SELECT COUNT(DISTINCT tn.id)
+        FROM travel_note tn
+        <if test="tagName != null and tagName != ''">
+            INNER JOIN content_tag ct
+                ON ct.content_type = 'note'
+               AND ct.content_id = tn.id
+               AND ct.del_flag = 0
+            INNER JOIN tag t
+                ON t.id = ct.tag_id
+               AND t.tag_name = #{tagName}
+               AND t.tag_type = 'content'
+        </if>
+        WHERE tn.del_flag = 0
+          AND tn.status = 'pass'
+        <if test="cityId != null">
+            AND tn.city_id = #{cityId}
+        </if>
+    </select>
+
 </mapper>
-
-
 
 
 

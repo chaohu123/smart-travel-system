@@ -34,6 +34,16 @@
         ORDER BY create_time DESC
     </select>
 
+    <select id="selectByContentWithLimit" resultMap="CommentResult">
+        SELECT id, content_type, content_id, user_id, content, parent_id, status, like_count,
+               create_time, update_time, del_flag
+        FROM comment
+        WHERE content_type = #{contentType} AND content_id = #{contentId}
+          AND del_flag = 0 AND status = 1
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
     <select id="selectById" parameterType="long" resultMap="CommentResult">
         SELECT id, content_type, content_id, user_id, content, parent_id, status, like_count,
                create_time, update_time, del_flag
@@ -71,7 +81,7 @@
 
     <update id="updateLikeCount">
         UPDATE comment
-        SET like_count = like_count + #{increment}
+        SET like_count = GREATEST(COALESCE(like_count, 0) + #{increment}, 0)
         WHERE id = #{id} AND del_flag = 0
     </update>
 
@@ -98,7 +108,5 @@
     </select>
 
 </mapper>
-
-
 
 

@@ -265,6 +265,10 @@ const showAvatarPreview = ref(false)
 // 签到状态
 const hasCheckedInToday = ref(false)
 
+const getCheckInCacheKey = (userId?: number | null) => {
+  return `lastCheckInDate_${userId || 'anonymous'}`
+}
+
 // 获取勋章图标
 const getMedalIcon = (medal: any) => {
   const iconMap: Record<string, string> = {
@@ -422,9 +426,13 @@ const openChat = () => {
 // 检查今天是否已签到
 const checkTodayCheckInStatus = () => {
   if (!isOwnProfile.value) return
+  if (!currentUser.value?.id) {
+    hasCheckedInToday.value = false
+    return
+  }
   
   const today = new Date().toDateString()
-  const lastCheckInDate = getCache<string>('lastCheckInDate')
+  const lastCheckInDate = getCache<string>(getCheckInCacheKey(currentUser.value?.id))
   hasCheckedInToday.value = lastCheckInDate === today
 }
 
@@ -438,7 +446,8 @@ const checkIn = async () => {
 
   // 检查今天是否已签到
   const today = new Date().toDateString()
-  const lastCheckInDate = getCache<string>('lastCheckInDate')
+  const checkInCacheKey = getCheckInCacheKey(userId)
+  const lastCheckInDate = getCache<string>(checkInCacheKey)
   
   if (lastCheckInDate === today) {
     uni.showToast({ title: '今天已经签到过了', icon: 'none' })
@@ -448,8 +457,17 @@ const checkIn = async () => {
   try {
     const res = await userApi.checkIn(userId)
     if (res.statusCode === 200 && res.data.code === 200) {
+      const checkinData = res.data.data || {}
+      if (checkinData.experience !== undefined) {
+        userInfo.value.experience = checkinData.experience
+      } else if (checkinData.experienceGained) {
+        userInfo.value.experience = (userInfo.value.experience || 0) + checkinData.experienceGained
+      }
+      if (checkinData.level !== undefined) {
+        userInfo.value.level = checkinData.level
+      }
       // 保存签到日期
-      setCache('lastCheckInDate', today, 24 * 60) // 24小时后过期
+      setCache(checkInCacheKey, today, 24 * 60) // 24小时后过期
       hasCheckedInToday.value = true // 更新签到状态
       uni.showToast({ title: '签到成功！+10经验', icon: 'success' })
       // 刷新用户信息
@@ -462,7 +480,7 @@ const checkIn = async () => {
   } catch (error: any) {
     // 如果后端返回已签到错误，也更新本地缓存
     if (error?.data?.code === 400 && error?.data?.msg?.includes('已签到')) {
-      setCache('lastCheckInDate', today, 24 * 60)
+      setCache(checkInCacheKey, today, 24 * 60)
       hasCheckedInToday.value = true
       checkTodayCheckInStatus() // 确保状态更新
       uni.showToast({ title: '今天已经签到过了', icon: 'none' })
@@ -1437,4 +1455,3 @@ onShow(() => {
   color: #999;
 }
 </style>
-

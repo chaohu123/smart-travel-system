@@ -324,6 +324,10 @@ to {
   flex-shrink: 0;
   white-space: nowrap;
 }
+.checkin-btn.checked.data-v-6e5fa1f7 {
+  background-color: #dfe9e5;
+  color: #6f827c;
+}
 .checkin-btn--hover.data-v-6e5fa1f7 {
   background-color: #2a8f5a;
   transform: scale(0.96);
@@ -506,6 +510,7 @@ to {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
   animation: scaleIn-6e5fa1f7 0.3s ease;
 }
 @keyframes scaleIn-6e5fa1f7 {
@@ -522,22 +527,31 @@ to {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 32rpx;
+  padding: 32rpx 88rpx 32rpx 32rpx;
   border-bottom: 1rpx solid #eeeeee;
 }
 .modal-title.data-v-6e5fa1f7 {
   font-size: 32rpx;
   font-weight: 600;
   color: #333333;
+  line-height: 1.4;
 }
 .modal-close.data-v-6e5fa1f7 {
-  font-size: 36rpx;
-  color: #999999;
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
   width: 48rpx;
   height: 48rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  color: #8a94a3;
+  z-index: 2;
+}
+.modal-close-icon.data-v-6e5fa1f7 {
+  font-size: 40rpx;
+  line-height: 48rpx;
 }
 .modal-body.data-v-6e5fa1f7 {
   flex: 1;

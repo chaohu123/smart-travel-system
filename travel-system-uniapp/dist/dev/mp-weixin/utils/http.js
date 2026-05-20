@@ -4,6 +4,8 @@ var utils_storage = require("./storage.js");
 var utils_config = require("./config.js");
 var utils_image = require("./image.js");
 const BASE_URL = utils_config.API_BASE_URL;
+const DEFAULT_TIMEOUT = 15e3;
+const DEFAULT_CACHE_TIME = 3 * 60;
 const getToken = () => utils_storage.getCache("token");
 const pendingRequests = /* @__PURE__ */ new Map();
 const getRequestKey = (url, method, data) => {
@@ -58,6 +60,12 @@ const normalizeUploadUrlInData = (value) => {
   }
   return value;
 };
+const isSuccessfulApiData = (data) => {
+  if (!data || typeof data !== "object") {
+    return true;
+  }
+  return data.code === void 0 || data.code === 200;
+};
 const request = (options) => {
   const {
     url,
@@ -65,6 +73,7 @@ const request = (options) => {
     showLoading = true,
     needRetry = false,
     enableCache = false,
+    disableCache = false,
     cacheTime = 5 * 60,
     header = {},
     data,
@@ -83,13 +92,16 @@ const request = (options) => {
   const cleanedData = data ? cleanParams(data) : void 0;
   const requestKey = getRequestKey(url, method, cleanedData);
   const cacheKey = `api_cache_${requestKey}`;
-  if (enableCache && method === "GET") {
+  const canCache = method === "GET" && !disableCache && (enableCache || !showLoading);
+  if (canCache) {
     const cached = utils_storage.getCache(cacheKey);
-    if (cached) {
+    if (cached && isSuccessfulApiData(cached)) {
       return Promise.resolve({
         statusCode: 200,
         data: cached
       });
+    } else if (cached) {
+      utils_storage.removeCache(cacheKey);
     }
   }
   if (pendingRequests.has(requestKey)) {
@@ -99,7 +111,7 @@ const request = (options) => {
     common_vendor.index.showLoading({ title: "\u52A0\u8F7D\u4E2D", mask: true });
   }
   const run = () => new Promise((resolve, reject) => {
-    const timeout = rest.timeout || 6e4;
+    const timeout = rest.timeout || DEFAULT_TIMEOUT;
     const fullUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`;
     common_vendor.index.request({
       url: fullUrl,
@@ -117,8 +129,8 @@ const request = (options) => {
         if (res && res.data) {
           res.data = normalizeUploadUrlInData(res.data);
         }
-        if (enableCache && method === "GET" && res.statusCode === 200 && res.data) {
-          utils_storage.setCache(cacheKey, res.data, cacheTime);
+        if (canCache && res.statusCode === 200 && res.data && isSuccessfulApiData(res.data)) {
+          utils_storage.setCache(cacheKey, res.data, enableCache ? cacheTime : DEFAULT_CACHE_TIME);
         }
         resolve(res);
       },

@@ -66,6 +66,43 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
     @Override
     public Map<String, Object> listNotes(Integer pageNum, Integer pageSize, Long cityId,
                                          String tagName, String sortBy) {
+        if (pageNum == null || pageNum != null) {
+            pageNum = normalizePageNum(pageNum);
+            pageSize = normalizePageSize(pageSize);
+            int offset = (pageNum - 1) * pageSize;
+            List<TravelNote> pageList = travelNoteMapper.selectUserListWithPage(cityId, tagName, sortBy, offset, pageSize);
+            int total = travelNoteMapper.countUserList(cityId, tagName);
+
+            List<Map<String, Object>> noteList = new ArrayList<>();
+            for (TravelNote note : pageList) {
+                Map<String, Object> noteMap = new HashMap<>();
+                noteMap.put("id", note.getId());
+                noteMap.put("title", note.getTitle());
+                noteMap.put("content", note.getContent());
+                noteMap.put("cityId", note.getCityId());
+                noteMap.put("cityName", note.getCityName());
+                noteMap.put("viewCount", note.getViewCount());
+                noteMap.put("likeCount", note.getLikeCount());
+                noteMap.put("favoriteCount", note.getFavoriteCount());
+                noteMap.put("commentCount", note.getCommentCount());
+                noteMap.put("isFeatured", note.getIsFeatured());
+                noteMap.put("createTime", note.getCreateTime());
+                noteMap.put("userId", note.getUserId());
+                noteMap.put("coverImage", note.getCoverImage());
+                noteMap.put("authorName", note.getAuthorName());
+                noteMap.put("authorAvatar", note.getAuthorAvatar());
+                noteList.add(noteMap);
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("list", noteList);
+            result.put("rows", noteList);
+            result.put("total", total);
+            result.put("pageNum", pageNum);
+            result.put("pageSize", pageSize);
+            return result;
+        }
+
         TravelNote query = new TravelNote();
         query.setCityId(cityId);
         query.setStatus("pass"); // 只查询已审核通过的
@@ -217,9 +254,9 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
         }
 
         // 加载最新评论（默认前10条）
-        List<Comment> comments = commentMapper.selectByContent("note", id);
+        List<Comment> comments = commentMapper.selectByContentWithLimit("note", id, 10);
         List<Map<String, Object>> commentResult = new ArrayList<>();
-        int limit = Math.min(10, comments.size());
+        int limit = comments == null ? 0 : comments.size();
         for (int i = 0; i < limit; i++) {
             Comment c = comments.get(i);
             Map<String, Object> cMap = new HashMap<>();
@@ -650,7 +687,15 @@ public class TravelNoteUserServiceImpl implements TravelNoteUserService {
         
         return item;
     }
+
+    private int normalizePageNum(Integer pageNum) {
+        return pageNum == null || pageNum < 1 ? 1 : pageNum;
+    }
+
+    private int normalizePageSize(Integer pageSize) {
+        if (pageSize == null || pageSize < 1) {
+            return 10;
+        }
+        return Math.min(pageSize, 50);
+    }
 }
-
-
-

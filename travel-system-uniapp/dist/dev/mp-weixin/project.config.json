@@ -39,7 +39,7 @@
     "useCompilerPlugins": false
   },
   "compileType": "miniprogram",
-  "libVersion": "",
+  "libVersion": "3.13.0",
   "appid": "wxcfae6ad33cbdce3d",
   "projectname": "智能旅游小程序",
   "condition": {

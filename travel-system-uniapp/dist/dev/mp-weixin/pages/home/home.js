@@ -7,6 +7,7 @@ var store_user = require("../../store/user.js");
 var utils_router = require("../../utils/router.js");
 var utils_config = require("../../utils/config.js");
 var utils_image = require("../../utils/image.js");
+var utils_tabPreload = require("../../utils/tabPreload.js");
 require("../../utils/storage.js");
 if (!Math) {
   (GuideOverlay + LoginPrompt + common_vendor.unref(common_vendor.Search) + SkeletonCards + EmptyState)();
@@ -45,6 +46,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const searchNoteResults = common_vendor.ref([]);
     const searchActivityResults = common_vendor.ref([]);
     let searchTimer = null;
+    const currentCityId = common_vendor.ref(null);
+    const currentCityName = common_vendor.ref("");
     const isSearching = common_vendor.computed(() => searchKeyword.value.trim().length > 0);
     const hasSearchResult = common_vendor.computed(() => {
       return searchScenicResults.value.length > 0 || searchFoodResults.value.length > 0 || searchNoteResults.value.length > 0 || searchActivityResults.value.length > 0;
@@ -110,7 +113,108 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     });
     const onProvinceChange = (e) => {
       selectedProvinceIndex.value = e.detail.value;
+      currentCityId.value = null;
+      currentCityName.value = "";
       fetchHomeData();
+      fetchHomeData();
+    };
+    const normalizeCityName = (name) => {
+      return String(name || "").trim().replace(/市$/, "").replace(/省$/, "").replace(/自治区$/, "").replace(/特别行政区$/, "");
+    };
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+    const applyProvinceByName = (provinceName) => {
+      const normalizedProvince = normalizeCityName(provinceName);
+      if (!normalizedProvince)
+        return false;
+      const index = provinceList.value.findIndex((province) => {
+        return normalizeCityName(province.name) === normalizedProvince || normalizeCityName(province.value) === normalizedProvince;
+      });
+      if (index <= 0)
+        return false;
+      selectedProvinceIndex.value = index;
+      return true;
+    };
+    const resolveLocatedCity = async (cityName, latitude, longitude) => {
+      try {
+        const res = await api_content.cityApi.list();
+        const data = res.data;
+        if (res.statusCode !== 200 || data.code !== 200)
+          return null;
+        const cities = (data.data || []).map((item) => {
+          const name = (item == null ? void 0 : item.cityName) || (item == null ? void 0 : item.name);
+          if (!(item == null ? void 0 : item.id) || !name)
+            return null;
+          const latRaw = item.latitude;
+          const lngRaw = item.longitude;
+          const lat = typeof latRaw === "number" ? latRaw : typeof latRaw === "string" ? parseFloat(latRaw) : NaN;
+          const lng = typeof lngRaw === "number" ? lngRaw : typeof lngRaw === "string" ? parseFloat(lngRaw) : NaN;
+          return {
+            id: Number(item.id),
+            name,
+            province: item.province,
+            latitude: lat,
+            longitude: lng
+          };
+        }).filter((item) => !!item);
+        const normalizedName = normalizeCityName(cityName);
+        if (normalizedName) {
+          const matched = cities.find((city) => normalizeCityName(city.name) === normalizedName);
+          if (matched)
+            return matched;
+        }
+        let nearest = null;
+        let minDist = Number.POSITIVE_INFINITY;
+        cities.forEach((city) => {
+          if (!Number.isFinite(city.latitude) || !Number.isFinite(city.longitude))
+            return;
+          const distance = calculateDistance(latitude, longitude, city.latitude, city.longitude);
+          if (distance < minDist) {
+            minDist = distance;
+            nearest = city;
+          }
+        });
+        return nearest;
+      } catch {
+        return null;
+      }
+    };
+    const locateCurrentCity = () => {
+      return new Promise((resolve) => {
+        common_vendor.index.getLocation({
+          type: "gcj02",
+          altitude: false,
+          geocode: true,
+          timeout: 5e3,
+          success: async (res) => {
+            const addr = res.address || {};
+            const cityName = normalizeCityName(addr.city || addr.province || addr.district || "");
+            const provinceName = addr.province || "";
+            const locatedCity = await resolveLocatedCity(cityName, res.latitude, res.longitude);
+            if (locatedCity) {
+              currentCityId.value = locatedCity.id;
+              currentCityName.value = normalizeCityName(locatedCity.name);
+              applyProvinceByName(locatedCity.province || provinceName);
+            } else {
+              currentCityId.value = null;
+              currentCityName.value = cityName;
+              applyProvinceByName(provinceName);
+            }
+            resolve();
+          },
+          fail: () => {
+            currentCityId.value = null;
+            currentCityName.value = "";
+            resolve();
+          }
+        });
+      });
     };
     const onSearchClick = () => {
     };
@@ -383,6 +487,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const provinceValue = selectedProvince.value && selectedProvince.value !== "\u5168\u90E8\u7701\u4EFD" ? (_a = provinceList.value[selectedProvinceIndex.value]) == null ? void 0 : _a.value : void 0;
         const scenicParams = { limit: 3 };
         const foodParams = { limit: 6 };
+        if (currentCityId.value) {
+          scenicParams.cityId = currentCityId.value;
+          foodParams.cityId = currentCityId.value;
+        }
         if (provinceValue && provinceValue !== "") {
           scenicParams.province = provinceValue;
           foodParams.province = provinceValue;
@@ -498,9 +606,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     common_vendor.onLoad(() => {
       utils_router.resetNavigationState();
     });
-    common_vendor.onMounted(() => {
+    common_vendor.onMounted(async () => {
+      await locateCurrentCity();
       fetchHomeData("high");
       loadNotes(true);
+      utils_tabPreload.preloadTabData();
       isInitialLoad.value = false;
       lastRefreshTime.value = Date.now();
       common_vendor.index.$on("noteCommentCountUpdated", handleNoteCommentCountUpdate);
@@ -523,6 +633,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       lastRefreshTime.value = now;
     });
     common_vendor.onPullDownRefresh(async () => {
+      await locateCurrentCity();
       await fetchHomeData("low");
       await loadNotes(true);
       lastRefreshTime.value = Date.now();

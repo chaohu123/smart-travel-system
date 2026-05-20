@@ -69,6 +69,7 @@ export const scenicSpotApi = {
       method: 'GET',
       data: params || {},
       showLoading: false,
+      disableCache: true,
     })
   },
 
@@ -78,6 +79,7 @@ export const scenicSpotApi = {
       url: `/scenic/${id}`,
       method: 'GET',
       showLoading: true,
+      disableCache: true,
     })
   },
 
@@ -262,12 +264,14 @@ export const travelNoteInteractionApi = {
     contentId: number
     pageNum?: number
     pageSize?: number
+    userId?: number
   }) => {
     return request({
       url: '/travel/note/interaction/comment/list',
       method: 'GET',
       data: params,
       showLoading: false,
+      disableCache: true,
     })
   },
 
@@ -387,13 +391,15 @@ export const checkinApi = {
     targetId: number,
     pageNum: number = 1,
     pageSize: number = 10,
+    userId?: number,
   ) => {
     return request({
       url: '/checkin/target',
       method: 'GET',
-      data: { targetType, targetId, pageNum, pageSize },
+      data: { targetType, targetId, pageNum, pageSize, userId },
       showLoading: false,
       needAuth: false,
+      disableCache: true,
     })
   },
   // 获取用户足迹统计（城市、省份、美食数量等）

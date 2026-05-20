@@ -176,16 +176,14 @@ const loadCities = async () => {
 let eventChannel: UniApp.EventChannel | null = null
 
 const selectCity = (city: CityItem) => {
-  uni.setStorageSync('ticket_selected_city', {
+  const selectedCity = {
     id: city.id,
     name: city.name,
     ts: Date.now(),
-  })
+  }
+  uni.setStorageSync('ticket_selected_city', selectedCity)
   if (eventChannel) {
-    eventChannel.emit('citySelected', {
-      id: city.id,
-      name: city.name,
-    })
+    eventChannel.emit('citySelected', selectedCity)
   }
   uni.navigateBack()
 }

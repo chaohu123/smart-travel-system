@@ -17,5 +17,10 @@ public interface UserCheckinMapper {
      * 查询用户今天是否已签到
      */
     UserCheckin selectByUserAndDate(@Param("userId") Long userId, @Param("checkinDate") Date checkinDate);
+
+    /**
+     * 统计用户签到累计获得的经验值
+     */
+    Integer sumExperienceByUserId(@Param("userId") Long userId);
 }
 

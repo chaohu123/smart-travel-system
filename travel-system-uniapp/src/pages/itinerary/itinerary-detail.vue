@@ -58,15 +58,21 @@
       <view class="map-section" v-if="activeTab === 'itinerary'">
         <view class="map-container">
           <map
+            id="route-day-map"
             class="map"
             :latitude="mapCenter.latitude"
             :longitude="mapCenter.longitude"
+            :scale="mapScale"
             :markers="mapMarkers"
             :polyline="mapPolyline"
             :show-location="true"
             :enable-zoom="true"
             provider="amap"
           ></map>
+          <view class="map-route-summary">
+            <text class="map-summary-title">Day {{ currentMapSummary.dayNo }}</text>
+            <text class="map-summary-desc">{{ currentMapSummary.poiCount }}个地点 · 路线为示意连线</text>
+          </view>
           <view class="map-button" @click="viewFullMap">
             <text>查看完整行程地图</text>
           </view>
@@ -305,15 +311,35 @@
       <view class="map-view-section" v-if="activeTab === 'map'">
         <view class="map-container-center">
           <map
+            id="route-full-map"
             class="full-map"
             :latitude="mapCenter.latitude"
             :longitude="mapCenter.longitude"
+            :scale="mapScale"
             :markers="mapMarkers"
             :polyline="mapPolyline"
             :show-location="true"
             :enable-zoom="true"
             provider="amap"
           ></map>
+          <view class="full-map-toolbar">
+            <scroll-view scroll-x class="map-chip-scroll" :show-scrollbar="false">
+              <view class="map-chip-list">
+                <view
+                  class="map-chip"
+                  :class="{ active: routeMapMode === 'full' }"
+                  @click="showFullRouteMap"
+                >全程</view>
+                <view
+                  v-for="(dayItem, dayIndex) in routeData.days"
+                  :key="dayItem.day?.id || dayIndex"
+                  class="map-chip"
+                  :class="{ active: routeMapMode === 'day' && selectedDayIndex === dayIndex }"
+                  @click="showMapDay(dayIndex)"
+                >Day {{ dayItem.day?.dayNo || dayIndex + 1 }}</view>
+              </view>
+            </scroll-view>
+          </view>
           <view v-if="fullMapLegends.length > 0" class="map-legend-panel">
             <view class="map-legend-title">行程图例</view>
             <view class="map-legend-list">
@@ -607,6 +633,7 @@ const mapCenter = ref({
 
 const mapMarkers = ref<any[]>([])
 const mapPolyline = ref<any[]>([])
+const mapScale = ref(12)
 const routeMapMode = ref<'day' | 'full'>('day')
 
 // 动态 marker 图标缓存（小程序 map 的 iconPath 需要本地路径/临时文件路径）
@@ -615,6 +642,69 @@ let mapUpdateGen = 0
 const DAY_LINE_COLORS = ['#3BA272', '#2F7DDB', '#F59E0B', '#EF4444', '#8B5CF6', '#14B8A6', '#EC4899']
 
 const getDayLineColor = (dayNo: number) => DAY_LINE_COLORS[(Math.max(1, dayNo) - 1) % DAY_LINE_COLORS.length]
+
+const getSortedDayPois = (dayItem: any) => {
+  return [...(dayItem?.pois || [])].sort((a, b) => {
+    const sortA = a.poi?.sort || 0
+    const sortB = b.poi?.sort || 0
+    return sortA - sortB
+  })
+}
+
+const getValidPoiCoords = (pois: any[]) => {
+  return pois
+    .map((poiItem) => extractPoiCoord(poiItem?.detail))
+    .filter((coord): coord is { latitude: number; longitude: number } => !!coord)
+}
+
+const getUniqueCoords = (coords: Array<{ latitude: number; longitude: number }>) => {
+  const seen = new Set<string>()
+  return coords.filter((coord) => {
+    if (!Number.isFinite(coord?.latitude) || !Number.isFinite(coord?.longitude)) return false
+    const key = `${coord.latitude},${coord.longitude}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+const updateMapViewport = (coords: Array<{ latitude: number; longitude: number }>) => {
+  const validCoords = getUniqueCoords(coords)
+  if (!validCoords.length) return
+
+  let sumLat = 0
+  let sumLng = 0
+  let minLat = validCoords[0].latitude
+  let maxLat = validCoords[0].latitude
+  let minLng = validCoords[0].longitude
+  let maxLng = validCoords[0].longitude
+
+  validCoords.forEach((coord) => {
+    sumLat += coord.latitude
+    sumLng += coord.longitude
+    minLat = Math.min(minLat, coord.latitude)
+    maxLat = Math.max(maxLat, coord.latitude)
+    minLng = Math.min(minLng, coord.longitude)
+    maxLng = Math.max(maxLng, coord.longitude)
+  })
+
+  mapCenter.value = {
+    latitude: sumLat / validCoords.length,
+    longitude: sumLng / validCoords.length,
+  }
+
+  const span = Math.max(maxLat - minLat, maxLng - minLng)
+  mapScale.value = span > 1.2 ? 7 : span > 0.5 ? 9 : span > 0.18 ? 11 : span > 0.06 ? 12 : span > 0.025 ? 13 : span > 0.01 ? 14 : 15
+}
+
+const currentMapSummary = computed(() => {
+  const dayItem = currentDayData.value
+  const pois = getSortedDayPois(dayItem)
+  return {
+    dayNo: dayItem?.day?.dayNo || selectedDayIndex.value + 1,
+    poiCount: getValidPoiCoords(pois).length,
+  }
+})
 
 const fullMapLegends = computed(() => {
   if (activeTab.value !== 'map' || routeMapMode.value !== 'full' || !routeData.value?.days?.length) return []
@@ -803,12 +893,7 @@ const updateMapData = () => {
   const markers: any[] = []
   const polylines: any[] = []
 
-  // 按sort排序
-  const sortedPois = [...dayItem.pois].sort((a, b) => {
-    const sortA = a.poi?.sort || 0
-    const sortB = b.poi?.sort || 0
-    return sortA - sortB
-  })
+  const sortedPois = getSortedDayPois(dayItem)
 
   const dayCoordinates: any[] = []
   const dayNo = dayItem.day?.dayNo || selectedDayIndex.value + 1
@@ -842,8 +927,8 @@ const updateMapData = () => {
         latitude: lat,
         longitude: lng,
         title: markerTitle,
-        width: 40,
-        height: 40,
+        width: 46,
+        height: 46,
         callout: {
           content: markerTitle,
           color: '#333',
@@ -853,6 +938,13 @@ const updateMapData = () => {
           padding: 8,
           display: 'BYCLICK',
           textAlign: 'center'
+        },
+        label: {
+          content: isFood ? '餐' : String(poiOrder),
+          color: '#ffffff',
+          fontSize: 14,
+          anchorX: -5,
+          anchorY: -36
         }
       }
       const icon = isFood ? foodIcon : scenicIcon
@@ -875,11 +967,12 @@ const updateMapData = () => {
     if (dayCoordinates.length > 1) {
       polylines.push({
         points: dayCoordinates,
-        color: '#3BA272',
-        width: 4,
+        color: '#1F8F66',
+        width: 5,
         arrowLine: true,
-        borderColor: '#2d8f5f',
-        borderWidth: 1
+        dottedLine: false,
+        borderColor: '#FFFFFF',
+        borderWidth: 2
       })
     }
 
@@ -899,6 +992,7 @@ const updateMapData = () => {
 
     // 更新地图数据
     if (gen === mapUpdateGen) {
+      updateMapViewport(dayCoordinates)
       mapMarkers.value = markers
       mapPolyline.value = polylines
     }
@@ -923,11 +1017,7 @@ const updateFullMapData = () => {
     const allCoords: Array<{ latitude: number; longitude: number }> = []
 
     days.forEach((dayItem, dayIdx) => {
-      const sortedPois = [...(dayItem?.pois || [])].sort((a, b) => {
-        const sortA = a.poi?.sort || 0
-        const sortB = b.poi?.sort || 0
-        return sortA - sortB
-      })
+      const sortedPois = getSortedDayPois(dayItem)
       const dayNo = Number(dayItem?.day?.dayNo || dayIdx + 1)
       const dayCoords: Array<{ latitude: number; longitude: number }> = []
       let scenicSeq = 1
@@ -937,15 +1027,16 @@ const updateFullMapData = () => {
         const coord = extractPoiCoord(detail)
         if (!coord) return
         const isFood = poiItem.poi?.poiType === 'food'
-        const markerTitle = `${isFood ? '食' : '景'} Day${dayNo}-${isFood ? poiIdx + 1 : scenicSeq} ${getPoiName(poiItem)}`
+        const markerSeq = isFood ? poiIdx + 1 : scenicSeq
+        const markerTitle = `${isFood ? '食' : '景'} Day${dayNo}-${markerSeq} ${getPoiName(poiItem)}`
         if (!isFood) scenicSeq++
         const marker: any = {
           id: dayNo * 10000 + poiIdx + 1,
           latitude: coord.latitude,
           longitude: coord.longitude,
           title: markerTitle,
-          width: 34,
-          height: 34,
+          width: 40,
+          height: 40,
           callout: {
             content: markerTitle,
             color: '#2d2d2d',
@@ -955,6 +1046,13 @@ const updateFullMapData = () => {
             padding: 6,
             display: 'BYCLICK',
             textAlign: 'center',
+          },
+          label: {
+            content: isFood ? '餐' : String(markerSeq),
+            color: '#ffffff',
+            fontSize: 13,
+            anchorX: -5,
+            anchorY: -32,
           },
         }
         const icon = isFood ? foodIcon : scenicIcon
@@ -989,6 +1087,7 @@ const updateFullMapData = () => {
     }
 
     if (gen === mapUpdateGen) {
+      updateMapViewport(allCoords)
       mapMarkers.value = markers
       mapPolyline.value = polylines
     }
@@ -1542,8 +1641,19 @@ const getDayDate = (dayIndex: number, dayNo?: number) => {
 
 // 处理天数切换
 const handleDayChange = (dayIndex: number) => {
+  if (selectedDayIndex.value === dayIndex) {
+    updateMapData()
+    return
+  }
   selectedDayIndex.value = dayIndex
-  // 更新地图显示
+}
+
+const showFullRouteMap = () => {
+  updateFullMapData()
+}
+
+const showMapDay = (dayIndex: number) => {
+  selectedDayIndex.value = dayIndex
   updateMapData()
 }
 
@@ -1842,6 +1952,34 @@ watch(activeTab, (tab) => {
 .map {
   width: 100%;
   height: 100%;
+}
+
+.map-route-summary {
+  position: absolute;
+  top: 16rpx;
+  left: 16rpx;
+  z-index: 10;
+  max-width: 360rpx;
+  padding: 12rpx 16rpx;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 14rpx;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.map-summary-title {
+  font-size: 24rpx;
+  color: #1f2a24;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.map-summary-desc {
+  font-size: 20rpx;
+  color: #647067;
+  line-height: 1.3;
 }
 
 .map-button {
@@ -2422,6 +2560,46 @@ watch(activeTab, (tab) => {
 .full-map {
   width: 100%;
   height: 100%;
+}
+
+.full-map-toolbar {
+  position: absolute;
+  left: 20rpx;
+  right: 20rpx;
+  bottom: 24rpx;
+  z-index: 13;
+}
+
+.map-chip-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.map-chip-list {
+  display: flex;
+  flex-direction: row;
+  gap: 12rpx;
+  padding: 4rpx 0;
+}
+
+.map-chip {
+  flex-shrink: 0;
+  min-width: 96rpx;
+  height: 56rpx;
+  padding: 0 20rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.94);
+  color: #425047;
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 56rpx;
+  text-align: center;
+  box-shadow: 0 4rpx 14rpx rgba(0, 0, 0, 0.12);
+}
+
+.map-chip.active {
+  background: #3ba272;
+  color: #ffffff;
 }
 
 .map-legend-panel {

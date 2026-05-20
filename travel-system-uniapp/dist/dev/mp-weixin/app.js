@@ -82,7 +82,6 @@ const setupGlobalTimeoutGuards = () => {
 setupGlobalTimeoutGuards();
 function createApp() {
   const app = common_vendor.createSSRApp(App);
-  common_vendor.install(app);
   return {
     app
   };

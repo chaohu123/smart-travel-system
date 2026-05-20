@@ -5,6 +5,7 @@ let navigateTimer = null;
 let lastNavigateUrl = "";
 let lastNavigateTime = 0;
 const NAVIGATE_DEBOUNCE_TIME = 300;
+const NAVIGATE_TIMEOUT = 4500;
 const TAB_BAR_PAGES = /* @__PURE__ */ new Set([
   "/pages/home/home",
   "/pages/route/plan",
@@ -18,139 +19,173 @@ const normalizePath = (url) => {
   const purePath = url.split("?")[0];
   return purePath.startsWith("/") ? purePath : `/${purePath}`;
 };
-const isTabBarUrl = (url) => {
-  return TAB_BAR_PAGES.has(normalizePath(url));
+const isTabBarUrl = (url) => TAB_BAR_PAGES.has(normalizePath(url));
+const getErrMsg = (err) => String((err == null ? void 0 : err.errMsg) || (err == null ? void 0 : err.message) || err || "");
+const isTimeoutError = (err) => {
+  const msg = getErrMsg(err).toLowerCase();
+  return msg.includes("timeout") || msg.includes("timedout");
 };
-const safeNavigateTo = (url, options) => {
-  if (isTabBarUrl(url)) {
-    return safeSwitchTab(url);
-  }
+const isRouteBusyError = (err) => {
+  const msg = getErrMsg(err).toLowerCase();
+  return msg.includes("webview") || msg.includes("route") || msg.includes("navigate");
+};
+const shouldSkipNavigate = (url) => {
   const now = Date.now();
-  if (isNavigating && lastNavigateUrl === url) {
-    return Promise.resolve();
-  }
-  if (now - lastNavigateTime < NAVIGATE_DEBOUNCE_TIME && lastNavigateUrl === url) {
-    return Promise.resolve();
-  }
+  return isNavigating && lastNavigateUrl === url || now - lastNavigateTime < NAVIGATE_DEBOUNCE_TIME && lastNavigateUrl === url;
+};
+const lockNavigation = (url) => {
   if (navigateTimer) {
     clearTimeout(navigateTimer);
     navigateTimer = null;
   }
   isNavigating = true;
   lastNavigateUrl = url;
-  lastNavigateTime = now;
+  lastNavigateTime = Date.now();
+};
+const unlockNavigation = (delay = 80) => {
+  if (navigateTimer) {
+    clearTimeout(navigateTimer);
+    navigateTimer = null;
+  }
+  navigateTimer = setTimeout(() => {
+    isNavigating = false;
+    lastNavigateUrl = "";
+    navigateTimer = null;
+  }, delay);
+};
+const notifyRouteTimeout = () => {
+  common_vendor.index.showToast({
+    title: "\u9875\u9762\u5207\u6362\u8D85\u65F6\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5",
+    icon: "none",
+    duration: 1600
+  });
+};
+const withoutCallbacks = (options) => {
+  if (!options)
+    return options;
+  const { success, fail, complete, ...rest } = options;
+  return rest;
+};
+const runWithNavigationTimeout = (url, options, runner, releaseDelay = 80) => {
+  lockNavigation(url);
   return new Promise((resolve, reject) => {
-    common_vendor.index.navigateTo({
-      url,
-      ...options,
+    let settled = false;
+    const timeoutTimer = setTimeout(() => {
+      var _a, _b;
+      if (settled)
+        return;
+      settled = true;
+      const err = { errMsg: "route timeout" };
+      unlockNavigation(0);
+      notifyRouteTimeout();
+      (_a = options == null ? void 0 : options.fail) == null ? void 0 : _a.call(options, err);
+      (_b = options == null ? void 0 : options.complete) == null ? void 0 : _b.call(options);
+      resolve();
+    }, NAVIGATE_TIMEOUT);
+    const finish = (callback) => {
+      if (settled)
+        return;
+      settled = true;
+      clearTimeout(timeoutTimer);
+      callback();
+    };
+    runner({
       success: (res) => {
-        var _a;
-        navigateTimer = setTimeout(() => {
-          isNavigating = false;
-          navigateTimer = null;
-          lastNavigateUrl = "";
-        }, 300);
-        (_a = options == null ? void 0 : options.success) == null ? void 0 : _a.call(options, res);
-        resolve();
+        finish(() => {
+          var _a, _b;
+          unlockNavigation(releaseDelay);
+          (_a = options == null ? void 0 : options.success) == null ? void 0 : _a.call(options, res);
+          (_b = options == null ? void 0 : options.complete) == null ? void 0 : _b.call(options);
+          resolve();
+        });
       },
       fail: (err) => {
-        var _a, _b, _c, _d, _e, _f;
-        isNavigating = false;
-        lastNavigateUrl = "";
-        if (navigateTimer) {
-          clearTimeout(navigateTimer);
-          navigateTimer = null;
-        }
-        if ((_a = err.errMsg) == null ? void 0 : _a.includes("tabbar page")) {
-          safeSwitchTab(url).then(resolve).catch(() => resolve());
-          return;
-        }
-        if (((_b = err.errMsg) == null ? void 0 : _b.includes("timeout")) || ((_c = err.errMsg) == null ? void 0 : _c.includes("timedout"))) {
-          common_vendor.index.showToast({
-            title: "\u9875\u9762\u5207\u6362\u8D85\u65F6\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5",
-            icon: "none",
-            duration: 1800
-          });
-          (_d = options == null ? void 0 : options.fail) == null ? void 0 : _d.call(options, err);
-          resolve();
-          return;
-        }
-        if (((_e = err.errMsg) == null ? void 0 : _e.includes("webview")) || ((_f = err.errMsg) == null ? void 0 : _f.includes("route"))) {
-          setTimeout(() => {
-            safeNavigateTo(url, options).then(resolve).catch(reject);
-          }, 500);
-        } else {
-          setTimeout(() => {
-            isNavigating = false;
-            lastNavigateUrl = "";
-            safeNavigateTo(url, options).then(resolve).catch(reject);
-          }, 300);
-        }
+        finish(() => {
+          var _a, _b, _c, _d;
+          unlockNavigation(0);
+          if (isTimeoutError(err)) {
+            notifyRouteTimeout();
+            (_a = options == null ? void 0 : options.fail) == null ? void 0 : _a.call(options, err);
+            (_b = options == null ? void 0 : options.complete) == null ? void 0 : _b.call(options);
+            resolve();
+            return;
+          }
+          (_c = options == null ? void 0 : options.fail) == null ? void 0 : _c.call(options, err);
+          (_d = options == null ? void 0 : options.complete) == null ? void 0 : _d.call(options);
+          reject(err);
+        });
       },
       complete: () => {
         var _a;
-        (_a = options == null ? void 0 : options.complete) == null ? void 0 : _a.call(options);
+        if (!settled) {
+          (_a = options == null ? void 0 : options.complete) == null ? void 0 : _a.call(options);
+        }
       }
     });
   });
 };
-const safeSwitchTab = (url, options) => {
-  const now = Date.now();
-  if (isNavigating && lastNavigateUrl === url) {
+const safeNavigateTo = (url, options, retryCount = 0) => {
+  if (isTabBarUrl(url)) {
+    return safeSwitchTab(url);
+  }
+  if (shouldSkipNavigate(url)) {
     return Promise.resolve();
   }
-  if (now - lastNavigateTime < NAVIGATE_DEBOUNCE_TIME && lastNavigateUrl === url) {
+  return runWithNavigationTimeout(
+    url,
+    options,
+    (handlers) => {
+      common_vendor.index.navigateTo({
+        url,
+        ...options,
+        success: handlers.success,
+        fail: (err) => {
+          if (getErrMsg(err).includes("tabbar page")) {
+            safeSwitchTab(url).then(handlers.success).catch(handlers.fail);
+            return;
+          }
+          if (!isTimeoutError(err) && isRouteBusyError(err) && retryCount < 1) {
+            unlockNavigation(0);
+            setTimeout(() => {
+              safeNavigateTo(url, withoutCallbacks(options), retryCount + 1).then(handlers.success).catch(handlers.fail);
+            }, 180);
+            return;
+          }
+          handlers.fail(err);
+        },
+        complete: handlers.complete
+      });
+    },
+    120
+  );
+};
+const safeSwitchTab = (url, options, retryCount = 0) => {
+  if (shouldSkipNavigate(url)) {
     return Promise.resolve();
   }
-  if (navigateTimer) {
-    clearTimeout(navigateTimer);
-  }
-  isNavigating = true;
-  lastNavigateUrl = url;
-  lastNavigateTime = now;
-  return new Promise((resolve, reject) => {
-    common_vendor.index.switchTab({
-      url,
-      ...options,
-      success: (res) => {
-        var _a;
-        navigateTimer = setTimeout(() => {
-          isNavigating = false;
-          navigateTimer = null;
-          lastNavigateUrl = "";
-        }, 200);
-        (_a = options == null ? void 0 : options.success) == null ? void 0 : _a.call(options, res);
-        resolve();
-      },
-      fail: (err) => {
-        var _a, _b, _c, _d, _e, _f;
-        isNavigating = false;
-        lastNavigateUrl = "";
-        if (((_a = err.errMsg) == null ? void 0 : _a.includes("timeout")) || ((_b = err.errMsg) == null ? void 0 : _b.includes("timedout"))) {
-          common_vendor.index.showToast({
-            title: "\u9875\u9762\u5207\u6362\u8D85\u65F6\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5",
-            icon: "none",
-            duration: 1800
-          });
-          (_c = options == null ? void 0 : options.fail) == null ? void 0 : _c.call(options, err);
-          resolve();
-          return;
-        }
-        if (((_d = err.errMsg) == null ? void 0 : _d.includes("webview")) || ((_e = err.errMsg) == null ? void 0 : _e.includes("route"))) {
-          setTimeout(() => {
-            safeSwitchTab(url, options).then(resolve).catch(reject);
-          }, 500);
-        } else {
-          (_f = options == null ? void 0 : options.fail) == null ? void 0 : _f.call(options, err);
-          reject(err);
-        }
-      },
-      complete: () => {
-        var _a;
-        (_a = options == null ? void 0 : options.complete) == null ? void 0 : _a.call(options);
-      }
-    });
-  });
+  return runWithNavigationTimeout(
+    url,
+    options,
+    (handlers) => {
+      common_vendor.index.switchTab({
+        url,
+        ...options,
+        success: handlers.success,
+        fail: (err) => {
+          if (!isTimeoutError(err) && isRouteBusyError(err) && retryCount < 1) {
+            unlockNavigation(0);
+            setTimeout(() => {
+              safeSwitchTab(url, withoutCallbacks(options), retryCount + 1).then(handlers.success).catch(handlers.fail);
+            }, 180);
+            return;
+          }
+          handlers.fail(err);
+        },
+        complete: handlers.complete
+      });
+    },
+    80
+  );
 };
 const resetNavigationState = () => {
   isNavigating = false;

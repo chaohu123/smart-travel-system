@@ -25,12 +25,13 @@ public interface CheckinService {
     Map<String, Object> getCheckinsByTarget(String targetType, Long targetId,
                                             Integer pageNum, Integer pageSize);
 
+    Map<String, Object> getMyCheckinByTarget(Long userId, String targetType, Long targetId);
+
     /**
      * 查询单条打卡详情
      */
     Map<String, Object> getCheckinDetail(Long id);
 }
-
 
 
 

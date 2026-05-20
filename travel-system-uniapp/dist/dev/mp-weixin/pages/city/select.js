@@ -92,16 +92,14 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     let eventChannel = null;
     const selectCity = (city) => {
-      common_vendor.index.setStorageSync("ticket_selected_city", {
+      const selectedCity = {
         id: city.id,
         name: city.name,
         ts: Date.now()
-      });
+      };
+      common_vendor.index.setStorageSync("ticket_selected_city", selectedCity);
       if (eventChannel) {
-        eventChannel.emit("citySelected", {
-          id: city.id,
-          name: city.name
-        });
+        eventChannel.emit("citySelected", selectedCity);
       }
       common_vendor.index.navigateBack();
     };

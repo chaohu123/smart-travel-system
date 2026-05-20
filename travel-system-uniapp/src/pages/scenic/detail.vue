@@ -144,14 +144,14 @@
           </view>
         </view>
 
-        <!-- 打卡评价（展示他人打卡 + 自己打卡入口） -->
+        <!-- 打卡评价 -->
         <view class="intro-card">
           <view class="card-title">
             <text class="iconfont icon-jingdianjieshao title-icon"></text>
             <text class="title-text">打卡评价</text>
           </view>
 
-          <!-- 他人打卡列表 -->
+          <!-- 打卡列表 -->
           <view v-if="checkinList.length > 0" class="checkin-list">
             <view
               v-for="item in checkinList"
@@ -185,12 +185,6 @@
             <text>还没有人打卡，快来成为第一位打卡者吧～</text>
           </view>
 
-          <!-- 自己打卡入口：简单按钮，引导回打卡页 -->
-          <view class="checkin-self-row">
-            <button class="checkin-self-btn" @click="goCheckin">
-              我也要去打卡
-            </button>
-          </view>
         </view>
       </view>
 
@@ -208,8 +202,8 @@
         ></text>
       </view>
       <view class="action-buttons">
-        <button class="action-btn checkin-btn" @click="goCheckin">
-          <text class="btn-text">去打卡</text>
+        <button class="action-btn checkin-btn" :class="{ checked: hasCheckedIn }" @click="goCheckin">
+          <text class="btn-text">{{ hasCheckedIn ? '已打卡' : '去打卡' }}</text>
         </button>
         <button
           class="action-btn route-btn"
@@ -244,7 +238,7 @@
                 <image class="upload-image" :src="img" mode="aspectFill" />
                 <text class="upload-delete" @click="removeImage(index)">×</text>
               </view>
-              <view v-if="uploadImages.length < 9" class="upload-add" @click="chooseImage">
+              <view v-if="uploadImages.length < 1" class="upload-add" @click="chooseImage">
                 <text class="upload-text">添加照片</text>
               </view>
             </view>
@@ -319,7 +313,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { scenicSpotApi, foodApi, checkinApi, type ApiResponse } from '@/api/content'
+import { scenicSpotApi, foodApi, checkinApi, uploadApi, type ApiResponse } from '@/api/content'
 import { getCache, setCache, removeCache } from '@/utils/storage'
 import { useUserStore } from '@/store/user'
 import { safeNavigateTo, safeSwitchTab } from '@/utils/router'
@@ -348,6 +342,8 @@ const CACHE_EXPIRE = 5 * 60 // 5分钟缓存
 
 // 打卡评价相关状态
 const checkinList = ref<any[]>([])
+const hasCheckedIn = ref(false)
+const myCheckin = ref<any>(null)
 
 // 收藏功能（使用本地存储）
 const FAVORITE_KEY = 'scenic_favorites'
@@ -448,7 +444,7 @@ const loadDetail = async (useCache = true) => {
   if (useCache) {
     const cacheKey = `${CACHE_KEY_PREFIX}${scenicId.value}`
     const cached = getCache<any>(cacheKey)
-    if (cached) {
+    if (cached && Number(cached.id) === Number(scenicId.value)) {
       detail.value = cached
       loadFavoriteStatus()
       checkPendingStatus()
@@ -457,6 +453,8 @@ const loadDetail = async (useCache = true) => {
         loadNearbyFoods()
       }, 300)
       return
+    } else if (cached) {
+      removeCache(cacheKey)
     }
   }
   
@@ -515,11 +513,13 @@ const loadNearbyFoods = async () => {
 const loadScenicCheckins = async () => {
   if (!scenicId.value) return
   try {
-    const res = await checkinApi.getTargetCheckins('scenic', scenicId.value, 1, 10)
-    const data = res.data as ApiResponse<{ list: any[] }>
+    const res = await checkinApi.getTargetCheckins('scenic', scenicId.value, 1, 10, user.value?.id)
+    const data = res.data as ApiResponse<{ list: any[]; hasCheckedIn?: boolean; myCheckin?: any }>
     if (res.statusCode === 200 && data.code === 200) {
       const list = (data.data && (data.data as any).list) || []
       checkinList.value = list || []
+      hasCheckedIn.value = !!data.data?.hasCheckedIn
+      myCheckin.value = data.data?.myCheckin || null
     }
   } catch (e) {
     // 静默失败，不影响主流程
@@ -547,6 +547,10 @@ const goCheckin = () => {
   lastClickTime = now
   
   if (!scenicId.value) return
+  if (hasCheckedIn.value) {
+    uni.showToast({ title: '你已经打卡过啦', icon: 'none' })
+    return
+  }
   openCheckinModal()
 }
 
@@ -696,7 +700,7 @@ const closeCheckinModal = () => {
 
 const chooseImage = () => {
   uni.chooseImage({
-    count: 9 - uploadImages.value.length,
+    count: 1 - uploadImages.value.length,
     success: (res) => {
       uploadImages.value.push(...res.tempFilePaths)
     },
@@ -705,6 +709,22 @@ const chooseImage = () => {
 
 const removeImage = (index: number) => {
   uploadImages.value.splice(index, 1)
+}
+
+const getUploadedPhotoUrl = async () => {
+  const firstImage = uploadImages.value[0]
+  if (!firstImage) return undefined
+
+  const uploadRes = await uploadApi.upload(firstImage)
+  const uploadData = uploadRes.data
+  if (uploadRes.statusCode !== 200 || uploadData?.code !== 200) {
+    throw new Error(uploadData?.msg || '图片上传失败')
+  }
+
+  if (typeof uploadData?.data === 'string') {
+    return uploadData.data
+  }
+  return uploadData?.data?.url
 }
 
 const submitCheckin = async () => {
@@ -721,18 +741,37 @@ const submitCheckin = async () => {
   }
 
   try {
+    const photoUrl = await getUploadedPhotoUrl()
+
     await checkinApi.addCheckin({
       userId,
       targetType: 'scenic',
       targetId: scenicId.value,
+      photoUrl,
       content: checkinComment.value.trim() || undefined,
       latitude: detail.value?.latitude,
       longitude: detail.value?.longitude,
     })
 
     uni.showToast({ title: '打卡成功', icon: 'success' })
+    const localCheckin = {
+      id: Date.now(),
+      userId,
+      userNickname: user.value?.nickname || '我',
+      userAvatar: user.value?.avatar,
+      targetType: 'scenic',
+      targetId: scenicId.value,
+      photoUrl,
+      content: checkinComment.value.trim(),
+      latitude: detail.value?.latitude,
+      longitude: detail.value?.longitude,
+      checkinTime: new Date().toISOString(),
+    }
+    hasCheckedIn.value = true
+    myCheckin.value = localCheckin
+    checkinList.value = [localCheckin, ...checkinList.value.filter(item => item.userId !== userId)]
     closeCheckinModal()
-    loadScenicCheckins()
+    await loadScenicCheckins()
   } catch (error: any) {
     uni.showToast({
       title: error?.data?.msg || error?.message || '打卡失败，请稍后重试',
@@ -1200,19 +1239,13 @@ const submitTicketOrder = () => {
   color: #999999;
 }
 
-.checkin-self-row {
-  margin-top: 16rpx;
-  display: flex;
-  justify-content: flex-end;
+.checkin-btn.checked {
+  background: #dfe9e5;
+  box-shadow: none;
 }
 
-.checkin-self-btn {
-  padding: 16rpx 32rpx;
-  background-color: #3ba272;
-  color: #ffffff;
-  border-radius: 32rpx;
-  font-size: 26rpx;
-  border: none;
+.checkin-btn.checked .btn-text {
+  color: #6f827c;
 }
 
 .loading {

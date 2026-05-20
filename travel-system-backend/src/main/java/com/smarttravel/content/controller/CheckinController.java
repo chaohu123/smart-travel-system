@@ -83,11 +83,17 @@ public class CheckinController {
     public Map<String, Object> getCheckinsByTarget(@RequestParam String targetType,
                                                      @RequestParam Long targetId,
                                                      @RequestParam(defaultValue = "1") Integer pageNum,
-                                                     @RequestParam(defaultValue = "10") Integer pageSize) {
+                                                     @RequestParam(defaultValue = "10") Integer pageSize,
+                                                     @RequestParam(required = false) Long userId) {
         Map<String, Object> response = new HashMap<>();
 
         try {
             Map<String, Object> data = checkinService.getCheckinsByTarget(targetType, targetId, pageNum, pageSize);
+            if (userId != null) {
+                Map<String, Object> myCheckin = checkinService.getMyCheckinByTarget(userId, targetType, targetId);
+                data.put("hasCheckedIn", myCheckin != null);
+                data.put("myCheckin", myCheckin);
+            }
             response.put("code", 200);
             response.put("msg", "success");
             response.put("data", data);
@@ -118,7 +124,6 @@ public class CheckinController {
         return response;
     }
 }
-
 
 
 

@@ -1,1 +1,1 @@
-"use strict";var t=require("../utils/http.js");const e={getList:e=>t.request({url:"/activity/list",method:"GET",data:e}),getDetail:e=>t.request({url:`/activity/${e}`,method:"GET"})};exports.activityApi=e;
+"use strict";var t=require("../utils/http.js");const i={getList:i=>t.request({url:"/activity/list",method:"GET",data:i,showLoading:!1}),getDetail:i=>t.request({url:`/activity/${i}`,method:"GET"})};exports.activityApi=i;

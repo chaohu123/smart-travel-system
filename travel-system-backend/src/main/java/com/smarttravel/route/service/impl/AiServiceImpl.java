@@ -234,8 +234,8 @@ public class AiServiceImpl implements AiService {
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("Authorization", "Bearer " + apiKey);
         conn.setDoOutput(true);
-        conn.setConnectTimeout(30000); // 30秒连接超时
-        conn.setReadTimeout(120000);   // 120秒读取超时（AI生成可能需要较长时间）
+        conn.setConnectTimeout(5000);
+        conn.setReadTimeout(20000);
 
         // 构建请求体
         Map<String, Object> requestBody = new HashMap<>();
@@ -581,7 +581,6 @@ public class AiServiceImpl implements AiService {
         return result;
     }
 }
-
 
 
 

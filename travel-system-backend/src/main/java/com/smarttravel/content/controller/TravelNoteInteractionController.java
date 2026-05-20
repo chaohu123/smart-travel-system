@@ -4,7 +4,6 @@ import com.smarttravel.content.service.TravelNoteInteractionService;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -62,11 +61,11 @@ public class TravelNoteInteractionController {
         Long parentId = request.get("parentId") != null ?
             Long.valueOf(request.get("parentId").toString()) : 0L;
 
-        Long commentId = interactionService.publishComment(userId, contentType, contentId, content, parentId);
+        Map<String, Object> result = interactionService.publishComment(userId, contentType, contentId, content, parentId);
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
         response.put("msg", "success");
-        response.put("data", Collections.singletonMap("commentId", commentId));
+        response.put("data", result);
         return response;
     }
 
@@ -78,14 +77,28 @@ public class TravelNoteInteractionController {
             @RequestParam String contentType,
             @RequestParam Long contentId,
             @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize) {
-        List<Map<String, Object>> list = interactionService.listComments(contentType, contentId, pageNum, pageSize);
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) Long userId) {
+        List<Map<String, Object>> list = interactionService.listComments(contentType, contentId, pageNum, pageSize, userId);
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);
         response.put("msg", "success");
         response.put("data", list);
         return response;
     }
+
+    /**
+     * 评论点赞/取消点赞
+     */
+    @PostMapping("/comment/like")
+    public Map<String, Object> toggleCommentLike(@RequestBody Map<String, Object> request) {
+        Long userId = Long.valueOf(request.get("userId").toString());
+        Long commentId = Long.valueOf(request.get("commentId").toString());
+        Map<String, Object> result = interactionService.toggleCommentLike(userId, commentId);
+        Map<String, Object> response = new HashMap<>();
+        response.put("code", 200);
+        response.put("msg", "success");
+        response.put("data", result);
+        return response;
+    }
 }
-
-

@@ -39,6 +39,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const currentCityId = common_vendor.ref(null);
     const locationStatus = common_vendor.ref("idle");
     const manualCitySelected = common_vendor.ref(false);
+    const lastCityApplyTs = common_vendor.ref(0);
+    const citySelectionPending = common_vendor.ref(false);
+    const citySelectorOpenTs = common_vendor.ref(0);
     let locationTimer = null;
     const sortOptions = [
       { label: "\u9ED8\u8BA4", value: "default" },
@@ -81,6 +84,53 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
       return R * c;
     };
+    const normalizeCityName = (name) => {
+      return String(name || "").trim().replace(/市$/, "").replace(/省$/, "").replace(/自治区$/, "").replace(/特别行政区$/, "");
+    };
+    const mapCityItem = (raw) => {
+      const name = (raw == null ? void 0 : raw.cityName) || (raw == null ? void 0 : raw.name);
+      if (!(raw == null ? void 0 : raw.id) || !name)
+        return null;
+      const latRaw = raw.latitude;
+      const lngRaw = raw.longitude;
+      const latitude = typeof latRaw === "number" ? latRaw : typeof latRaw === "string" ? parseFloat(latRaw) : NaN;
+      const longitude = typeof lngRaw === "number" ? lngRaw : typeof lngRaw === "string" ? parseFloat(lngRaw) : NaN;
+      return {
+        id: Number(raw.id),
+        name,
+        latitude,
+        longitude
+      };
+    };
+    const resolveLocatedCity = async (cityName, latitude, longitude) => {
+      try {
+        const resp = await api_content.cityApi.list();
+        const response = resp.data;
+        if (resp.statusCode !== 200 || response.code !== 200)
+          return null;
+        const cities = (response.data || []).map((item) => mapCityItem(item)).filter((item) => !!item);
+        const normalizedName = normalizeCityName(cityName);
+        if (normalizedName) {
+          const matched = cities.find((city) => normalizeCityName(city.name) === normalizedName);
+          if (matched)
+            return matched;
+        }
+        let nearest = null;
+        let minDist = Number.POSITIVE_INFINITY;
+        cities.forEach((city) => {
+          if (!Number.isFinite(city.latitude) || !Number.isFinite(city.longitude))
+            return;
+          const distance = calculateDistance(latitude, longitude, city.latitude, city.longitude);
+          if (distance < minDist) {
+            minDist = distance;
+            nearest = city;
+          }
+        });
+        return nearest;
+      } catch {
+        return null;
+      }
+    };
     const getUserLocation = () => {
       locationStatus.value = "loading";
       if (!manualCitySelected.value) {
@@ -102,7 +152,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         altitude: false,
         geocode: true,
         timeout: 5e3,
-        success: (res) => {
+        success: async (res) => {
           if (locationTimer !== null) {
             clearTimeout(locationTimer);
             locationTimer = null;
@@ -182,6 +232,22 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             } catch {
             }
           }
+          if (!manualCitySelected.value) {
+            const locatedCity = await resolveLocatedCity(cityName, res.latitude, res.longitude);
+            if (locatedCity) {
+              currentCity.value = normalizeCityName(locatedCity.name);
+              currentCityId.value = locatedCity.id;
+            } else if (cityName) {
+              currentCity.value = cityName;
+              currentCityId.value = null;
+            }
+            checkinList.value = [];
+            pageNum.value = 1;
+            total.value = 0;
+            noMore.value = false;
+            cardAnimate.value = false;
+            loadCheckinList();
+          }
           if (userLocation.value) {
             currentSort.value = "distance";
           }
@@ -211,6 +277,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }
           if (!manualCitySelected.value) {
             currentCity.value = "\u5B9A\u4F4D\u5931\u8D25\uFF0C\u70B9\u51FB\u91CD\u8BD5";
+            currentCityId.value = null;
+            loadCheckinList();
           }
           common_vendor.index.showToast({
             title: errorMsg,
@@ -223,6 +291,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const handleLocationClick = () => {
       if (locationStatus.value === "loading")
         return;
+      manualCitySelected.value = false;
+      currentCityId.value = null;
       getUserLocation();
     };
     const filteredList = common_vendor.computed(() => {
@@ -322,6 +392,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             const rows = Array.isArray(raw == null ? void 0 : raw.rows) ? raw.rows : Array.isArray(raw == null ? void 0 : raw.list) ? raw.list : Array.isArray(raw) ? raw : [];
             checkinList.value = rows.map((item) => ({
               id: item.id,
+              targetId: item.targetId || item.id,
               name: item.name,
               cover: utils_image.getImageUrl(item.imageUrl) || utils_config.defaultScenicImage,
               location: item.address || `${item.province || ""}${item.city || ""}`,
@@ -352,6 +423,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             const rows = Array.isArray(raw == null ? void 0 : raw.rows) ? raw.rows : Array.isArray(raw == null ? void 0 : raw.list) ? raw.list : Array.isArray(raw) ? raw : [];
             checkinList.value = rows.map((item) => ({
               id: item.id,
+              targetId: item.targetId || item.id,
               name: item.name,
               cover: utils_image.getImageUrl(item.imageUrl) || utils_config.defaultFoodImage,
               location: item.address || item.cityName || "",
@@ -368,12 +440,33 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             total.value = mockFoods.length;
           }
         }
+        await markCheckedItems();
       } catch (error) {
         checkinList.value = activeTab.value === "attraction" ? [...mockAttractions] : [...mockFoods];
       } finally {
         loading.value = false;
         cardAnimate.value = true;
-        getUserLocation();
+      }
+    };
+    const markCheckedItems = async () => {
+      var _a, _b;
+      const userId = (_a = currentUser.value) == null ? void 0 : _a.id;
+      if (!userId || checkinList.value.length === 0)
+        return;
+      try {
+        const res = await api_content.checkinApi.getMyCheckins(userId, 1, 1e3);
+        const response = res.data;
+        if (res.statusCode !== 200 || response.code !== 200)
+          return;
+        const records = ((_b = response.data) == null ? void 0 : _b.list) || [];
+        const currentTargetType = activeTab.value === "attraction" ? "scenic" : "food";
+        const checkedIds = new Set(
+          records.filter((record) => record.targetType === currentTargetType).map((record) => Number(record.targetId))
+        );
+        checkinList.value.forEach((item) => {
+          item.isChecked = checkedIds.has(Number(item.targetId || item.id));
+        });
+      } catch (error) {
       }
     };
     const goPrevPage = () => {
@@ -393,10 +486,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
     };
     const viewDetail = (item) => {
+      const targetId = item.targetId || item.id;
       if (item.type === "attraction") {
-        common_vendor.index.navigateTo({ url: `/pages/scenic/detail?id=${item.id}&from=checkin` });
+        common_vendor.index.navigateTo({ url: `/pages/scenic/detail?id=${targetId}&from=checkin` });
       } else {
-        common_vendor.index.navigateTo({ url: `/pages/food/detail?id=${item.id}&from=checkin` });
+        common_vendor.index.navigateTo({ url: `/pages/food/detail?id=${targetId}&from=checkin` });
       }
     };
     const viewActivity = (activity) => {
@@ -445,21 +539,52 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const clearSearch = () => {
       searchKeyword.value = "";
     };
+    const applySelectedCity = (data, shouldReload = true) => {
+      const cityId = Number(data == null ? void 0 : data.id);
+      const cityName = String((data == null ? void 0 : data.name) || "").trim();
+      const ts = Number((data == null ? void 0 : data.ts) || Date.now());
+      if (!cityId || !cityName)
+        return false;
+      const unchanged = currentCityId.value === cityId && currentCity.value === cityName;
+      currentCity.value = cityName;
+      currentCityId.value = cityId;
+      manualCitySelected.value = true;
+      lastCityApplyTs.value = Math.max(lastCityApplyTs.value, ts);
+      if (shouldReload && !unchanged) {
+        checkinList.value = [];
+        pageNum.value = 1;
+        total.value = 0;
+        noMore.value = false;
+        cardAnimate.value = false;
+        loadCheckinList();
+      }
+      return true;
+    };
+    const applyCityFromStorage = () => {
+      const selected = common_vendor.index.getStorageSync("ticket_selected_city");
+      if (!selected || !selected.id || !selected.name)
+        return false;
+      const ts = Number(selected.ts || 0);
+      if (citySelectorOpenTs.value && ts <= citySelectorOpenTs.value)
+        return false;
+      if (ts && ts <= lastCityApplyTs.value)
+        return false;
+      return applySelectedCity(selected, true);
+    };
     const openCitySelector = async () => {
+      citySelectionPending.value = true;
+      citySelectorOpenTs.value = Date.now();
+      const handleCitySelected = (data) => {
+        citySelectionPending.value = false;
+        applySelectedCity(data, true);
+      };
       common_vendor.index.navigateTo({
         url: "/pages/city/select",
         events: {
-          citySelected: (data) => {
-            if (!data || !data.id || !data.name)
-              return;
-            currentCity.value = data.name;
-            currentCityId.value = data.id;
-            manualCitySelected.value = true;
-            pageNum.value = 1;
-            total.value = 0;
-            noMore.value = false;
-            loadCheckinList();
-          }
+          citySelected: handleCitySelected
+        },
+        success: (res) => {
+          res.eventChannel.on("citySelected", handleCitySelected);
         }
       });
     };
@@ -507,6 +632,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         showLoginPromptDialog();
         return;
       }
+      if (item.isChecked) {
+        common_vendor.index.showToast({ title: "\u4F60\u5DF2\u7ECF\u6253\u5361\u8FC7\u5566", icon: "none" });
+        return;
+      }
       currentItem.value = item;
       uploadImages.value = [];
       checkinComment.value = "";
@@ -519,7 +648,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const chooseImage = () => {
       common_vendor.index.chooseImage({
-        count: 9 - uploadImages.value.length,
+        count: 1 - uploadImages.value.length,
         success: (res) => {
           uploadImages.value.push(...res.tempFilePaths);
         }
@@ -527,6 +656,21 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const removeImage = (index) => {
       uploadImages.value.splice(index, 1);
+    };
+    const getUploadedPhotoUrl = async () => {
+      var _a;
+      const firstImage = uploadImages.value[0];
+      if (!firstImage)
+        return void 0;
+      const uploadRes = await api_content.uploadApi.upload(firstImage);
+      const uploadData = uploadRes.data;
+      if (uploadRes.statusCode !== 200 || (uploadData == null ? void 0 : uploadData.code) !== 200) {
+        throw new Error((uploadData == null ? void 0 : uploadData.msg) || "\u56FE\u7247\u4E0A\u4F20\u5931\u8D25");
+      }
+      if (typeof (uploadData == null ? void 0 : uploadData.data) === "string") {
+        return uploadData.data;
+      }
+      return (_a = uploadData == null ? void 0 : uploadData.data) == null ? void 0 : _a.url;
     };
     const submitCheckin = async () => {
       var _a, _b;
@@ -550,10 +694,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const targetType = currentItem.value.type === "attraction" ? "scenic" : "food";
         const latitude = currentItem.value.latitude;
         const longitude = currentItem.value.longitude;
+        const photoUrl = await getUploadedPhotoUrl();
         await api_content.checkinApi.addCheckin({
           userId,
           targetType,
-          targetId: currentItem.value.id,
+          targetId: currentItem.value.targetId || currentItem.value.id,
+          photoUrl,
           content: checkinComment.value.trim() || void 0,
           latitude,
           longitude
@@ -651,9 +797,20 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     common_vendor.onMounted(() => {
-      loadCheckinList();
       getUserLocation();
       loadActivities();
+    });
+    common_vendor.onShow(() => {
+      if (citySelectionPending.value) {
+        citySelectionPending.value = false;
+        applyCityFromStorage();
+      }
+    });
+    common_vendor.onUnmounted(() => {
+      if (locationTimer !== null) {
+        clearTimeout(locationTimer);
+        locationTimer = null;
+      }
     });
     return (_ctx, _cache) => {
       var _a;
@@ -724,9 +881,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }, item.distance ? {
             k: common_vendor.t(item.distance)
           } : {}, {
-            l: common_vendor.o(($event) => openCheckinModal(item)),
-            m: item.id,
-            n: common_vendor.o(($event) => viewDetail(item))
+            l: common_vendor.t(item.isChecked ? "\u5DF2\u6253\u5361" : "\u53BB\u6253\u5361"),
+            m: item.isChecked ? 1 : "",
+            n: common_vendor.o(($event) => openCheckinModal(item)),
+            o: item.id,
+            p: common_vendor.o(($event) => viewDetail(item))
           });
         }),
         w: common_vendor.p({
@@ -787,44 +946,39 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }, showModal.value ? common_vendor.e({
         V: common_vendor.t((_a = currentItem.value) == null ? void 0 : _a.name),
         W: common_vendor.o(closeModal),
-        X: common_vendor.p({
-          theme: "outline",
-          size: "26",
-          fill: "#8a94a3"
-        }),
-        Y: locationMsg.value
+        X: locationMsg.value
       }, locationMsg.value ? {
-        Z: common_vendor.t(locationMsg.value)
+        Y: common_vendor.t(locationMsg.value)
       } : {}, {
-        aa: common_vendor.f(uploadImages.value, (img, index, i0) => {
+        Z: common_vendor.f(uploadImages.value, (img, index, i0) => {
           return {
             a: img,
             b: common_vendor.o(($event) => removeImage(index)),
-            c: "6e5fa1f7-7-" + i0,
+            c: "6e5fa1f7-6-" + i0,
             d: index
           };
         }),
-        ab: common_vendor.p({
+        aa: common_vendor.p({
           theme: "outline",
           size: "24",
           fill: "#ffffff"
         }),
-        ac: uploadImages.value.length < 9
-      }, uploadImages.value.length < 9 ? {
-        ad: common_vendor.p({
+        ab: uploadImages.value.length < 1
+      }, uploadImages.value.length < 1 ? {
+        ac: common_vendor.p({
           theme: "outline",
           size: "28",
           fill: "#3ba272"
         }),
-        ae: common_vendor.o(chooseImage)
+        ad: common_vendor.o(chooseImage)
       } : {}, {
-        af: checkinComment.value,
-        ag: common_vendor.o(($event) => checkinComment.value = $event.detail.value),
-        ah: common_vendor.t(checkinComment.value.length),
-        ai: common_vendor.o(submitCheckin),
-        aj: common_vendor.o(() => {
+        ae: checkinComment.value,
+        af: common_vendor.o(($event) => checkinComment.value = $event.detail.value),
+        ag: common_vendor.t(checkinComment.value.length),
+        ah: common_vendor.o(submitCheckin),
+        ai: common_vendor.o(() => {
         }),
-        ak: common_vendor.o(closeModal)
+        aj: common_vendor.o(closeModal)
       }) : {});
     };
   }

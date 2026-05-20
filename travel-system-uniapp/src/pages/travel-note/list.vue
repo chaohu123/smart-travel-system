@@ -269,7 +269,7 @@
 import { ref, onMounted, computed, onUnmounted, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { travelNoteApi, cityApi, travelNoteInteractionApi } from '@/api/content'
-import { CloseSmall } from '@icon-park/vue-next'
+import CloseSmall from '@icon-park/vue-next/es/icons/CloseSmall'
 import { safeNavigateTo } from '@/utils/router'
 import { useUserStore } from '@/store/user'
 import { getImageUrl } from '@/utils/image'
@@ -317,6 +317,7 @@ const defaultAvatar = 'https://images.pexels.com/photos/415829/pexels-photo-4158
 
 // 滚动位置记录（用于懒加载）
 const scrollTop = ref(0)
+let initialLoadStarted = false
 
 // 城市选择
 const onCityChange = (e: any) => {
@@ -831,6 +832,7 @@ const retryLoad = () => {
 
 // 使用 onLoad 来获取页面参数
 onLoad(() => {
+  initialLoadStarted = true
   loadCities().then(() => {
     selectedCity.value = cityList.value[0]
     loadNotes()
@@ -839,7 +841,8 @@ onLoad(() => {
 
 onMounted(() => {
   // 如果还没有加载数据，则加载（用于 tabbar 切换的情况）
-  if (noteList.value.length === 0 && !loading.value) {
+  if (!initialLoadStarted && noteList.value.length === 0 && !loading.value) {
+    initialLoadStarted = true
     loadCities().then(() => {
       selectedCity.value = cityList.value[0]
       loadNotes()

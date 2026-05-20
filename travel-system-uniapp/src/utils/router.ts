@@ -1,14 +1,10 @@
-/**
- * 路由工具函数
- * 解决微信小程序路由跳转时的 webview 错误问题
- */
-
-// 防抖：避免快速连续跳转
 let isNavigating = false
 let navigateTimer: ReturnType<typeof setTimeout> | null = null
-let lastNavigateUrl = '' // 记录上次跳转的URL
-let lastNavigateTime = 0 // 记录上次跳转的时间
-const NAVIGATE_DEBOUNCE_TIME = 300 // 300ms 防抖时间
+let lastNavigateUrl = ''
+let lastNavigateTime = 0
+
+const NAVIGATE_DEBOUNCE_TIME = 300
+const NAVIGATE_TIMEOUT = 4500
 const TAB_BAR_PAGES = new Set([
   '/pages/home/home',
   '/pages/route/plan',
@@ -23,234 +19,243 @@ const normalizePath = (url: string) => {
   return purePath.startsWith('/') ? purePath : `/${purePath}`
 }
 
-const isTabBarUrl = (url: string) => {
-  return TAB_BAR_PAGES.has(normalizePath(url))
+const isTabBarUrl = (url: string) => TAB_BAR_PAGES.has(normalizePath(url))
+
+const getErrMsg = (err: any) => String(err?.errMsg || err?.message || err || '')
+
+const isTimeoutError = (err: any) => {
+  const msg = getErrMsg(err).toLowerCase()
+  return msg.includes('timeout') || msg.includes('timedout')
 }
 
-/**
- * 安全的路由跳转（navigateTo）
- * @param url 目标页面路径
- * @param options 跳转选项
- */
-export const safeNavigateTo = (url: string, options?: UniApp.NavigateToOptions) => {
-  // tabBar 页面必须使用 switchTab
-  if (isTabBarUrl(url)) {
-    return safeSwitchTab(url)
-  }
+const isRouteBusyError = (err: any) => {
+  const msg = getErrMsg(err).toLowerCase()
+  return msg.includes('webview') || msg.includes('route') || msg.includes('navigate')
+}
 
+const shouldSkipNavigate = (url: string) => {
   const now = Date.now()
-  
-  // 防抖：如果正在跳转，且是同一个 URL，则忽略（防止重复点击）
-  if (isNavigating && lastNavigateUrl === url) {
-    return Promise.resolve()
-  }
-  
-  // 防抖：如果距离上次跳转时间太短，且是同一个URL，则忽略
-  if (now - lastNavigateTime < NAVIGATE_DEBOUNCE_TIME && lastNavigateUrl === url) {
-    return Promise.resolve()
-  }
+  return (
+    (isNavigating && lastNavigateUrl === url) ||
+    (now - lastNavigateTime < NAVIGATE_DEBOUNCE_TIME && lastNavigateUrl === url)
+  )
+}
 
-  // 清除之前的定时器
+const lockNavigation = (url: string) => {
   if (navigateTimer) {
     clearTimeout(navigateTimer)
     navigateTimer = null
   }
-
   isNavigating = true
   lastNavigateUrl = url
-  lastNavigateTime = now
-
-  // 使用 Promise 包装，确保跳转完成后再允许下一次跳转
-  return new Promise<void>((resolve, reject) => {
-    uni.navigateTo({
-      url,
-      ...options,
-      success: (res) => {
-        // 延迟重置状态，确保页面加载完成
-        navigateTimer = setTimeout(() => {
-          isNavigating = false
-          navigateTimer = null
-          lastNavigateUrl = '' // 清除URL记录
-        }, 300) // 减少延迟时间，提升响应速度
-        options?.success?.(res)
-        resolve()
-      },
-      fail: (err) => {
-        // 立即重置状态，允许重试
-        isNavigating = false
-        lastNavigateUrl = ''
-        if (navigateTimer) {
-          clearTimeout(navigateTimer)
-          navigateTimer = null
-        }
-        
-        // 微信小程序限制：tabBar 页面不能 navigateTo
-        if (err.errMsg?.includes('tabbar page')) {
-          safeSwitchTab(url).then(resolve).catch(() => resolve())
-          return
-        }
-        
-        // 处理超时错误
-        if (err.errMsg?.includes('timeout') || err.errMsg?.includes('timedout')) {
-          // 超时错误不重试，不向上抛出，避免出现未捕获 timeout 报错
-          uni.showToast({
-            title: '页面切换超时，请稍后重试',
-            icon: 'none',
-            duration: 1800,
-          })
-          options?.fail?.(err)
-          resolve()
-          return
-        }
-        
-        // 如果是 webview 错误，尝试延迟重试
-        if (err.errMsg?.includes('webview') || err.errMsg?.includes('route')) {
-          setTimeout(() => {
-            safeNavigateTo(url, options).then(resolve).catch(reject)
-          }, 500)
-        } else {
-          // 其他错误也尝试重试一次
-          setTimeout(() => {
-            isNavigating = false
-            lastNavigateUrl = ''
-            safeNavigateTo(url, options).then(resolve).catch(reject)
-          }, 300)
-        }
-      },
-      complete: () => {
-        options?.complete?.()
-      }
-    })
-  })
+  lastNavigateTime = Date.now()
 }
 
-/**
- * 安全的 Tab 切换（switchTab）
- * @param url 目标页面路径
- * @param options 跳转选项
- */
-export const safeSwitchTab = (url: string, options?: UniApp.SwitchTabOptions) => {
-  const now = Date.now()
-  
-  // 防抖：如果正在跳转，且是同一个 URL，则忽略
-  if (isNavigating && lastNavigateUrl === url) {
-    return Promise.resolve()
-  }
-  
-  // 防抖：如果距离上次跳转时间太短，且是同一个URL，则忽略
-  if (now - lastNavigateTime < NAVIGATE_DEBOUNCE_TIME && lastNavigateUrl === url) {
-    return Promise.resolve()
-  }
-
+const unlockNavigation = (delay = 80) => {
   if (navigateTimer) {
     clearTimeout(navigateTimer)
+    navigateTimer = null
   }
+  navigateTimer = setTimeout(() => {
+    isNavigating = false
+    lastNavigateUrl = ''
+    navigateTimer = null
+  }, delay)
+}
 
-  isNavigating = true
-  lastNavigateUrl = url
-  lastNavigateTime = now
+const notifyRouteTimeout = () => {
+  uni.showToast({
+    title: '页面切换超时，请稍后重试',
+    icon: 'none',
+    duration: 1600,
+  })
+}
+
+const withoutCallbacks = <T extends Record<string, any> | undefined>(options: T): T => {
+  if (!options) return options
+  const { success, fail, complete, ...rest } = options
+  return rest as T
+}
+
+const runWithNavigationTimeout = (
+  url: string,
+  options: {
+    success?: (res: any) => void
+    fail?: (err: any) => void
+    complete?: () => void
+  } | undefined,
+  runner: (handlers: {
+    success: (res: any) => void
+    fail: (err: any) => void
+    complete: () => void
+  }) => void,
+  releaseDelay = 80,
+) => {
+  lockNavigation(url)
 
   return new Promise<void>((resolve, reject) => {
-    uni.switchTab({
-      url,
-      ...options,
+    let settled = false
+    const timeoutTimer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      const err = { errMsg: 'route timeout' }
+      unlockNavigation(0)
+      notifyRouteTimeout()
+      options?.fail?.(err)
+      options?.complete?.()
+      resolve()
+    }, NAVIGATE_TIMEOUT)
+
+    const finish = (callback: () => void) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeoutTimer)
+      callback()
+    }
+
+    runner({
       success: (res) => {
-        navigateTimer = setTimeout(() => {
-          isNavigating = false
-          navigateTimer = null
-          lastNavigateUrl = ''
-        }, 200) // Tab切换更快
-        options?.success?.(res)
-        resolve()
+        finish(() => {
+          unlockNavigation(releaseDelay)
+          options?.success?.(res)
+          options?.complete?.()
+          resolve()
+        })
       },
       fail: (err) => {
-        isNavigating = false
-        lastNavigateUrl = ''
-        if (err.errMsg?.includes('timeout') || err.errMsg?.includes('timedout')) {
-          uni.showToast({
-            title: '页面切换超时，请稍后重试',
-            icon: 'none',
-            duration: 1800,
-          })
+        finish(() => {
+          unlockNavigation(0)
+          if (isTimeoutError(err)) {
+            notifyRouteTimeout()
+            options?.fail?.(err)
+            options?.complete?.()
+            resolve()
+            return
+          }
           options?.fail?.(err)
-          resolve()
-          return
-        }
-        if (err.errMsg?.includes('webview') || err.errMsg?.includes('route')) {
-          setTimeout(() => {
-            safeSwitchTab(url, options).then(resolve).catch(reject)
-          }, 500)
-        } else {
-          options?.fail?.(err)
+          options?.complete?.()
           reject(err)
-        }
+        })
       },
       complete: () => {
-        options?.complete?.()
-      }
+        if (!settled) {
+          options?.complete?.()
+        }
+      },
     })
   })
 }
 
-/**
- * 安全的重定向（redirectTo）
- * @param url 目标页面路径
- * @param options 跳转选项
- */
-export const safeRedirectTo = (url: string, options?: UniApp.RedirectToOptions) => {
-  if (isNavigating) {
-    return
+export const safeNavigateTo = (
+  url: string,
+  options?: UniApp.NavigateToOptions,
+  retryCount = 0,
+): Promise<void> => {
+  if (isTabBarUrl(url)) {
+    return safeSwitchTab(url)
   }
 
-  if (navigateTimer) {
-    clearTimeout(navigateTimer)
+  if (shouldSkipNavigate(url)) {
+    return Promise.resolve()
   }
 
-  isNavigating = true
-
-  return new Promise<void>((resolve, reject) => {
-    uni.redirectTo({
-      url,
-      ...options,
-      success: (res) => {
-        navigateTimer = setTimeout(() => {
-          isNavigating = false
-          navigateTimer = null
-        }, 300)
-        options?.success?.(res)
-        resolve()
-      },
-      fail: (err) => {
-        isNavigating = false
-        if (err.errMsg?.includes('timeout') || err.errMsg?.includes('timedout')) {
-          uni.showToast({
-            title: '页面切换超时，请稍后重试',
-            icon: 'none',
-            duration: 1800,
-          })
-          options?.fail?.(err)
-          resolve()
-          return
-        }
-        if (err.errMsg?.includes('webview') || err.errMsg?.includes('route')) {
-          setTimeout(() => {
-            safeRedirectTo(url, options).then(resolve).catch(reject)
-          }, 500)
-        } else {
-          options?.fail?.(err)
-          reject(err)
-        }
-      },
-      complete: () => {
-        options?.complete?.()
-      }
-    })
-  })
+  return runWithNavigationTimeout(
+    url,
+    options,
+    (handlers) => {
+      uni.navigateTo({
+        url,
+        ...options,
+        success: handlers.success,
+        fail: (err) => {
+          if (getErrMsg(err).includes('tabbar page')) {
+            safeSwitchTab(url).then(handlers.success).catch(handlers.fail)
+            return
+          }
+          if (!isTimeoutError(err) && isRouteBusyError(err) && retryCount < 1) {
+            unlockNavigation(0)
+            setTimeout(() => {
+              safeNavigateTo(url, withoutCallbacks(options), retryCount + 1).then(handlers.success).catch(handlers.fail)
+            }, 180)
+            return
+          }
+          handlers.fail(err)
+        },
+        complete: handlers.complete,
+      })
+    },
+    120,
+  )
 }
 
-/**
- * 重置导航状态（在页面 onLoad 时调用）
- */
+export const safeSwitchTab = (
+  url: string,
+  options?: UniApp.SwitchTabOptions,
+  retryCount = 0,
+): Promise<void> => {
+  if (shouldSkipNavigate(url)) {
+    return Promise.resolve()
+  }
+
+  return runWithNavigationTimeout(
+    url,
+    options,
+    (handlers) => {
+      uni.switchTab({
+        url,
+        ...options,
+        success: handlers.success,
+        fail: (err) => {
+          if (!isTimeoutError(err) && isRouteBusyError(err) && retryCount < 1) {
+            unlockNavigation(0)
+            setTimeout(() => {
+              safeSwitchTab(url, withoutCallbacks(options), retryCount + 1).then(handlers.success).catch(handlers.fail)
+            }, 180)
+            return
+          }
+          handlers.fail(err)
+        },
+        complete: handlers.complete,
+      })
+    },
+    80,
+  )
+}
+
+export const safeRedirectTo = (
+  url: string,
+  options?: UniApp.RedirectToOptions,
+  retryCount = 0,
+): Promise<void> => {
+  if (shouldSkipNavigate(url)) {
+    return Promise.resolve()
+  }
+
+  return runWithNavigationTimeout(
+    url,
+    options,
+    (handlers) => {
+      uni.redirectTo({
+        url,
+        ...options,
+        success: handlers.success,
+        fail: (err) => {
+          if (!isTimeoutError(err) && isRouteBusyError(err) && retryCount < 1) {
+            unlockNavigation(0)
+            setTimeout(() => {
+              safeRedirectTo(url, withoutCallbacks(options), retryCount + 1).then(handlers.success).catch(handlers.fail)
+            }, 180)
+            return
+          }
+          handlers.fail(err)
+        },
+        complete: handlers.complete,
+      })
+    },
+    120,
+  )
+}
+
 export const resetNavigationState = () => {
   isNavigating = false
   lastNavigateUrl = ''
@@ -260,4 +265,3 @@ export const resetNavigationState = () => {
     navigateTimer = null
   }
 }
-

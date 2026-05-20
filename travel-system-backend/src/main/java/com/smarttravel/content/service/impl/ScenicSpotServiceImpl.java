@@ -18,9 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * 景点服务实现
- */
 @Service
 public class ScenicSpotServiceImpl implements ScenicSpotService {
 
@@ -39,20 +36,20 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
     @Override
     public Map<String, Object> listSpots(Integer pageNum, Integer pageSize, Long cityId,
                                          String tagName, String sortBy) {
+        pageNum = normalizePageNum(pageNum);
+        pageSize = normalizePageSize(pageSize);
+
         ScenicSpot query = new ScenicSpot();
         query.setCityId(cityId);
         query.setDelFlag(0);
 
-        List<ScenicSpot> list = scenicSpotMapper.selectList(query);
-
-        // 简化分页处理
-        int start = (pageNum - 1) * pageSize;
-        int end = Math.min(start + pageSize, list.size());
-        List<ScenicSpot> pageList = list.subList(start, end);
+        int offset = (pageNum - 1) * pageSize;
+        List<ScenicSpot> pageList = scenicSpotMapper.selectListWithPage(query, offset, pageSize);
+        int total = scenicSpotMapper.countList(query);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("list", pageList);
-        result.put("total", list.size());
+        result.put("list", pageList != null ? pageList : new ArrayList<>());
+        result.put("total", total);
         result.put("pageNum", pageNum);
         result.put("pageSize", pageSize);
         return result;
@@ -63,10 +60,8 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
         ScenicSpot spot = scenicSpotMapper.selectById(id);
         Map<String, Object> result = new HashMap<>();
 
-        // 获取景点标签
         List<String> tagNames = new ArrayList<>();
         if (spot != null && spot.getId() != null) {
-            // 避免使用 Collections.singletonList 导致 JDK17+ 反射访问受限
             List<Long> scenicIds = new ArrayList<>();
             scenicIds.add(spot.getId());
             List<ContentTag> contentTags = contentTagMapper.selectByContentIds("scenic", scenicIds);
@@ -92,6 +87,7 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
 
     @Override
     public List<ScenicSpot> getHotSpots(Long cityId, Integer limit) {
+        limit = normalizeLimit(limit);
         return scenicSpotMapper.selectHotByCityId(cityId, limit);
     }
 
@@ -100,12 +96,11 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
         return getMyFavorites(userId, 1, 1000);
     }
 
-    /**
-     * 获取用户收藏的景点列表（支持分页）
-     */
     public Map<String, Object> getMyFavorites(Long userId, Integer pageNum, Integer pageSize) {
+        pageNum = normalizePageNum(pageNum);
+        pageSize = normalizePageSize(pageSize);
         int offset = (pageNum - 1) * pageSize;
-        // 获取用户收藏的景点ID列表
+
         List<Long> favoriteIds = userBehaviorMapper.selectContentIds(
             userId,
             BehaviorType.FAVORITE.getCode(),
@@ -115,12 +110,11 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
         );
         int total = userBehaviorMapper.countByUserAndBehavior(userId, BehaviorType.FAVORITE.getCode(), "scenic");
 
-        // 根据ID列表查询景点详情
         List<ScenicSpot> favorites = new ArrayList<>();
         if (favoriteIds != null && !favoriteIds.isEmpty()) {
             for (Long id : favoriteIds) {
                 ScenicSpot spot = scenicSpotMapper.selectById(id);
-                if (spot != null && spot.getDelFlag() == 0) {
+                if (spot != null && (spot.getDelFlag() == null || spot.getDelFlag() == 0)) {
                     favorites.add(spot);
                 }
             }
@@ -133,5 +127,22 @@ public class ScenicSpotServiceImpl implements ScenicSpotService {
         result.put("pageSize", pageSize);
         return result;
     }
-}
 
+    private int normalizePageNum(Integer pageNum) {
+        return pageNum == null || pageNum < 1 ? 1 : pageNum;
+    }
+
+    private int normalizePageSize(Integer pageSize) {
+        if (pageSize == null || pageSize < 1) {
+            return 10;
+        }
+        return Math.min(pageSize, 50);
+    }
+
+    private int normalizeLimit(Integer limit) {
+        if (limit == null || limit < 1) {
+            return 10;
+        }
+        return Math.min(limit, 50);
+    }
+}

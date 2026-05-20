@@ -217,8 +217,12 @@ public class UserApiController {
         int commentCount = commentMapper.countByUserId(userId);
         int noteCount = travelNoteMapper.countByUserId(userId);
         int checkinCount = checkinRecordMapper.countByUserId(userId);
+        Integer dailyCheckinExp = userCheckinMapper.sumExperienceByUserId(userId);
         
-        return commentCount * commentExp + noteCount * noteExp + checkinCount * checkinExp;
+        return commentCount * commentExp
+            + noteCount * noteExp
+            + checkinCount * checkinExp
+            + (dailyCheckinExp != null ? dailyCheckinExp : 0);
     }
     
     /**
@@ -480,6 +484,9 @@ public class UserApiController {
             response.put("msg", "签到成功");
             Map<String, Object> data = new HashMap<>();
             data.put("experienceGained", 10);
+            int currentExperience = calculateExperience(userId);
+            data.put("experience", currentExperience);
+            data.put("level", calculateLevel(currentExperience));
             response.put("data", data);
         } catch (Exception e) {
             response.put("code", 500);
@@ -489,4 +496,3 @@ public class UserApiController {
         return response;
     }
 }
-

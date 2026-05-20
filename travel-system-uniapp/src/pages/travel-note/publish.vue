@@ -108,6 +108,7 @@ import {
 import { useUserStore } from '@/store/user'
 import { getImageUrl } from '@/utils/image'
 import { STATIC_BASE_URL } from '@/utils/config'
+import CloseSmall from '@icon-park/vue-next/es/icons/CloseSmall'
 
 interface CityItem {
   id: number
@@ -629,4 +630,3 @@ onMounted(() => {
   padding: 20rpx 0;
 }
 </style>
-

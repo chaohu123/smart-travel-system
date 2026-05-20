@@ -127,6 +127,21 @@ public class CheckinServiceImpl implements CheckinService {
     }
 
     @Override
+    public Map<String, Object> getMyCheckinByTarget(Long userId, String targetType, Long targetId) {
+        CheckinRecord record = checkinRecordMapper.selectByUserAndTarget(userId, targetType, targetId);
+        if (record == null) {
+            return null;
+        }
+        Map<String, Object> item = buildCheckinItem(record);
+        User user = userMapper.selectById(record.getUserId());
+        if (user != null) {
+            item.put("userNickname", user.getNickname());
+            item.put("userAvatar", user.getAvatar());
+        }
+        return item;
+    }
+
+    @Override
     public Map<String, Object> getCheckinDetail(Long id) {
         CheckinRecord record = checkinRecordMapper.selectById(id);
         if (record == null) {
@@ -177,4 +192,3 @@ public class CheckinServiceImpl implements CheckinService {
         return item;
     }
 }
-

@@ -5,7 +5,8 @@ const activityApi = {
     return utils_http.request({
       url: "/activity/list",
       method: "GET",
-      data: params
+      data: params,
+      showLoading: false
     });
   },
   getDetail: (id) => {

@@ -6,12 +6,8 @@ var utils_image = require("../../utils/image.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
-if (!Array) {
-  const _component_CloseSmall = common_vendor.resolveComponent("CloseSmall");
-  _component_CloseSmall();
-}
 if (!Math) {
-  LoginPrompt();
+  (LoginPrompt + common_vendor.unref(common_vendor.CloseSmall))();
 }
 const LoginPrompt = () => "../../components/LoginPrompt.js";
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
@@ -29,6 +25,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const showLoginPrompt = common_vendor.ref(false);
     const textareaFocus = common_vendor.ref(false);
     const replyingTo = common_vendor.ref(null);
+    const NOTE_CONTENT_TYPE = "note";
     const commentCount = common_vendor.computed(() => {
       var _a, _b;
       if (((_b = (_a = noteDetail.value) == null ? void 0 : _a.note) == null ? void 0 : _b.commentCount) !== void 0 && noteDetail.value.note.commentCount !== null) {
@@ -162,7 +159,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         });
       }
     };
-    const openCommentEditor = (replyComment) => {
+    const openCommentEditor = (replyComment = null) => {
       if (!user.value) {
         showLoginPromptDialog();
         return;
@@ -179,6 +176,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const openReplyEditor = (comment) => {
       openCommentEditor(comment);
+    };
+    const openRootCommentEditor = () => {
+      openCommentEditor(null);
     };
     const handleTextareaTap = (e) => {
       if (e) {
@@ -198,10 +198,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       replyingTo.value = null;
     };
     const submitComment = async () => {
-      var _a, _b, _c;
+      var _a, _b, _c, _d;
       if (!noteId.value)
         return;
-      if (!commentContent.value.trim()) {
+      const submittedContent = commentContent.value.trim();
+      if (!submittedContent) {
         common_vendor.index.showToast({ title: "\u8BF7\u8F93\u5165\u8BC4\u8BBA\u5185\u5BB9", icon: "none" });
         return;
       }
@@ -212,22 +213,34 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
       submitting.value = true;
       try {
+        const parentComment = replyingTo.value;
         const res = await api_content.travelNoteInteractionApi.publishComment({
           userId: user.value.id,
-          contentType: "note",
+          contentType: NOTE_CONTENT_TYPE,
           contentId: noteId.value,
-          content: commentContent.value.trim(),
-          parentId: ((_a = replyingTo.value) == null ? void 0 : _a.id) || void 0
+          content: submittedContent,
+          parentId: (parentComment == null ? void 0 : parentComment.id) || void 0
         });
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
-          common_vendor.index.showToast({ title: replyingTo.value ? "\u56DE\u590D\u6210\u529F" : "\u8BC4\u8BBA\u6210\u529F", icon: "success" });
+          common_vendor.index.showToast({ title: parentComment ? "\u56DE\u590D\u6210\u529F" : "\u8BC4\u8BBA\u6210\u529F", icon: "success" });
+          const createdComment = ((_a = data.data) == null ? void 0 : _a.comment) || {
+            id: ((_b = data.data) == null ? void 0 : _b.commentId) || Date.now(),
+            userId: user.value.id,
+            content: submittedContent,
+            parentId: (parentComment == null ? void 0 : parentComment.id) || 0,
+            likeCount: 0,
+            createTime: new Date().toISOString(),
+            nickname: user.value.nickname,
+            avatar: user.value.avatar
+          };
+          insertComment(createdComment);
           commentContent.value = "";
           commentEditorVisible.value = false;
           replyingTo.value = null;
           await loadComments();
-          if ((_b = noteDetail.value) == null ? void 0 : _b.note) {
-            if (((_c = data.data) == null ? void 0 : _c.commentCount) !== void 0) {
+          if ((_c = noteDetail.value) == null ? void 0 : _c.note) {
+            if (((_d = data.data) == null ? void 0 : _d.commentCount) !== void 0) {
               noteDetail.value.note.commentCount = data.data.commentCount;
             } else {
               noteDetail.value.note.commentCount = (noteDetail.value.note.commentCount || 0) + 1;
@@ -252,8 +265,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         showLoginPromptDialog();
         return;
       }
+      const wasLiked = comment.isLiked;
+      const previousLikeCount = comment.likeCount || 0;
       try {
-        const wasLiked = comment.isLiked;
         comment.isLiked = !comment.isLiked;
         comment.likeCount = comment.isLiked ? (comment.likeCount || 0) + 1 : Math.max((comment.likeCount || 0) - 1, 0);
         if (api_content.travelNoteInteractionApi.toggleCommentLike) {
@@ -266,7 +280,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             }
           } else {
             comment.isLiked = wasLiked;
-            comment.likeCount = wasLiked ? (comment.likeCount || 0) + 1 : Math.max((comment.likeCount || 0) - 1, 0);
+            comment.likeCount = previousLikeCount;
             common_vendor.index.showToast({
               title: data.msg || "\u64CD\u4F5C\u5931\u8D25",
               icon: "none"
@@ -279,9 +293,11 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         }
       } catch (error) {
+        comment.isLiked = wasLiked;
+        comment.likeCount = previousLikeCount;
         common_vendor.index.showToast({
-          title: comment.isLiked ? "\u70B9\u8D5E\u6210\u529F" : "\u53D6\u6D88\u70B9\u8D5E",
-          icon: "success"
+          title: "\u64CD\u4F5C\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u540E\u7AEF\u63A5\u53E3",
+          icon: "none"
         });
       }
     };
@@ -291,8 +307,45 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       const date = new Date(time);
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     };
+    const normalizeCommentList = (list = []) => {
+      const allComments = list.map((comment) => ({
+        ...comment,
+        nickname: comment.nickname || comment.userName || comment.nick_name,
+        avatar: comment.avatar || comment.userAvatar || comment.user_avatar,
+        isLiked: comment.isLiked || false,
+        likeCount: comment.likeCount || 0,
+        parentId: comment.parentId || 0,
+        replies: comment.replies || []
+      }));
+      const mainComments = allComments.filter((c) => !c.parentId || c.parentId === 0);
+      const replies = allComments.filter((c) => c.parentId && c.parentId !== 0);
+      mainComments.forEach((comment) => {
+        comment.replies = replies.filter((r) => r.parentId === comment.id);
+      });
+      return mainComments;
+    };
+    const insertComment = (comment) => {
+      const normalized = normalizeCommentList([comment])[0] || {
+        ...comment,
+        parentId: comment.parentId || 0,
+        replies: []
+      };
+      if (normalized.parentId && normalized.parentId !== 0) {
+        const parent = comments.value.find((item) => item.id === normalized.parentId);
+        if (parent) {
+          parent.replies = parent.replies || [];
+          if (!parent.replies.some((item) => item.id === normalized.id)) {
+            parent.replies.unshift(normalized);
+          }
+          return;
+        }
+      }
+      if (!comments.value.some((item) => item.id === normalized.id)) {
+        comments.value.unshift(normalized);
+      }
+    };
     const loadDetail = async () => {
-      var _a, _b, _c;
+      var _a, _b, _c, _d;
       if (!noteId.value)
         return;
       try {
@@ -300,10 +353,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
           noteDetail.value = data.data;
-          if (((_b = data.data) == null ? void 0 : _b.isFavorite) !== void 0) {
+          if (comments.value.length === 0 && Array.isArray((_b = data.data) == null ? void 0 : _b.comments)) {
+            comments.value = normalizeCommentList(data.data.comments);
+          }
+          if (((_c = data.data) == null ? void 0 : _c.isFavorite) !== void 0) {
             isFavorite.value = data.data.isFavorite;
           }
-          if (((_c = data.data) == null ? void 0 : _c.isLiked) !== void 0) {
+          if (((_d = data.data) == null ? void 0 : _d.isLiked) !== void 0) {
             isLiked.value = data.data.isLiked;
           }
         } else {
@@ -320,31 +376,20 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const loadComments = async () => {
+      var _a;
       if (!noteId.value)
         return;
       try {
         const res = await api_content.travelNoteInteractionApi.listComments({
-          contentType: "note",
+          contentType: NOTE_CONTENT_TYPE,
           contentId: noteId.value,
           pageNum: 1,
-          pageSize: 1e3
+          pageSize: 1e3,
+          userId: (_a = user.value) == null ? void 0 : _a.id
         });
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
-          const allComments = (data.data || []).map((comment) => ({
-            ...comment,
-            nickname: comment.nickname || comment.userName || comment.nick_name,
-            avatar: comment.avatar || comment.userAvatar || comment.user_avatar,
-            isLiked: comment.isLiked || false,
-            likeCount: comment.likeCount || 0,
-            replies: comment.replies || []
-          }));
-          const mainComments = allComments.filter((c) => !c.parentId || c.parentId === 0);
-          const replies = allComments.filter((c) => c.parentId && c.parentId !== 0);
-          mainComments.forEach((comment) => {
-            comment.replies = replies.filter((r) => r.parentId === comment.id);
-          });
-          comments.value = mainComments;
+          comments.value = normalizeCommentList(data.data || []);
         }
       } catch (error) {
       }
@@ -404,9 +449,15 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           }, comment.replies && comment.replies.length > 0 ? {
             e: common_vendor.f(comment.replies, (reply, k1, i1) => {
               return {
-                a: common_vendor.t(reply.nickname || "\u533F\u540D\u7528\u6237"),
-                b: common_vendor.t(reply.content),
-                c: reply.id
+                a: common_vendor.unref(utils_image.getImageUrl)(reply.avatar || reply.userAvatar) || common_vendor.unref(authorAvatar),
+                b: common_vendor.t(reply.nickname || "\u533F\u540D\u7528\u6237"),
+                c: common_vendor.t(reply.content),
+                d: common_vendor.t(formatTime(reply.createTime)),
+                e: reply.isLiked ? 1 : "",
+                f: common_vendor.t(reply.likeCount || 0),
+                g: reply.isLiked ? 1 : "",
+                h: common_vendor.o(($event) => toggleCommentLike(reply)),
+                i: reply.id
               };
             })
           } : {}, {
@@ -431,7 +482,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         z: isFavorite.value ? 1 : "",
         A: common_vendor.o(toggleFavorite),
         B: common_vendor.t(common_vendor.unref(commentCount)),
-        C: common_vendor.o(openCommentEditor),
+        C: common_vendor.o(openRootCommentEditor),
         D: commentEditorVisible.value
       }, commentEditorVisible.value ? {
         E: common_vendor.t(replyingTo.value ? `\u56DE\u590D ${replyingTo.value.nickname || "\u533F\u540D\u7528\u6237"}` : "\u53D1\u8868\u8BC4\u8BBA"),

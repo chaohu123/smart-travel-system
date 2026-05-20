@@ -6,9 +6,8 @@ var utils_image = require("../../utils/image.js");
 var utils_config = require("../../utils/config.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
-if (!Array) {
-  const _component_CloseSmall = common_vendor.resolveComponent("CloseSmall");
-  _component_CloseSmall();
+if (!Math) {
+  common_vendor.unref(common_vendor.CloseSmall)();
 }
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {

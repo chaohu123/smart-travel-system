@@ -25,5 +25,8 @@ public interface CheckinRecordMapper {
                       @Param("targetId") Long targetId);
 
     CheckinRecord selectById(@Param("id") Long id);
-}
 
+    CheckinRecord selectByUserAndTarget(@Param("userId") Long userId,
+                                        @Param("targetType") String targetType,
+                                        @Param("targetId") Long targetId);
+}

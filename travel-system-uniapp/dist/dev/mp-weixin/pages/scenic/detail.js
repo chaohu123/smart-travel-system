@@ -23,6 +23,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const CACHE_KEY_PREFIX = "scenic_detail_";
     const CACHE_EXPIRE = 5 * 60;
     const checkinList = common_vendor.ref([]);
+    const hasCheckedIn = common_vendor.ref(false);
+    const myCheckin = common_vendor.ref(null);
     const FAVORITE_KEY = "scenic_favorites";
     const showCheckinModal = common_vendor.ref(false);
     const uploadImages = common_vendor.ref([]);
@@ -113,7 +115,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       if (useCache) {
         const cacheKey = `${CACHE_KEY_PREFIX}${scenicId.value}`;
         const cached = utils_storage.getCache(cacheKey);
-        if (cached) {
+        if (cached && Number(cached.id) === Number(scenicId.value)) {
           detail.value = cached;
           loadFavoriteStatus();
           checkPendingStatus();
@@ -121,6 +123,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             loadNearbyFoods();
           }, 300);
           return;
+        } else if (cached) {
+          utils_storage.removeCache(cacheKey);
         }
       }
       loading.value = true;
@@ -167,14 +171,17 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     };
     const loadScenicCheckins = async () => {
+      var _a, _b, _c;
       if (!scenicId.value)
         return;
       try {
-        const res = await api_content.checkinApi.getTargetCheckins("scenic", scenicId.value, 1, 10);
+        const res = await api_content.checkinApi.getTargetCheckins("scenic", scenicId.value, 1, 10, (_a = user.value) == null ? void 0 : _a.id);
         const data = res.data;
         if (res.statusCode === 200 && data.code === 200) {
           const list = data.data && data.data.list || [];
           checkinList.value = list || [];
+          hasCheckedIn.value = !!((_b = data.data) == null ? void 0 : _b.hasCheckedIn);
+          myCheckin.value = ((_c = data.data) == null ? void 0 : _c.myCheckin) || null;
         }
       } catch (e) {
       }
@@ -199,6 +206,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       lastClickTime = now;
       if (!scenicId.value)
         return;
+      if (hasCheckedIn.value) {
+        common_vendor.index.showToast({ title: "\u4F60\u5DF2\u7ECF\u6253\u5361\u8FC7\u5566", icon: "none" });
+        return;
+      }
       openCheckinModal();
     };
     const addToRoute = () => {
@@ -332,7 +343,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const chooseImage = () => {
       common_vendor.index.chooseImage({
-        count: 9 - uploadImages.value.length,
+        count: 1 - uploadImages.value.length,
         success: (res) => {
           uploadImages.value.push(...res.tempFilePaths);
         }
@@ -341,8 +352,23 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const removeImage = (index) => {
       uploadImages.value.splice(index, 1);
     };
+    const getUploadedPhotoUrl = async () => {
+      var _a;
+      const firstImage = uploadImages.value[0];
+      if (!firstImage)
+        return void 0;
+      const uploadRes = await api_content.uploadApi.upload(firstImage);
+      const uploadData = uploadRes.data;
+      if (uploadRes.statusCode !== 200 || (uploadData == null ? void 0 : uploadData.code) !== 200) {
+        throw new Error((uploadData == null ? void 0 : uploadData.msg) || "\u56FE\u7247\u4E0A\u4F20\u5931\u8D25");
+      }
+      if (typeof (uploadData == null ? void 0 : uploadData.data) === "string") {
+        return uploadData.data;
+      }
+      return (_a = uploadData == null ? void 0 : uploadData.data) == null ? void 0 : _a.url;
+    };
     const submitCheckin = async () => {
-      var _a, _b, _c, _d;
+      var _a, _b, _c, _d, _e, _f, _g, _h;
       const userId = (_a = user.value) == null ? void 0 : _a.id;
       if (!userId) {
         showLoginPromptDialog();
@@ -355,20 +381,38 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return;
       }
       try {
+        const photoUrl = await getUploadedPhotoUrl();
         await api_content.checkinApi.addCheckin({
           userId,
           targetType: "scenic",
           targetId: scenicId.value,
+          photoUrl,
           content: checkinComment.value.trim() || void 0,
           latitude: (_b = detail.value) == null ? void 0 : _b.latitude,
           longitude: (_c = detail.value) == null ? void 0 : _c.longitude
         });
         common_vendor.index.showToast({ title: "\u6253\u5361\u6210\u529F", icon: "success" });
+        const localCheckin = {
+          id: Date.now(),
+          userId,
+          userNickname: ((_d = user.value) == null ? void 0 : _d.nickname) || "\u6211",
+          userAvatar: (_e = user.value) == null ? void 0 : _e.avatar,
+          targetType: "scenic",
+          targetId: scenicId.value,
+          photoUrl,
+          content: checkinComment.value.trim(),
+          latitude: (_f = detail.value) == null ? void 0 : _f.latitude,
+          longitude: (_g = detail.value) == null ? void 0 : _g.longitude,
+          checkinTime: new Date().toISOString()
+        };
+        hasCheckedIn.value = true;
+        myCheckin.value = localCheckin;
+        checkinList.value = [localCheckin, ...checkinList.value.filter((item) => item.userId !== userId)];
         closeCheckinModal();
-        loadScenicCheckins();
+        await loadScenicCheckins();
       } catch (error) {
         common_vendor.index.showToast({
-          title: ((_d = error == null ? void 0 : error.data) == null ? void 0 : _d.msg) || (error == null ? void 0 : error.message) || "\u6253\u5361\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5",
+          title: ((_h = error == null ? void 0 : error.data) == null ? void 0 : _h.msg) || (error == null ? void 0 : error.message) || "\u6253\u5361\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5",
           icon: "none"
         });
       }
@@ -492,52 +536,52 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             h: item.id
           });
         })
-      } : {}, {
-        F: common_vendor.o(goCheckin)
-      }) : {}, {
+      } : {}) : {}, {
         c: detail.value,
-        G: isFavorite.value ? 1 : "",
-        H: common_vendor.o(toggleFavorite),
-        I: common_vendor.o(goCheckin),
-        J: common_vendor.t(isInPendingList.value ? "\u5DF2\u6DFB\u52A0\u5230\u8DEF\u7EBF" : "\u6DFB\u52A0\u5230\u8DEF\u7EBF"),
-        K: isInPendingList.value ? 1 : "",
-        L: common_vendor.o(addToRoute),
-        M: !common_vendor.unref(isFreeScenic)
+        F: isFavorite.value ? 1 : "",
+        G: common_vendor.o(toggleFavorite),
+        H: common_vendor.t(hasCheckedIn.value ? "\u5DF2\u6253\u5361" : "\u53BB\u6253\u5361"),
+        I: hasCheckedIn.value ? 1 : "",
+        J: common_vendor.o(goCheckin),
+        K: common_vendor.t(isInPendingList.value ? "\u5DF2\u6DFB\u52A0\u5230\u8DEF\u7EBF" : "\u6DFB\u52A0\u5230\u8DEF\u7EBF"),
+        L: isInPendingList.value ? 1 : "",
+        M: common_vendor.o(addToRoute),
+        N: !common_vendor.unref(isFreeScenic)
       }, !common_vendor.unref(isFreeScenic) ? {
-        N: common_vendor.o(openTicketModal)
+        O: common_vendor.o(openTicketModal)
       } : {}, {
-        O: showCheckinModal.value
+        P: showCheckinModal.value
       }, showCheckinModal.value ? common_vendor.e({
-        P: common_vendor.t(((_b = detail.value) == null ? void 0 : _b.name) || ""),
-        Q: common_vendor.o(closeCheckinModal),
-        R: locationMsg.value
+        Q: common_vendor.t(((_b = detail.value) == null ? void 0 : _b.name) || ""),
+        R: common_vendor.o(closeCheckinModal),
+        S: locationMsg.value
       }, locationMsg.value ? {
-        S: common_vendor.t(locationMsg.value)
+        T: common_vendor.t(locationMsg.value)
       } : {}, {
-        T: common_vendor.f(uploadImages.value, (img, index, i0) => {
+        U: common_vendor.f(uploadImages.value, (img, index, i0) => {
           return {
             a: img,
             b: common_vendor.o(($event) => removeImage(index)),
             c: index
           };
         }),
-        U: uploadImages.value.length < 9
-      }, uploadImages.value.length < 9 ? {
-        V: common_vendor.o(chooseImage)
+        V: uploadImages.value.length < 1
+      }, uploadImages.value.length < 1 ? {
+        W: common_vendor.o(chooseImage)
       } : {}, {
-        W: checkinComment.value,
-        X: common_vendor.o(($event) => checkinComment.value = $event.detail.value),
-        Y: common_vendor.t(checkinComment.value.length),
-        Z: common_vendor.o(submitCheckin),
-        aa: common_vendor.o(() => {
+        X: checkinComment.value,
+        Y: common_vendor.o(($event) => checkinComment.value = $event.detail.value),
+        Z: common_vendor.t(checkinComment.value.length),
+        aa: common_vendor.o(submitCheckin),
+        ab: common_vendor.o(() => {
         }),
-        ab: common_vendor.o(closeCheckinModal)
+        ac: common_vendor.o(closeCheckinModal)
       }) : {}, {
-        ac: showTicketModal.value
+        ad: showTicketModal.value
       }, showTicketModal.value ? {
-        ad: common_vendor.t(((_c = detail.value) == null ? void 0 : _c.name) || ""),
-        ae: common_vendor.o(closeTicketModal),
-        af: common_vendor.f(common_vendor.unref(ticketOptions), (ticket, k0, i0) => {
+        ae: common_vendor.t(((_c = detail.value) == null ? void 0 : _c.name) || ""),
+        af: common_vendor.o(closeTicketModal),
+        ag: common_vendor.f(common_vendor.unref(ticketOptions), (ticket, k0, i0) => {
           return {
             a: common_vendor.t(ticket.name),
             b: common_vendor.t(ticket.originalPrice),
@@ -547,17 +591,17 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             f: common_vendor.o(($event) => selectedTicketId.value = ticket.id)
           };
         }),
-        ag: common_vendor.t(selectedPlayDate.value || "\u8BF7\u9009\u62E9\u65E5\u671F"),
-        ah: selectedPlayDate.value,
-        ai: common_vendor.o(onPlayDateChange),
-        aj: common_vendor.o(($event) => changeTicketCount(-1)),
-        ak: common_vendor.t(ticketCount.value),
-        al: common_vendor.o(($event) => changeTicketCount(1)),
-        am: common_vendor.t(common_vendor.unref(ticketTotalPrice)),
-        an: common_vendor.o(submitTicketOrder),
-        ao: common_vendor.o(() => {
+        ah: common_vendor.t(selectedPlayDate.value || "\u8BF7\u9009\u62E9\u65E5\u671F"),
+        ai: selectedPlayDate.value,
+        aj: common_vendor.o(onPlayDateChange),
+        ak: common_vendor.o(($event) => changeTicketCount(-1)),
+        al: common_vendor.t(ticketCount.value),
+        am: common_vendor.o(($event) => changeTicketCount(1)),
+        an: common_vendor.t(common_vendor.unref(ticketTotalPrice)),
+        ao: common_vendor.o(submitTicketOrder),
+        ap: common_vendor.o(() => {
         }),
-        ap: common_vendor.o(closeTicketModal)
+        aq: common_vendor.o(closeTicketModal)
       } : {});
     };
   }
