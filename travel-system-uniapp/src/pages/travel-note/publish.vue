@@ -228,7 +228,11 @@ const chooseImages = () => {
     success: async (res) => {
       for (const path of res.tempFilePaths) {
         const uploadRes = await uploadApi.upload(path)
-        const data = JSON.parse(uploadRes.data) as ApiResponse<{ url: string }>
+        const data = (
+          typeof uploadRes.data === 'string'
+            ? JSON.parse(uploadRes.data)
+            : uploadRes.data
+        ) as ApiResponse<{ url: string }>
         if (uploadRes.statusCode === 200 && data.code === 200) {
           // 后端返回格式：{ code: 200, msg: "success", data: { url: "..." } }
           const imageUrl = typeof data.data === 'string' ? data.data : data.data?.url

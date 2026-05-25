@@ -308,6 +308,7 @@ import { scenicSpotApi, foodApi, cityApi, checkinApi, uploadApi, type ApiRespons
 import { defaultFoodImage, defaultScenicImage } from '@/utils/config'
 import { getImageUrl } from '@/utils/image'
 import { useUserStore } from '@/store/user'
+import { syncSelectedCityName } from '@/utils/selectedCity'
 
 type TabType = 'attraction' | 'food'
 type SortType = 'default' | 'distance' | 'hot' | 'checkin'
@@ -998,7 +999,8 @@ const applySelectedCity = (data: any, shouldReload = true) => {
   return true
 }
 
-const applyCityFromStorage = () => {
+const applyCityFromStorage = async () => {
+  await syncSelectedCityName()
   const selected = uni.getStorageSync('ticket_selected_city') as { id?: number; name?: string; ts?: number } | null
   if (!selected || !selected.id || !selected.name) return false
   const ts = Number(selected.ts || 0)
@@ -1267,10 +1269,10 @@ onMounted(() => {
   loadActivities()
 })
 
-onShow(() => {
+onShow(async () => {
   if (citySelectionPending.value) {
     citySelectionPending.value = false
-    applyCityFromStorage()
+    await applyCityFromStorage()
   }
 })
 

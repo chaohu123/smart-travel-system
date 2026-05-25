@@ -102,7 +102,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           var _a;
           for (const path of res.tempFilePaths) {
             const uploadRes = await api_content.uploadApi.upload(path);
-            const data = JSON.parse(uploadRes.data);
+            const data = typeof uploadRes.data === "string" ? JSON.parse(uploadRes.data) : uploadRes.data;
             if (uploadRes.statusCode === 200 && data.code === 200) {
               const imageUrl = typeof data.data === "string" ? data.data : (_a = data.data) == null ? void 0 : _a.url;
               if (imageUrl) {

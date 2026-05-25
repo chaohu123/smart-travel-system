@@ -1,0 +1,280 @@
+<mxfile host="app.diagrams.net" agent="Codex">
+  <diagram id="smart-travel-chen-er-professional" name="智能旅游系统专业ER图">
+    <mxGraphModel dx="1758" dy="990" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=28;fontStyle=1;fontFamily=Microsoft YaHei;" value="智能旅游系统 E-R 图" vertex="1">
+          <mxGeometry height="44" width="560" x="520" y="24" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#cbd5e1;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="矩形表示实体，菱形表示关系；连线标注 1、N、M 表示基数；实体仅展示中文表名。" vertex="1">
+          <mxGeometry height="38" width="920" x="340" y="76" as="geometry" />
+        </mxCell>
+        <mxCell id="module-resource" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#7aa7d9;strokeWidth=1.5;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;verticalAlign=top;align=left;spacing=10;" value="旅游资源模块" vertex="1">
+          <mxGeometry height="430" width="560" x="55" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="module-checkin" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4f8fb;strokeColor=#94a3b8;strokeWidth=1.5;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;verticalAlign=top;align=left;spacing=10;" value="打卡系统模块" vertex="1">
+          <mxGeometry height="280" width="330" x="640" y="205" as="geometry" />
+        </mxCell>
+        <mxCell id="module-user" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f7f3ff;strokeColor=#a78bfa;strokeWidth=1.5;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;verticalAlign=top;align=left;spacing=10;" value="用户行为模块" vertex="1">
+          <mxGeometry height="760" width="540" x="1000" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="module-content" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f0fdf4;strokeColor=#86efac;strokeWidth=1.5;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;verticalAlign=top;align=left;spacing=10;" value="内容生态模块" vertex="1">
+          <mxGeometry height="290" width="700" x="250" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="city" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="城市" vertex="1">
+          <mxGeometry height="52" width="110" x="105" y="245" as="geometry" />
+        </mxCell>
+        <mxCell id="route" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="旅游线路" vertex="1">
+          <mxGeometry height="52" width="110" x="335" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="routeDay" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="线路日程" vertex="1">
+          <mxGeometry height="52" width="110" x="335" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="routePoi" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="日程明细" vertex="1">
+          <mxGeometry height="52" width="110" x="335" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="scenic" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="景点" vertex="1">
+          <mxGeometry height="52" width="110" x="105" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="food" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="美食" vertex="1">
+          <mxGeometry height="52" width="110" x="105" y="470" as="geometry" />
+        </mxCell>
+        <mxCell id="checkinPoint" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="打卡点配置" vertex="1">
+          <mxGeometry height="52" width="120" x="690" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="checkin" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="打卡记录" vertex="1">
+          <mxGeometry height="52" width="110" x="850" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="user" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="用户" vertex="1">
+          <mxGeometry height="52" width="110" x="1125" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="activity" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="活动" vertex="1">
+          <mxGeometry height="52" width="110" x="1125" y="165" as="geometry" />
+        </mxCell>
+        <mxCell id="behavior" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="行为记录" vertex="1">
+          <mxGeometry height="52" width="110" x="1125" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="level" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="等级配置" vertex="1">
+          <mxGeometry height="52" width="110" x="1125" y="770" as="geometry" />
+        </mxCell>
+        <mxCell id="follow" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="用户关注关系" vertex="1">
+          <mxGeometry height="52" width="130" x="1370" y="409" as="geometry" />
+        </mxCell>
+        <mxCell id="dailyCheckin" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="用户签到记录" vertex="1">
+          <mxGeometry height="52" width="130" x="1380" y="518" as="geometry" />
+        </mxCell>
+        <mxCell id="tag" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="标签" vertex="1">
+          <mxGeometry height="52" width="110" x="260" y="704" as="geometry" />
+        </mxCell>
+        <mxCell id="note" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="游记" vertex="1">
+          <mxGeometry height="52" width="110" x="560" y="705" as="geometry" />
+        </mxCell>
+        <mxCell id="noteImage" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="游记图片" vertex="1">
+          <mxGeometry height="52" width="110" x="560" y="805" as="geometry" />
+        </mxCell>
+        <mxCell id="comment" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dbeafe;strokeColor=#111111;strokeWidth=1.6;fontSize=16;fontStyle=1;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="评论" vertex="1">
+          <mxGeometry height="52" width="110" x="800" y="705" as="geometry" />
+        </mxCell>
+        <mxCell id="rCityRoute" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="拥有" vertex="1">
+          <mxGeometry height="50" width="70" x="260" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="rRouteDay" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="包含" vertex="1">
+          <mxGeometry height="50" width="70" x="355" y="235" as="geometry" />
+        </mxCell>
+        <mxCell id="rDayPoi" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="包含" vertex="1">
+          <mxGeometry height="50" width="70" x="355" y="375" as="geometry" />
+        </mxCell>
+        <mxCell id="rCityScenic" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="包含" vertex="1">
+          <mxGeometry height="50" width="70" x="260" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="rCityFood" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="包含" vertex="1">
+          <mxGeometry height="50" width="70" x="260" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="rPoiScenic" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="引用" vertex="1">
+          <mxGeometry height="50" width="70" x="505" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="rPoiFood" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="引用" vertex="1">
+          <mxGeometry height="50" width="70" x="505" y="460" as="geometry" />
+        </mxCell>
+        <mxCell id="rPoint" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="配置" vertex="1">
+          <mxGeometry height="50" width="70" x="615" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="rRecord" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="产生" vertex="1">
+          <mxGeometry height="50" width="70" x="815" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="rUserCheckin" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="打卡" vertex="1">
+          <mxGeometry height="50" width="70" x="995" y="315" as="geometry" />
+        </mxCell>
+        <mxCell id="rActivity" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="报名" vertex="1">
+          <mxGeometry height="50" width="70" x="1145" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="rFollow" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="关注" vertex="1">
+          <mxGeometry height="50" width="70" x="1250" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="rDailyCheckin" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="签到" vertex="1">
+          <mxGeometry height="50" width="70" x="1250" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="rUserNote" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="发布" vertex="1">
+          <mxGeometry height="50" width="70" x="995" y="500" as="geometry" />
+        </mxCell>
+        <mxCell id="rUserBehavior" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="产生" vertex="1">
+          <mxGeometry height="50" width="70" x="1145" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="rBehaviorLevel" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="匹配" vertex="1">
+          <mxGeometry height="50" width="70" x="1145" y="690" as="geometry" />
+        </mxCell>
+        <mxCell id="rNoteComment" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="拥有" vertex="1">
+          <mxGeometry height="50" width="70" x="690" y="705" as="geometry" />
+        </mxCell>
+        <mxCell id="rNoteImage" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="包含" vertex="1">
+          <mxGeometry height="50" width="70" x="580" y="765" as="geometry" />
+        </mxCell>
+        <mxCell id="rUserComment" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="发表" vertex="1">
+          <mxGeometry height="50" width="70" x="950" y="705" as="geometry" />
+        </mxCell>
+        <mxCell id="rTagNote" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="标注" vertex="1">
+          <mxGeometry height="50" width="70" x="430" y="705" as="geometry" />
+        </mxCell>
+        <mxCell id="rUserTag" parent="1" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f1f5f9;strokeColor=#111111;strokeWidth=1.5;fontSize=14;fontFamily=Microsoft YaHei;align=center;verticalAlign=middle;" value="选择" vertex="1">
+          <mxGeometry height="50" width="70" x="430" y="820" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="city" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rCityRoute" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="rCityRoute" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="route" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="route" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rRouteDay" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="rRouteDay" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="routeDay" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="routeDay" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rDayPoi" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="rDayPoi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="routePoi" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="city" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rCityScenic" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="rCityScenic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="scenic" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="city" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rCityFood" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="rCityFood" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="food" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="routePoi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rPoiScenic" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="rPoiScenic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="scenic" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="routePoi" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rPoiFood" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="rPoiFood" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="food" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="scenic" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rPoint" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e16" edge="1" parent="1" source="rPoint" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="checkinPoint" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" edge="1" parent="1" source="checkinPoint" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rRecord" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e18" edge="1" parent="1" source="rRecord" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="checkin" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e19" edge="1" parent="1" source="checkin" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rUserCheckin" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e20" edge="1" parent="1" source="rUserCheckin" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="user" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e21" edge="1" parent="1" source="activity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rActivity" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e22" edge="1" parent="1" source="rActivity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="user" value="M">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e23" edge="1" parent="1" source="user" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rFollow" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e24" edge="1" parent="1" source="rFollow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="follow" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e25" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" value="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1235" y="345.4999999999998" as="sourcePoint" />
+            <mxPoint x="1285" y="524.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e26" edge="1" parent="1" source="rDailyCheckin" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="dailyCheckin" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e27" edge="1" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" value="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1125" y="366.9999999999998" as="sourcePoint" />
+            <mxPoint x="1030" y="526" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e28" edge="1" parent="1" source="rUserNote" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="note" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e29" edge="1" parent="1" source="note" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rNoteComment" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e30" edge="1" parent="1" source="rNoteComment" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="comment" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e31" edge="1" parent="1" source="user" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rUserComment" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e32" edge="1" parent="1" source="rUserComment" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="comment" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e33" edge="1" parent="1" source="note" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rNoteImage" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e34" edge="1" parent="1" source="rNoteImage" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="noteImage" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e35" edge="1" parent="1" source="tag" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rTagNote" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e36" edge="1" parent="1" source="rTagNote" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="note" value="M">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e37" edge="1" parent="1" source="tag" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rUserTag" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e38" edge="1" parent="1" source="rUserTag" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="user" value="M">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e39" edge="1" parent="1" source="user" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rUserBehavior" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e40" edge="1" parent="1" source="rUserBehavior" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="behavior" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e41" edge="1" parent="1" source="behavior" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="rBehaviorLevel" value="N">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e42" edge="1" parent="1" source="rBehaviorLevel" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;strokeColor=#111111;strokeWidth=1.4;fontSize=14;fontFamily=Microsoft YaHei;" target="level" value="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="caption" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=20;fontFamily=SimSun;" value="图 4.19 智能旅游系统 E-R 图" vertex="1">
+          <mxGeometry height="28" width="400" x="600" y="925" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

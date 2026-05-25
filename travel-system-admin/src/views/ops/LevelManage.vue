@@ -223,15 +223,15 @@ const rules = {
 const loadLevelList = async () => {
   loading.value = true;
   try {
-    const res = await fetchLevelList({
+    const resp = await fetchLevelList({
       pageNum: pageNum.value,
       pageSize: pageSize.value
     });
-    if (res.code === 200) {
-      levelList.value = res.rows || [];
-      total.value = res.total || 0;
+    if (resp.data.code === 200) {
+      levelList.value = resp.data.rows || [];
+      total.value = resp.data.total || 0;
     } else {
-      ElMessage.error(res.msg || '加载失败');
+      ElMessage.error(resp.data.msg || '加载失败');
     }
   } catch (error: any) {
     ElMessage.error(error.message || '加载失败');
@@ -243,9 +243,9 @@ const loadLevelList = async () => {
 // 加载经验值规则
 const loadExpRules = async () => {
   try {
-    const res = await fetchExpRules();
-    if (res.code === 200 && res.data) {
-      Object.assign(expRuleForm, res.data);
+    const resp = await fetchExpRules();
+    if (resp.data.code === 200 && resp.data.data) {
+      Object.assign(expRuleForm, resp.data.data);
     }
   } catch (error: any) {
     console.error('加载经验值规则失败', error);
@@ -255,11 +255,11 @@ const loadExpRules = async () => {
 // 保存经验值规则
 const saveExpRules = async () => {
   try {
-    const res = await saveExpRulesApi(expRuleForm);
-    if (res.code === 200) {
+    const resp = await saveExpRulesApi(expRuleForm);
+    if (resp.data.code === 200) {
       ElMessage.success('保存成功');
     } else {
-      ElMessage.error(res.msg || '保存失败');
+      ElMessage.error(resp.data.msg || '保存失败');
     }
   } catch (error: any) {
     ElMessage.error(error.message || '保存失败');
@@ -286,12 +286,12 @@ const handleDelete = async (row: Level) => {
     await ElMessageBox.confirm('确定要删除该等级吗？', '提示', {
       type: 'warning'
     });
-    const res = await deleteLevel(row.id!);
-    if (res.code === 200) {
+    const resp = await deleteLevel(row.id!);
+    if (resp.data.code === 200) {
       ElMessage.success('删除成功');
       loadLevelList();
     } else {
-      ElMessage.error(res.msg || '删除失败');
+      ElMessage.error(resp.data.msg || '删除失败');
     }
   } catch (error: any) {
     if (error !== 'cancel') {
@@ -307,18 +307,18 @@ const handleSubmit = async () => {
     if (valid) {
       submitting.value = true;
       try {
-        let res;
+        let resp;
         if (form.id) {
-          res = await updateLevel(form);
+          resp = await updateLevel(form);
         } else {
-          res = await createLevel(form);
+          resp = await createLevel(form);
         }
-        if (res.code === 200) {
+        if (resp.data.code === 200) {
           ElMessage.success(form.id ? '更新成功' : '创建成功');
           dialogVisible.value = false;
           loadLevelList();
         } else {
-          ElMessage.error(res.msg || '操作失败');
+          ElMessage.error(resp.data.msg || '操作失败');
         }
       } catch (error: any) {
         ElMessage.error(error.message || '操作失败');

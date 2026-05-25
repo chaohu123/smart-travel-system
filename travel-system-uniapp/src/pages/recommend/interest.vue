@@ -88,6 +88,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { scenicSpotApi, cityApi, type ApiResponse } from '@/api/content'
 import { defaultScenicImage } from '@/utils/config'
 import { getImageUrl } from '@/utils/image'
+import { syncSelectedCityName } from '@/utils/selectedCity'
 
 interface ScenicItem {
   id: number
@@ -273,7 +274,8 @@ const chooseCity = () => {
   })
 }
 
-const applyCityFromStorage = () => {
+const applyCityFromStorage = async () => {
+  await syncSelectedCityName()
   const selected = uni.getStorageSync('ticket_selected_city') as { id?: number; name?: string; ts?: number } | null
   if (!selected || !selected.id || !selected.name) return
   const ts = Number(selected.ts || 0)
@@ -308,8 +310,9 @@ onMounted(async () => {
   getUserCityAndLoad()
 })
 
-onShow(() => {
-  applyCityFromStorage()
+onShow(async () => {
+  await loadCityList()
+  await applyCityFromStorage()
 })
 </script>
 

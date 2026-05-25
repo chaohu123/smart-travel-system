@@ -278,7 +278,8 @@ const cityApi = {
     return utils_http.request({
       url: "/city/list",
       method: "GET",
-      showLoading: false
+      showLoading: false,
+      disableCache: true
     });
   }
 };

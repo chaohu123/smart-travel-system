@@ -422,6 +422,7 @@ export const cityApi = {
       url: '/city/list',
       method: 'GET',
       showLoading: false,
+      disableCache: true, // 运营后台会改城市名，避免 GET 静默缓存导致长期不更新
     })
   },
 }

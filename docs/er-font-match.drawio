@@ -1,0 +1,103 @@
+<mxfile host="app.diagrams.net" agent="Codex">
+  <diagram id="er-route" name="路线ER图">
+    <mxGraphModel dx="1406" dy="792" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="560" pageHeight="500" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="route-center" parent="1" style="whiteSpace=wrap;html=1;rounded=0;strokeColor=#333333;fillColor=#ffffff;fontSize=19;fontStyle=0;" value="路线" vertex="1">
+          <mxGeometry height="54" width="64" x="248" y="223" as="geometry" />
+        </mxCell>
+        <mxCell id="route-source" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="来源类型" vertex="1">
+          <mxGeometry height="64" width="108" x="94" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="route-people" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="适合人群" vertex="1">
+          <mxGeometry height="64" width="108" x="204" y="16" as="geometry" />
+        </mxCell>
+        <mxCell id="route-days" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="行程天数" vertex="1">
+          <mxGeometry height="64" width="108" x="326" y="16" as="geometry" />
+        </mxCell>
+        <mxCell id="route-city" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="主要城市&lt;br&gt;ID" vertex="1">
+          <mxGeometry height="72" width="112" x="410" y="64" as="geometry" />
+        </mxCell>
+        <mxCell id="route-name" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="路线名称" vertex="1">
+          <mxGeometry height="64" width="108" x="439" y="136" as="geometry" />
+        </mxCell>
+        <mxCell id="route-id" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="路线ID" vertex="1">
+          <mxGeometry height="64" width="96" x="451" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="route-del" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="逻辑删除&lt;br&gt;标记" vertex="1">
+          <mxGeometry height="72" width="112" x="434" y="270" as="geometry" />
+        </mxCell>
+        <mxCell id="route-update" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="更新时间" vertex="1">
+          <mxGeometry height="64" width="108" x="386" y="346" as="geometry" />
+        </mxCell>
+        <mxCell id="route-create" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="创建时间" vertex="1">
+          <mxGeometry height="64" width="108" x="318" y="406" as="geometry" />
+        </mxCell>
+        <mxCell id="route-ai" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="是否使用&lt;br&gt;AI文案" vertex="1">
+          <mxGeometry height="76" width="116" x="196" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="route-use" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="使用次数" vertex="1">
+          <mxGeometry height="64" width="108" x="96" y="366" as="geometry" />
+        </mxCell>
+        <mxCell id="route-favorite" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="收藏数" vertex="1">
+          <mxGeometry height="64" width="96" x="34" y="308" as="geometry" />
+        </mxCell>
+        <mxCell id="route-view" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="浏览数" vertex="1">
+          <mxGeometry height="64" width="96" x="10" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="route-cover" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="封面图" vertex="1">
+          <mxGeometry height="64" width="96" x="20" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="route-summary" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#333333;fillColor=#ffffff;fontSize=18;fontStyle=0;" value="行程概要" vertex="1">
+          <mxGeometry height="64" width="108" x="34" y="94" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e1" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-source">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e2" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-people">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e3" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-days">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e4" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-city">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e5" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-name">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e6" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-id">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e7" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-del">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e8" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-update">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e9" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-create">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e10" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-ai">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e11" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-use">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e12" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-favorite">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e13" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-view">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e14" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-cover">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="route-e15" edge="1" parent="1" source="route-center" style="endArrow=none;html=1;rounded=0;strokeColor=#333333;strokeWidth=1.8;" target="route-summary">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

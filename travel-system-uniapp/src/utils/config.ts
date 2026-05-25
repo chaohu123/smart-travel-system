@@ -1,15 +1,3 @@
-/**
- * 应用配置文件
- * 统一管理服务器地址等配置
- *
- * 开发模式配置说明：
- * 1. H5 平台：使用 localhost:8080（本地开发）
- * 2. 微信小程序：由于平台限制，需要使用局域网 IP 地址
- *
- * 如何获取本机 IP（仅微信小程序需要）：
- * Windows: 在命令行运行 ipconfig，查找 "IPv4 地址"
- * Mac/Linux: 在终端运行 ifconfig，查找 inet 地址
- */
 
 
 const DEV_CONFIG = {
@@ -19,7 +7,8 @@ const DEV_CONFIG = {
 };
 
 //本地
-const LOCAL_IP = '10.18.41.225'
+// 与 ipconfig 中当前网卡 IPv4 一致；换网络后需同步修改
+const LOCAL_IP = '192.168.142.1'
 //线上
 // const LOCAL_IP = '39.102.56.193/'
 const MP_WEIXIN_CONFIG = {

@@ -5,6 +5,7 @@ var api_content = require("../../api/content.js");
 var utils_config = require("../../utils/config.js");
 var utils_image = require("../../utils/image.js");
 var store_user = require("../../store/user.js");
+var utils_selectedCity = require("../../utils/selectedCity.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 if (!Math) {
@@ -560,7 +561,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
       return true;
     };
-    const applyCityFromStorage = () => {
+    const applyCityFromStorage = async () => {
+      await utils_selectedCity.syncSelectedCityName();
       const selected = common_vendor.index.getStorageSync("ticket_selected_city");
       if (!selected || !selected.id || !selected.name)
         return false;
@@ -800,10 +802,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       getUserLocation();
       loadActivities();
     });
-    common_vendor.onShow(() => {
+    common_vendor.onShow(async () => {
       if (citySelectionPending.value) {
         citySelectionPending.value = false;
-        applyCityFromStorage();
+        await applyCityFromStorage();
       }
     });
     common_vendor.onUnmounted(() => {
