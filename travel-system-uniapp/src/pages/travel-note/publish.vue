@@ -108,6 +108,7 @@ import {
 import { useUserStore } from '@/store/user'
 import { getImageUrl } from '@/utils/image'
 import { STATIC_BASE_URL } from '@/utils/config'
+import { safeNavigateBack } from '@/utils/router'
 import CloseSmall from '@icon-park/vue-next/es/icons/CloseSmall'
 
 interface CityItem {
@@ -369,13 +370,13 @@ const loadNoteDetail = async (id: number) => {
     } else {
       uni.showToast({ title: data.msg || '加载失败', icon: 'none' })
       setTimeout(() => {
-        uni.navigateBack()
+        safeNavigateBack({ fallbackUrl: '/pages/travel-note/list' })
       }, 1500)
     }
   } catch (error) {
     uni.showToast({ title: '加载失败', icon: 'none' })
     setTimeout(() => {
-      uni.navigateBack()
+      safeNavigateBack({ fallbackUrl: '/pages/travel-note/list' })
     }, 1500)
   } finally {
     loading.value = false

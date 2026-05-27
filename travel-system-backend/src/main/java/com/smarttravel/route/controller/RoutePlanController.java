@@ -7,7 +7,7 @@ import javax.annotation.Resource;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Map; 
 
 /**
  * 线路规划接口
@@ -144,7 +144,16 @@ public class RoutePlanController {
      * 收藏/取消收藏线路
      */
     @PostMapping("/favorite")
-    public Map<String, Object> toggleFavorite(@RequestParam Long userId, @RequestParam Long routeId) {
+    public Map<String, Object> toggleFavorite(@RequestBody Map<String, Object> request) {
+        if (request == null || request.get("userId") == null || request.get("routeId") == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("code", 400);
+            response.put("msg", "userId 和 routeId 不能为空");
+            response.put("data", Collections.emptyMap());
+            return response;
+        }
+        Long userId = Long.valueOf(request.get("userId").toString());
+        Long routeId = Long.valueOf(request.get("routeId").toString());
         Map<String, Object> result = routePlanService.toggleFavorite(userId, routeId);
         Map<String, Object> response = new HashMap<>();
         response.put("code", 200);

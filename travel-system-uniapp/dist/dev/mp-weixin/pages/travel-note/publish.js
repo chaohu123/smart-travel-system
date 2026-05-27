@@ -4,6 +4,7 @@ var api_content = require("../../api/content.js");
 var store_user = require("../../store/user.js");
 var utils_image = require("../../utils/image.js");
 var utils_config = require("../../utils/config.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 if (!Math) {
@@ -210,13 +211,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         } else {
           common_vendor.index.showToast({ title: data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
           setTimeout(() => {
-            common_vendor.index.navigateBack();
+            utils_router.safeNavigateBack({ fallbackUrl: "/pages/travel-note/list" });
           }, 1500);
         }
       } catch (error) {
         common_vendor.index.showToast({ title: "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
         setTimeout(() => {
-          common_vendor.index.navigateBack();
+          utils_router.safeNavigateBack({ fallbackUrl: "/pages/travel-note/list" });
         }, 1500);
       } finally {
         loading.value = false;

@@ -129,6 +129,7 @@ export const travelNoteApi = {
       method: 'GET',
       data: params || {},
       showLoading: false,
+      disableCache: true,
     })
   },
 
@@ -139,6 +140,7 @@ export const travelNoteApi = {
       method: 'GET',
       data: { userId },
       showLoading: true,
+      disableCache: true,
     })
   },
 
@@ -196,6 +198,7 @@ export const travelNoteApi = {
       method: 'GET',
       data: { userId, pageNum, pageSize },
       needAuth: true,
+      disableCache: true,
     })
   },
 
@@ -206,6 +209,7 @@ export const travelNoteApi = {
       method: 'GET',
       data: { userId, pageNum, pageSize, status },
       needAuth: true,
+      disableCache: true,
     })
   },
 

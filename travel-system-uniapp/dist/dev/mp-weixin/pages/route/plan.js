@@ -4,6 +4,7 @@ var api_route = require("../../api/route.js");
 var api_content = require("../../api/content.js");
 var store_user = require("../../store/user.js");
 var utils_storage = require("../../utils/storage.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/config.js");
 require("../../utils/image.js");
@@ -946,12 +947,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             utils_storage.setCache(ROUTE_PLAN_RESET_FORM_FLAG, true);
             utils_storage.setCache(ROUTE_PLAN_POST_GENERATE_KEY, Number(routeId));
           };
-          common_vendor.index.navigateTo({
-            url: detailUrl,
+          utils_router.safeNavigateTo(detailUrl, {
             success: markResetOnReturn,
             fail: () => {
-              common_vendor.index.redirectTo({
-                url: detailUrl,
+              utils_router.safeRedirectTo(detailUrl, {
                 success: markResetOnReturn,
                 fail: () => {
                   common_vendor.index.showToast({

@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
 var api_user = require("../../api/user.js");
 var store_user = require("../../store/user.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
@@ -52,7 +53,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
     ]);
     const goBack = () => {
-      common_vendor.index.navigateBack();
+      utils_router.safeNavigateBack({ fallbackUrl: "/pages/profile/profile" });
     };
     const toggleTagName = (name) => {
       const i = selectedNames.value.indexOf(name);

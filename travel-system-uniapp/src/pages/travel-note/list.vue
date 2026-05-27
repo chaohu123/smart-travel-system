@@ -267,7 +267,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted, nextTick } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { travelNoteApi, cityApi, travelNoteInteractionApi } from '@/api/content'
 import CloseSmall from '@icon-park/vue-next/es/icons/CloseSmall'
 import { safeNavigateTo } from '@/utils/router'
@@ -318,6 +318,9 @@ const defaultAvatar = 'https://images.pexels.com/photos/415829/pexels-photo-4158
 // 滚动位置记录（用于懒加载）
 const scrollTop = ref(0)
 let initialLoadStarted = false
+let skipNextShowRefresh = true
+let lastListRefreshTime = 0
+const LIST_REFRESH_INTERVAL = 3000
 
 // 城市选择
 const onCityChange = (e: any) => {
@@ -821,7 +824,7 @@ const publishNote = () => {
 }
 
 // 重试加载
-const retryLoad = () => {
+const resetAndLoadNotes = () => {
   networkError.value = false
   pageNum.value = 1
   noteList.value = []
@@ -830,13 +833,31 @@ const retryLoad = () => {
   loadNotes()
 }
 
+const retryLoad = () => {
+  resetAndLoadNotes()
+}
+
 // 使用 onLoad 来获取页面参数
 onLoad(() => {
   initialLoadStarted = true
   loadCities().then(() => {
     selectedCity.value = cityList.value[0]
-    loadNotes()
+    resetAndLoadNotes()
+    lastListRefreshTime = Date.now()
   })
+})
+
+// 从其他页面返回时刷新列表（避免仍显示审核前的旧数据）
+onShow(() => {
+  if (!initialLoadStarted) return
+  if (skipNextShowRefresh) {
+    skipNextShowRefresh = false
+    return
+  }
+  const now = Date.now()
+  if (now - lastListRefreshTime < LIST_REFRESH_INTERVAL) return
+  lastListRefreshTime = now
+  resetAndLoadNotes()
 })
 
 onMounted(() => {

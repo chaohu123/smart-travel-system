@@ -171,7 +171,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { userApi } from '@/api/user'
 import { useUserStore } from '@/store/user'
 import { getCache, setCache } from '@/utils/storage'
-import { safeNavigateTo, resetNavigationState } from '@/utils/router'
+import { safeNavigateTo, resetNavigationState, safeNavigateBack } from '@/utils/router'
 import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
@@ -288,7 +288,7 @@ const loadUserInfo = async () => {
   if (!userId) {
     uni.showToast({ title: '用户不存在', icon: 'none' })
     setTimeout(() => {
-      uni.navigateBack()
+      safeNavigateBack({ fallbackUrl: '/pages/home/home' })
     }, 1500)
     return
   }

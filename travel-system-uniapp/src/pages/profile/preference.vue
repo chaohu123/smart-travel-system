@@ -93,6 +93,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { tagApi } from '@/api/content'
 import { userApi } from '@/api/user'
 import { useUserStore } from '@/store/user'
+import { safeNavigateBack } from '@/utils/router'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -146,7 +147,7 @@ const weightItems = computed(() => [
 ])
 
 const goBack = () => {
-  uni.navigateBack()
+  safeNavigateBack({ fallbackUrl: '/pages/profile/profile' })
 }
 
 const toggleTagName = (name: string) => {

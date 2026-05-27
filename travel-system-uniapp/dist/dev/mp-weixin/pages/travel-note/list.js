@@ -40,6 +40,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const defaultAvatar = "https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=200";
     const scrollTop = common_vendor.ref(0);
     let initialLoadStarted = false;
+    let skipNextShowRefresh = true;
+    let lastListRefreshTime = 0;
+    const LIST_REFRESH_INTERVAL = 3e3;
     const onCityChange = (e) => {
       selectedCity.value = cityList.value[e.detail.value];
       pageNum.value = 1;
@@ -447,7 +450,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const publishNote = () => {
       utils_router.safeNavigateTo("/pages/travel-note/publish");
     };
-    const retryLoad = () => {
+    const resetAndLoadNotes = () => {
       networkError.value = false;
       pageNum.value = 1;
       noteList.value = [];
@@ -455,12 +458,29 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       noMore.value = false;
       loadNotes();
     };
+    const retryLoad = () => {
+      resetAndLoadNotes();
+    };
     common_vendor.onLoad(() => {
       initialLoadStarted = true;
       loadCities().then(() => {
         selectedCity.value = cityList.value[0];
-        loadNotes();
+        resetAndLoadNotes();
+        lastListRefreshTime = Date.now();
       });
+    });
+    common_vendor.onShow(() => {
+      if (!initialLoadStarted)
+        return;
+      if (skipNextShowRefresh) {
+        skipNextShowRefresh = false;
+        return;
+      }
+      const now = Date.now();
+      if (now - lastListRefreshTime < LIST_REFRESH_INTERVAL)
+        return;
+      lastListRefreshTime = now;
+      resetAndLoadNotes();
     });
     common_vendor.onMounted(() => {
       if (!initialLoadStarted && noteList.value.length === 0 && !loading.value) {

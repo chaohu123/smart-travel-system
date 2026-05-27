@@ -4,6 +4,7 @@ var api_content = require("../../api/content.js");
 var utils_config = require("../../utils/config.js");
 var utils_image = require("../../utils/image.js");
 var utils_selectedCity = require("../../utils/selectedCity.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
@@ -18,7 +19,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const pageSize = common_vendor.ref(6);
     const lastCityApplyTs = common_vendor.ref(0);
     const goBack = () => {
-      common_vendor.index.navigateBack();
+      utils_router.safeNavigateBack({ fallbackUrl: "/pages/home/home" });
     };
     const filteredList = common_vendor.computed(() => {
       const keyword = searchKeyword.value.trim().toLowerCase();

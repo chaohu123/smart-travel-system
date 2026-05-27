@@ -4,9 +4,11 @@ D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttr
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\route\controller\AdminRouteController.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\content\domain\Comment.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\content\mapper\ActivityMapper.java
+D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\common\map\PoiCoordinateLookupService.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\content\domain\Activity.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\SmartTravelApplication.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\recommend\service\impl\RecommendServiceImpl.java
+D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\common\controller\MapController.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\content\service\impl\ScenicSpotServiceImpl.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\content\domain\City.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\user\domain\Level.java
@@ -14,6 +16,7 @@ D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttr
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\user\domain\UserTag.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\user\domain\UserCheckin.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\common\controller\AdminStatController.java
+D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\common\map\AiIntroPlaceParser.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\content\mapper\ContentTagMapper.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\content\mapper\ScenicSpotMapper.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\content\controller\AdminScenicSpotController.java
@@ -25,6 +28,7 @@ D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttr
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\user\domain\User.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\route\mapper\TravelRoutePoiMapper.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\user\mapper\LevelMapper.java
+D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\common\map\AmapGeocodeService.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\content\controller\ImageController.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\travel\service\TravelNoteService.java
 D:\APPdalley\smart-travel-system\travel-system-backend\src\main\java\com\smarttravel\user\mapper\UserFollowMapper.java

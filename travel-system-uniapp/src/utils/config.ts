@@ -53,10 +53,11 @@ export const API_BASE_URL = config.API_BASE_URL;
 export const STATIC_BASE_URL = config.STATIC_BASE_URL;
 
 /**
- * 高德 Web 服务 Key（行政区域查询 / 边界 polyline）
- * 请在 https://lbs.amap.com 申请「Web 服务」类型 Key，并勾选「行政区域查询」能力；
- * 微信小程序后台 request 合法域名需添加：https://restapi.amap.com
- * manifest.json → mp-weixin.map.key 请填写同一开放平台应用下的「微信小程序」Key（地图组件）
+ * 高德 Web 服务 Key（地理编码 / 行政区域查询）
+ * 必须使用「Web 服务」类型 Key，不能与小程序 map 组件 Key 混用。
+ * 若返回 USERKEY_PLAT_NOMATCH，请到 https://lbs.amap.com 重新申请 Web 服务 Key，
+ * 并分别写入 application.yml 的 amap.web-key 与本常量。
+ * 小程序 request 合法域名需添加后端 API 地址（地理编码走后端代理）。
  */
 export const AMAP_WEB_KEY = "b49d114eb175a158b25db7bf30156a3d";
 

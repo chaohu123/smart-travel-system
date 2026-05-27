@@ -416,13 +416,21 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         }
       }
     });
+    let skipNextShowRefresh = true;
+    let lastMyArticleRefreshTime = 0;
+    const MY_ARTICLE_REFRESH_INTERVAL = 3e3;
     common_vendor.onShow(() => {
-      if (user.value && noteList.value.length === 0 && !loading.value) {
-        pageNum.value = 1;
-        noteList.value = [];
-        noMore.value = false;
-        loadNotes();
+      if (!user.value)
+        return;
+      if (skipNextShowRefresh) {
+        skipNextShowRefresh = false;
+        return;
       }
+      const now = Date.now();
+      if (now - lastMyArticleRefreshTime < MY_ARTICLE_REFRESH_INTERVAL)
+        return;
+      lastMyArticleRefreshTime = now;
+      loadNotes(true);
     });
     common_vendor.onMounted(() => {
       if (user.value) {
@@ -430,7 +438,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       } else {
         common_vendor.index.showToast({ title: "\u8BF7\u5148\u767B\u5F55", icon: "none" });
         setTimeout(() => {
-          common_vendor.index.navigateBack();
+          utils_router.safeNavigateBack({ fallbackUrl: "/pages/profile/profile" });
         }, 1500);
       }
     });

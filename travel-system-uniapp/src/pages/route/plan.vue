@@ -588,6 +588,7 @@ import { routeApi } from '@/api/route'
 import { cityApi, tagApi, scenicSpotApi, foodApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
 import { getCache, setCache, removeCache } from '@/utils/storage'
+import { safeNavigateTo, safeRedirectTo } from '@/utils/router'
 
 /** 从行程详情返回规划页时需清空表单并回到步骤一 */
 const ROUTE_PLAN_RESET_FORM_FLAG = 'route_plan_reset_form_on_show'
@@ -1758,12 +1759,10 @@ const generateRoute = async () => {
         setCache(ROUTE_PLAN_POST_GENERATE_KEY, Number(routeId))
       }
 
-      uni.navigateTo({
-        url: detailUrl,
+      safeNavigateTo(detailUrl, {
         success: markResetOnReturn,
         fail: () => {
-          uni.redirectTo({
-            url: detailUrl,
+          safeRedirectTo(detailUrl, {
             success: markResetOnReturn,
             fail: () => {
               uni.showToast({

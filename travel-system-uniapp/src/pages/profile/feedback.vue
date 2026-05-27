@@ -105,6 +105,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
+import { safeNavigateBack } from '@/utils/router'
 
 const statusBarHeight = ref(0)
 /** 右侧预留宽度，避免标题与小程序胶囊菜单重叠（非微信端为对称占位） */
@@ -151,7 +152,7 @@ const submitting = ref(false)
 const canSubmit = computed(() => form.content.trim().length >= 10)
 
 const goBack = () => {
-  uni.navigateBack()
+  safeNavigateBack({ fallbackUrl: '/pages/profile/profile' })
 }
 
 const chooseImage = () => {
@@ -199,7 +200,7 @@ const submitFeedback = async () => {
       duration: 2000,
     })
     setTimeout(() => {
-      uni.navigateBack()
+      safeNavigateBack({ fallbackUrl: '/pages/profile/profile' })
     }, 2000)
   } catch {
     uni.showToast({ title: '提交失败，请稍后重试', icon: 'none' })

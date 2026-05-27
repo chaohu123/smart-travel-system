@@ -1,9 +1,12 @@
 let isNavigating = false
+let isNavigatingBack = false
 let navigateTimer: ReturnType<typeof setTimeout> | null = null
 let lastNavigateUrl = ''
 let lastNavigateTime = 0
+let lastNavigateBackTime = 0
 
 const NAVIGATE_DEBOUNCE_TIME = 300
+const NAVIGATE_BACK_DEBOUNCE_TIME = 300
 const NAVIGATE_TIMEOUT = 4500
 const TAB_BAR_PAGES = new Set([
   '/pages/home/home',
@@ -31,6 +34,31 @@ const isTimeoutError = (err: any) => {
 const isRouteBusyError = (err: any) => {
   const msg = getErrMsg(err).toLowerCase()
   return msg.includes('webview') || msg.includes('route') || msg.includes('navigate')
+}
+
+const isWebviewRouteError = (err: any) => {
+  const msg = getErrMsg(err).toLowerCase()
+  return (
+    msg.includes('webview') ||
+    msg.includes('navigateback') ||
+    msg.includes('routedone') ||
+    msg.includes('page route')
+  )
+}
+
+const getPageStackLength = () => {
+  try {
+    return getCurrentPages()?.length || 0
+  } catch {
+    return 0
+  }
+}
+
+const navigateBackFallback = (fallbackUrl: string) => {
+  if (isTabBarUrl(fallbackUrl)) {
+    return safeSwitchTab(fallbackUrl)
+  }
+  return safeRedirectTo(fallbackUrl)
 }
 
 const shouldSkipNavigate = (url: string) => {
@@ -256,10 +284,61 @@ export const safeRedirectTo = (
   )
 }
 
+export const safeNavigateBack = (
+  options?: UniApp.NavigateBackOptions & { fallbackUrl?: string },
+): Promise<void> => {
+  const delta = Math.max(1, options?.delta ?? 1)
+  const fallbackUrl = options?.fallbackUrl || '/pages/home/home'
+  const now = Date.now()
+
+  if (isNavigatingBack || now - lastNavigateBackTime < NAVIGATE_BACK_DEBOUNCE_TIME) {
+    return Promise.resolve()
+  }
+
+  const stackLength = getPageStackLength()
+  if (stackLength <= 1 || stackLength <= delta) {
+    return navigateBackFallback(fallbackUrl).catch(() => undefined)
+  }
+
+  isNavigatingBack = true
+  lastNavigateBackTime = now
+
+  return new Promise((resolve) => {
+    const { fallbackUrl: _fallback, ...navigateOptions } = options || {}
+
+    uni.navigateBack({
+      delta,
+      ...navigateOptions,
+      success: (res) => {
+        setTimeout(() => {
+          isNavigatingBack = false
+        }, 120)
+        options?.success?.(res)
+        options?.complete?.()
+        resolve()
+      },
+      fail: (err) => {
+        isNavigatingBack = false
+        if (isWebviewRouteError(err)) {
+          navigateBackFallback(fallbackUrl)
+            .then(() => resolve())
+            .catch(() => resolve())
+          return
+        }
+        options?.fail?.(err)
+        options?.complete?.()
+        resolve()
+      },
+    })
+  })
+}
+
 export const resetNavigationState = () => {
   isNavigating = false
+  isNavigatingBack = false
   lastNavigateUrl = ''
   lastNavigateTime = 0
+  lastNavigateBackTime = 0
   if (navigateTimer) {
     clearTimeout(navigateTimer)
     navigateTimer = null

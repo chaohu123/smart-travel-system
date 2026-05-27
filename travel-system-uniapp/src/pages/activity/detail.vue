@@ -238,6 +238,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { activityApi, type ActivityDetail } from '@/api/activity'
 import { getImageUrl } from '@/utils/image'
 import { defaultFoodImage, defaultScenicImage } from '@/utils/config'
+import { safeNavigateBack } from '@/utils/router'
 
 const activityId = ref<number | null>(null)
 const loading = ref(false)
@@ -532,7 +533,7 @@ onLoad((options: { id?: string | number }) => {
       icon: 'none'
     })
     setTimeout(() => {
-      uni.navigateBack()
+      safeNavigateBack({ fallbackUrl: '/pages/checkin/checkin' })
     }, 1500)
   }
 })

@@ -34,17 +34,21 @@ const isTimeoutError = (msg) => {
   const text = String(msg || "").toLowerCase();
   return text.includes("timeout") || text.includes("timedout");
 };
+const isWebviewRouteError = (msg) => {
+  const text = String(msg || "").toLowerCase();
+  return text.includes("webview") || text.includes("navigateback") || text.includes("routedone") || text.includes("page route \u9519\u8BEF");
+};
 const _sfc_main = {
   onUnhandledRejection(e) {
     var _a, _b;
     const message = ((_a = e == null ? void 0 : e.reason) == null ? void 0 : _a.errMsg) || ((_b = e == null ? void 0 : e.reason) == null ? void 0 : _b.message) || (e == null ? void 0 : e.reason) || "";
-    if (isTimeoutError(message)) {
+    if (isTimeoutError(message) || isWebviewRouteError(message)) {
       return;
     }
     console.error("UnhandledRejection:", e);
   },
   onError(err) {
-    if (isTimeoutError(err)) {
+    if (isTimeoutError(err) || isWebviewRouteError(err)) {
       return;
     }
     console.error("GlobalError:", err);

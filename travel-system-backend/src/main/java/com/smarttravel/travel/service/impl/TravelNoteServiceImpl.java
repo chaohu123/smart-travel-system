@@ -1,5 +1,6 @@
 package com.smarttravel.travel.service.impl;
 
+import com.smarttravel.common.redis.RedisService;
 import com.smarttravel.travel.domain.TravelNote;
 import com.smarttravel.travel.mapper.TravelNoteMapper;
 import com.smarttravel.travel.service.TravelNoteService;
@@ -11,8 +12,13 @@ import java.util.List;
 @Service
 public class TravelNoteServiceImpl implements TravelNoteService {
 
+    private static final String HOT_NOTES_CACHE_KEY = "recommend:hot:notes";
+
     @Resource
     private TravelNoteMapper travelNoteMapper;
+
+    @Resource
+    private RedisService redisService;
 
     @Override
     public List<TravelNote> list(TravelNote query) {
@@ -58,12 +64,24 @@ public class TravelNoteServiceImpl implements TravelNoteService {
         } else if ("reject".equalsIgnoreCase(action)) {
             status = "reject";
         }
-        return travelNoteMapper.updateStatusAndRemark(id, status, remark);
+        int rows = travelNoteMapper.updateStatusAndRemark(id, status, remark);
+        if (rows > 0) {
+            evictHotNotesCache();
+        }
+        return rows;
     }
 
     @Override
     public int feature(Long id, Integer isFeatured) {
-        return travelNoteMapper.updateFeatured(id, isFeatured);
+        int rows = travelNoteMapper.updateFeatured(id, isFeatured);
+        if (rows > 0) {
+            evictHotNotesCache();
+        }
+        return rows;
+    }
+
+    private void evictHotNotesCache() {
+        redisService.delete(HOT_NOTES_CACHE_KEY);
     }
 }
 

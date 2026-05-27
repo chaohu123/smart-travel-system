@@ -85,7 +85,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       if (!userId) {
         common_vendor.index.showToast({ title: "\u7528\u6237\u4E0D\u5B58\u5728", icon: "none" });
         setTimeout(() => {
-          common_vendor.index.navigateBack();
+          utils_router.safeNavigateBack({ fallbackUrl: "/pages/home/home" });
         }, 1500);
         return;
       }

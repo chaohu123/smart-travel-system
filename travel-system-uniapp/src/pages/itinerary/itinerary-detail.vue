@@ -24,7 +24,136 @@
       style="position: fixed; left: -9999px; top: -9999px; width: 64px; height: 64px;"
     ></canvas>
 
-    <scroll-view scroll-y class="scroll-content" v-if="!loading && routeData">
+    <!-- 地图须在 scroll-view 外，否则微信小程序原生 map 无法渲染 -->
+    <view
+      v-if="!loading && routeData && activeTab === 'itinerary'"
+      class="map-section map-section--outer"
+    >
+      <view class="map-container">
+        <map
+          :key="'day-' + mapRenderKey"
+          id="route-day-map"
+          class="map"
+          :latitude="mapCenter.latitude"
+          :longitude="mapCenter.longitude"
+          :scale="mapScale"
+          :markers="mapMarkers"
+          :polyline="mapPolyline"
+          :show-location="true"
+          :enable-zoom="true"
+          :enable-scroll="true"
+          provider="amap"
+          @markertap="onMarkerTap"
+          @callouttap="onCalloutTap"
+        >
+          <cover-view v-if="activeMarkerCallout" class="map-marker-callout">
+            <cover-view class="map-marker-callout-title">{{ activeMarkerCallout.title }}</cover-view>
+            <cover-view v-if="activeMarkerCallout.address" class="map-marker-callout-address">{{ activeMarkerCallout.address }}</cover-view>
+            <cover-view v-if="activeMarkerCallout.typeLabel" class="map-marker-callout-type">{{ activeMarkerCallout.typeLabel }}</cover-view>
+            <cover-view class="map-marker-callout-close" @tap.stop="activeMarkerCallout = null">×</cover-view>
+          </cover-view>
+        </map>
+        <view v-if="!hasMapPoints" class="map-empty-overlay">
+          <text class="map-empty-text">暂无坐标，请确认景点/美食已填写地址</text>
+        </view>
+        <view class="map-route-summary">
+          <text class="map-summary-title">Day {{ currentMapSummary.dayNo }}</text>
+          <text class="map-summary-desc">{{ currentMapSummary.poiCount }}个地点 · 路线为示意连线</text>
+        </view>
+        <view class="map-button" @click="viewFullMap">
+          <text>查看完整行程地图</text>
+        </view>
+      </view>
+    </view>
+
+    <view
+      v-if="!loading && routeData && activeTab === 'map'"
+      class="map-full-page"
+    >
+      <view class="map-full-map-wrap">
+        <map
+          :key="'full-' + mapRenderKey"
+          id="route-full-map"
+          class="full-map"
+          :latitude="mapCenter.latitude"
+          :longitude="mapCenter.longitude"
+          :scale="mapScale"
+          :markers="mapMarkers"
+          :polyline="mapPolyline"
+          :show-location="true"
+          :enable-zoom="true"
+          :enable-scroll="true"
+          provider="amap"
+          @markertap="onMarkerTap"
+          @callouttap="onCalloutTap"
+          @labeltap="onMarkerTap"
+          @updated="onFullMapUpdated"
+        ></map>
+        <view v-if="!hasMapPoints" class="map-empty-overlay">
+          <text class="map-empty-text">暂无坐标，请确认景点/美食已填写地址</text>
+        </view>
+      </view>
+
+      <view v-if="activeMarkerCallout" class="map-full-marker-info">
+        <view class="map-full-marker-info-header">
+          <text class="map-full-marker-info-title">{{ activeMarkerCallout.title }}</text>
+          <text class="map-full-marker-info-close" @click.stop="activeMarkerCallout = null">×</text>
+        </view>
+        <text v-if="activeMarkerCallout.typeLabel" class="map-full-marker-info-type">{{ activeMarkerCallout.typeLabel }}</text>
+        <text v-if="activeMarkerCallout.address" class="map-full-marker-info-address">{{ activeMarkerCallout.address }}</text>
+      </view>
+
+      <view class="map-full-toolbar">
+        <scroll-view scroll-x class="map-chip-scroll" :show-scrollbar="false">
+          <view class="map-chip-list">
+            <view
+              class="map-chip"
+              :class="{ active: routeMapMode === 'full' }"
+              @click="showFullRouteMap"
+            >全程</view>
+            <view
+              v-for="(dayItem, dayIndex) in routeData.days"
+              :key="dayItem.day?.id || dayIndex"
+              class="map-chip"
+              :class="{ active: routeMapMode === 'day' && selectedDayIndex === dayIndex }"
+              @click="showMapDay(dayIndex)"
+            >Day {{ dayItem.day?.dayNo || dayIndex + 1 }}</view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <view v-if="fullMapLegends.length > 0" class="map-full-legend">
+        <text class="map-full-legend-title">行程图例</text>
+        <view class="map-full-legend-list">
+          <view v-for="item in fullMapLegends" :key="item.dayNo" class="map-full-legend-item">
+            <view class="map-full-legend-color" :style="{ backgroundColor: item.color }"></view>
+            <text class="map-full-legend-text">Day {{ item.dayNo }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view v-if="currentMapPoiList.length > 0" class="map-full-poi-panel">
+        <view class="map-full-poi-panel-title">当日地点（{{ currentMapPoiList.length }}）</view>
+        <scroll-view scroll-y class="map-full-poi-scroll" :show-scrollbar="false">
+          <view
+            v-for="item in currentMapPoiList"
+            :key="item.markerId"
+            class="map-full-poi-item"
+            :class="{ active: activeMarkerId === item.markerId }"
+            @click="focusMapPoi(item.markerId)"
+          >
+            <view class="map-full-poi-item-index">{{ item.orderLabel }}</view>
+            <view class="map-full-poi-item-body">
+              <text class="map-full-poi-item-name">{{ item.title }}</text>
+              <text v-if="item.address" class="map-full-poi-item-address">{{ item.address }}</text>
+            </view>
+            <text class="map-full-poi-item-type">{{ item.typeLabel }}</text>
+          </view>
+        </scroll-view>
+      </view>
+    </view>
+
+    <scroll-view scroll-y class="scroll-content" v-if="!loading && routeData && activeTab === 'itinerary'">
       <!-- 行程概览卡片 -->
       <view class="overview-card">
         <view class="card-header">
@@ -50,31 +179,6 @@
             <view class="summary-text">
               {{ routeData.route.summary }}
             </view>
-          </view>
-        </view>
-      </view>
-
-      <!-- 地图区域 -->
-      <view class="map-section" v-if="activeTab === 'itinerary'">
-        <view class="map-container">
-          <map
-            id="route-day-map"
-            class="map"
-            :latitude="mapCenter.latitude"
-            :longitude="mapCenter.longitude"
-            :scale="mapScale"
-            :markers="mapMarkers"
-            :polyline="mapPolyline"
-            :show-location="true"
-            :enable-zoom="true"
-            provider="amap"
-          ></map>
-          <view class="map-route-summary">
-            <text class="map-summary-title">Day {{ currentMapSummary.dayNo }}</text>
-            <text class="map-summary-desc">{{ currentMapSummary.poiCount }}个地点 · 路线为示意连线</text>
-          </view>
-          <view class="map-button" @click="viewFullMap">
-            <text>查看完整行程地图</text>
           </view>
         </view>
       </view>
@@ -307,50 +411,6 @@
         </view>
       </view>
 
-      <!-- 地图视图 -->
-      <view class="map-view-section" v-if="activeTab === 'map'">
-        <view class="map-container-center">
-          <map
-            id="route-full-map"
-            class="full-map"
-            :latitude="mapCenter.latitude"
-            :longitude="mapCenter.longitude"
-            :scale="mapScale"
-            :markers="mapMarkers"
-            :polyline="mapPolyline"
-            :show-location="true"
-            :enable-zoom="true"
-            provider="amap"
-          ></map>
-          <view class="full-map-toolbar">
-            <scroll-view scroll-x class="map-chip-scroll" :show-scrollbar="false">
-              <view class="map-chip-list">
-                <view
-                  class="map-chip"
-                  :class="{ active: routeMapMode === 'full' }"
-                  @click="showFullRouteMap"
-                >全程</view>
-                <view
-                  v-for="(dayItem, dayIndex) in routeData.days"
-                  :key="dayItem.day?.id || dayIndex"
-                  class="map-chip"
-                  :class="{ active: routeMapMode === 'day' && selectedDayIndex === dayIndex }"
-                  @click="showMapDay(dayIndex)"
-                >Day {{ dayItem.day?.dayNo || dayIndex + 1 }}</view>
-              </view>
-            </scroll-view>
-          </view>
-          <view v-if="fullMapLegends.length > 0" class="map-legend-panel">
-            <view class="map-legend-title">行程图例</view>
-            <view class="map-legend-list">
-              <view v-for="item in fullMapLegends" :key="item.dayNo" class="map-legend-item">
-                <view class="map-legend-color" :style="{ backgroundColor: item.color }"></view>
-                <text class="map-legend-text">Day {{ item.dayNo }}</text>
-              </view>
-            </view>
-          </view>
-        </view>
-      </view>
     </scroll-view>
 
     <!-- 加载状态 -->
@@ -375,23 +435,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
 import { routeApi } from '@/api/route'
 import { useUserStore } from '@/store/user'
 import { getCache, setCache } from '@/utils/storage'
 import { defaultFoodImage, defaultScenicImage } from '@/utils/config'
 import { getImageUrl } from '@/utils/image'
+import { geocodeAddress, isCoordNearCity, type CityCenter } from '@/utils/amapGeocode'
+import { extractPlacesFromAiIntro, dayHasAiIntro, type AiMapStop } from '@/utils/aiMapLocations'
 
 interface RouteData {
   route?: {
     id?: number
     routeName?: string
+    cityId?: number
     days?: number
     suitablePeople?: string
     summary?: string
     coverImage?: string
     favoriteCount?: number
+  }
+  city?: {
+    id?: number
+    cityName?: string
+    province?: string
+    latitude?: number
+    longitude?: number
   }
   days?: Array<{
     day?: {
@@ -400,6 +470,12 @@ interface RouteData {
       title?: string
       intro?: string
     }
+    mapStops?: Array<{
+      name?: string
+      sortOrder?: number
+      latitude?: number
+      longitude?: number
+    }>
     pois?: Array<{
       poi?: {
         id?: number
@@ -635,6 +711,12 @@ const mapMarkers = ref<any[]>([])
 const mapPolyline = ref<any[]>([])
 const mapScale = ref(12)
 const routeMapMode = ref<'day' | 'full'>('day')
+const mapRenderKey = ref(0)
+const hasMapPoints = ref(false)
+const mapPageInstance = getCurrentInstance()
+const activeMarkerCallout = ref<{ title: string; address?: string; typeLabel?: string } | null>(null)
+const activeMarkerId = ref<number | null>(null)
+const markerMetaMap = ref<Record<number, { title: string; address?: string; typeLabel?: string }>>({})
 
 // 动态 marker 图标缓存（小程序 map 的 iconPath 需要本地路径/临时文件路径）
 const markerIconCache = ref<{ scenic?: string; food?: string }>({})
@@ -699,11 +781,35 @@ const updateMapViewport = (coords: Array<{ latitude: number; longitude: number }
 
 const currentMapSummary = computed(() => {
   const dayItem = currentDayData.value
+  const markerCount = mapMarkers.value.length
   const pois = getSortedDayPois(dayItem)
+  const validFromPoi = getValidPoiCoords(pois).length
   return {
     dayNo: dayItem?.day?.dayNo || selectedDayIndex.value + 1,
-    poiCount: getValidPoiCoords(pois).length,
+    poiCount: markerCount || validFromPoi,
   }
+})
+
+const currentMapPoiList = computed(() => {
+  const list: Array<{
+    markerId: number
+    orderLabel: string
+    title: string
+    address?: string
+    typeLabel: string
+  }> = []
+  mapMarkers.value.forEach((marker) => {
+    const meta = markerMetaMap.value[marker.id] || marker.meta
+    if (!meta) return
+    list.push({
+      markerId: marker.id,
+      orderLabel: marker.label?.content ? String(marker.label.content) : '·',
+      title: meta.title,
+      address: meta.address,
+      typeLabel: meta.typeLabel || '地点',
+    })
+  })
+  return list
 })
 
 const fullMapLegends = computed(() => {
@@ -799,8 +905,8 @@ const loadRouteDetail = async () => {
       // 加载收藏状态
       loadFavoriteStatus()
 
-      // 初始化地图数据（显示当前选中天的路线）
-      updateMapData()
+      await enrichRouteCoordinates(routeData.value)
+      mapRenderKey.value += 1
     } else {
       uni.showToast({ title: res.data.msg || '加载失败', icon: 'none' })
     }
@@ -808,6 +914,10 @@ const loadRouteDetail = async () => {
     uni.showToast({ title: '网络错误', icon: 'none' })
   } finally {
     loading.value = false
+    await nextTick()
+    if (routeData.value) {
+      refreshMapAfterMount()
+    }
   }
 }
 
@@ -868,232 +978,615 @@ const extractPoiCoord = (detail: any): { latitude: number; longitude: number } |
   if (!detail) return null
   const latRaw = detail.latitude ?? detail.lat
   const lngRaw = detail.longitude ?? detail.lng ?? detail.lon
-  const lat = toCoordNumber(latRaw)
-  const lng = toCoordNumber(lngRaw)
+  let lat = toCoordNumber(latRaw)
+  let lng = toCoordNumber(lngRaw)
   if (lat == null || lng == null) return null
+  if (!isChinaCoord(lat, lng) && isChinaCoord(lng, lat)) {
+    const swappedLat = lng
+    const swappedLng = lat
+    lat = swappedLat
+    lng = swappedLng
+  }
   if (!isChinaCoord(lat, lng)) return null
   return { latitude: lat, longitude: lng }
 }
 
-// 更新地图数据（根据选中的天数显示对应的路线）
-const updateMapData = () => {
-  routeMapMode.value = 'day'
-  const gen = ++mapUpdateGen
-  // 先清空地图数据，避免显示无关内容
-  mapMarkers.value = []
-  mapPolyline.value = []
-  
-  if (!routeData.value?.days || routeData.value.days.length === 0) return
+const normalizeCityName = (value: any): string => {
+  return String(value || '')
+    .trim()
+    .replace(/(特别行政区|自治州|地区|盟|市|省)$/u, '')
+}
 
-  const dayItem = routeData.value.days[selectedDayIndex.value]
-  if (!dayItem || !dayItem.pois || dayItem.pois.length === 0) {
-    return
+const resolveRouteCityName = (data: RouteData | null): string => {
+  if (!data) return ''
+  if (data.city?.cityName) return normalizeCityName(data.city.cityName)
+  if (!data?.days?.length) return ''
+  for (const dayItem of data.days) {
+    for (const poiItem of dayItem.pois || []) {
+      const detail = poiItem?.detail
+      if (detail?.city) return normalizeCityName(detail.city)
+      if (detail?.province) return normalizeCityName(detail.province)
+    }
+  }
+  return ''
+}
+
+const resolveRouteCityCenter = (data: RouteData | null): CityCenter | null => {
+  if (!data?.city) return null
+  const lat = toCoordNumber(data.city.latitude)
+  const lng = toCoordNumber(data.city.longitude)
+  if (lat == null || lng == null || !isChinaCoord(lat, lng)) return null
+  return { latitude: lat, longitude: lng }
+}
+
+const isCoordInRouteCity = (coord: { latitude: number; longitude: number } | null, data: RouteData | null) => {
+  if (!coord) return false
+  return isCoordNearCity(coord, resolveRouteCityCenter(data))
+}
+
+const geocodePoiDetail = async (
+  detail: any,
+  cityName?: string,
+  cityId?: number,
+  cityCenter?: CityCenter | null
+): Promise<{ latitude: number; longitude: number } | null> => {
+  const city = normalizeCityName(cityName || detail?.city || detail?.province)
+  const address = String(detail?.address || '').trim()
+  const name = String(detail?.name || '').trim()
+  const cityLabel = city ? `${city}市` : ''
+  const candidates = Array.from(
+    new Set(
+      [
+        cityLabel && name ? `${cityLabel}${name}` : '',
+        city && name ? `${city}${name}` : '',
+        cityLabel && address ? `${cityLabel}${address}` : '',
+        city && address ? `${city}${address}` : '',
+        address,
+        name,
+      ].filter(Boolean)
+    )
+  )
+  for (const query of candidates) {
+    const coord = await geocodeAddress(query, city || undefined, cityId, cityCenter)
+    if (coord) return coord
+  }
+  return null
+}
+
+const getPoiName = (poiItem: any) => {
+  if (poiItem?.detail?.name) return poiItem.detail.name
+  return poiItem?.poi?.note || '未知地点'
+}
+
+const applyCoordToDetail = (detail: any, coord: { latitude: number; longitude: number }) => {
+  if (!detail) return
+  detail.latitude = coord.latitude
+  detail.longitude = coord.longitude
+}
+
+/** 为缺少经纬度的 POI 做地理编码兜底 */
+const enrichRouteCoordinates = async (data: RouteData | null) => {
+  if (!data?.days?.length) return
+  const cityName = resolveRouteCityName(data)
+  const cityId = data?.route?.cityId
+  const cityCenter = resolveRouteCityCenter(data)
+  const tasks: Promise<void>[] = []
+  for (const dayItem of data.days) {
+    for (const poiItem of dayItem.pois || []) {
+      const detail = poiItem?.detail
+      if (!detail) continue
+      const existing = extractPoiCoord(detail)
+      if (existing && isCoordInRouteCity(existing, data)) continue
+      if (existing && !isCoordInRouteCity(existing, data)) {
+        detail.latitude = undefined
+        detail.longitude = undefined
+      }
+      tasks.push(
+        geocodePoiDetail(detail, cityName, cityId, cityCenter).then((coord) => {
+          if (coord) applyCoordToDetail(detail, coord)
+        })
+      )
+    }
+  }
+  if (tasks.length) {
+    await Promise.all(tasks)
+  }
+}
+
+const findPoiDetailByName = (dayItem: any, placeName: string) => {
+  const target = placeName.trim()
+  if (!target || !dayItem?.pois?.length) return null
+  for (const poiItem of dayItem.pois) {
+    const name = String(poiItem?.detail?.name || '').trim()
+    if (!name) continue
+    if (name === target || name.includes(target) || target.includes(name)) {
+      return poiItem.detail
+    }
+  }
+  return null
+}
+
+type ResolvedAiMapStop = AiMapStop & {
+  latitude: number
+  longitude: number
+  address: string
+}
+
+const resolveAiMapStopsForDay = async (dayItem: any, cityName: string, cityId?: number): Promise<ResolvedAiMapStop[]> => {
+  const cityCenter = resolveRouteCityCenter(routeData.value)
+  const backendStops = dayItem?.mapStops
+  if (Array.isArray(backendStops) && backendStops.length > 0) {
+    return backendStops
+      .map((stop: any, index: number) => {
+        const lat = toCoordNumber(stop?.latitude)
+        const lng = toCoordNumber(stop?.longitude)
+        if (lat == null || lng == null || !isChinaCoord(lat, lng)) return null
+        const coord = { latitude: lat, longitude: lng }
+        if (!isCoordNearCity(coord, cityCenter)) return null
+        return {
+          name: String(stop?.name || ''),
+          period: '',
+          periodOrder: index + 1,
+          sortOrder: Number(stop?.sortOrder || index + 1),
+          latitude: lat,
+          longitude: lng,
+          address: String(stop?.name || ''),
+        } as ResolvedAiMapStop
+      })
+      .filter((item): item is ResolvedAiMapStop => !!item && !!item.name)
   }
 
+  const intro = parseDayIntro(dayItem)
+  const stops = extractPlacesFromAiIntro(intro)
+  const resolved: ResolvedAiMapStop[] = []
+
+  for (const stop of stops) {
+    const matchedDetail = findPoiDetailByName(dayItem, stop.name)
+    let coord = matchedDetail ? extractPoiCoord(matchedDetail) : null
+    if (coord && !isCoordNearCity(coord, cityCenter)) {
+      coord = null
+    }
+    const address = matchedDetail?.address ? String(matchedDetail.address) : stop.name
+    if (!coord) {
+      coord = await geocodePoiDetail(
+        { name: stop.name, address: stop.name, city: cityName },
+        cityName,
+        cityId,
+        cityCenter
+      )
+    }
+    if (coord) {
+      resolved.push({
+        ...stop,
+        latitude: coord.latitude,
+        longitude: coord.longitude,
+        address,
+      })
+    }
+  }
+  return resolved
+}
+
+const buildStopsMapData = (
+  stops: ResolvedAiMapStop[],
+  dayNo: number,
+  lineColor: string,
+  scenicIcon?: string,
+  foodIcon?: string,
+  metaStore?: Record<number, { title: string; address?: string; typeLabel?: string }>
+): MapBuildResult => {
   const markers: any[] = []
   const polylines: any[] = []
+  const dayCoordinates: Array<{ latitude: number; longitude: number }> = []
 
-  const sortedPois = getSortedDayPois(dayItem)
-
-  const dayCoordinates: any[] = []
-  const dayNo = dayItem.day?.dayNo || selectedDayIndex.value + 1
-  let poiOrder = 1 // POI顺序计数器
-
-  // 提前生成两种 marker 图标（并行），避免循环内重复生成
-  Promise.all([createPoiMarkerIcon('scenic'), createPoiMarkerIcon('food')]).then(([scenicIcon, foodIcon]) => {
-    if (gen !== mapUpdateGen) return
-    sortedPois.forEach((poiItem, poiIndex) => {
-    const detail = poiItem.detail
-    if (!detail) {
-      return
+  stops.forEach((stop, index) => {
+    const markerId = dayNo * 10000 + stop.sortOrder
+    const markerTitle = `${stop.period} · ${stop.name}`
+    const meta = {
+      title: stop.name,
+      address: stop.address,
+      typeLabel: stop.period,
     }
-    
-    const coord = extractPoiCoord(detail)
-    if (coord) {
-      const lat = coord.latitude
-      const lng = coord.longitude
-
-      // 创建标记，包含顺序标签（景点显示顺序，美食不显示顺序）
-      const isScenic = poiItem.poi?.poiType === 'scenic'
-      const orderLabel = isScenic ? `D${dayNo}-${poiOrder}` : ''
-      const poiName = getPoiName(poiItem)
-      const markerTitle = orderLabel ? `${orderLabel} ${poiName}` : poiName
-      
-      // 微信小程序要求 marker.id 必须为 number
-      const markerId = (dayNo || 1) * 1000 + (poiIndex + 1)
-      const isFood = poiItem.poi?.poiType === 'food'
-      const marker: any = {
-        id: markerId,
-        latitude: lat,
-        longitude: lng,
-        title: markerTitle,
-        width: 46,
-        height: 46,
-        callout: {
-          content: markerTitle,
-          color: '#333',
-          fontSize: 14,
-          borderRadius: 4,
-          bgColor: '#fff',
-          padding: 8,
-          display: 'BYCLICK',
-          textAlign: 'center'
-        },
-        label: {
-          content: isFood ? '餐' : String(poiOrder),
-          color: '#ffffff',
-          fontSize: 14,
-          anchorX: -5,
-          anchorY: -36
-        }
-      }
-      const icon = isFood ? foodIcon : scenicIcon
-      if (icon) marker.iconPath = icon
-
-      markers.push(marker)
-      dayCoordinates.push({
-        latitude: lat,
-        longitude: lng
-      })
-
-      // 只有景点才增加顺序号，美食不增加（但也会显示在地图上）
-      if (isScenic) {
-        poiOrder++
-      }
+    if (metaStore) {
+      metaStore[markerId] = meta
     }
+
+    const marker: any = {
+      id: markerId,
+      latitude: stop.latitude,
+      longitude: stop.longitude,
+      title: markerTitle,
+      width: 46,
+      height: 46,
+      meta,
+      callout: {
+        content: stop.address ? `${stop.name}\n${stop.address}` : stop.name,
+        color: '#333333',
+        fontSize: 14,
+        borderRadius: 8,
+        bgColor: '#ffffff',
+        padding: 10,
+        display: 'BYCLICK',
+        textAlign: 'center',
+      },
+      label: {
+        content: String(index + 1),
+        color: '#ffffff',
+        fontSize: 14,
+        anchorX: -5,
+        anchorY: -36,
+        bgColor: '#5D92B0',
+        borderRadius: 12,
+        padding: 4,
+      },
+      joinCluster: false,
+    }
+    if (scenicIcon) marker.iconPath = scenicIcon
+    markers.push(marker)
+    dayCoordinates.push({ latitude: stop.latitude, longitude: stop.longitude })
+  })
+
+  if (dayCoordinates.length > 1) {
+    polylines.push({
+      points: dayCoordinates,
+      color: lineColor,
+      width: 5,
+      arrowLine: true,
+      dottedLine: false,
+      borderColor: '#FFFFFF',
+      borderWidth: 2,
     })
+  }
 
-    // 为当前天创建路线
-    if (dayCoordinates.length > 1) {
-      polylines.push({
-        points: dayCoordinates,
-        color: '#1F8F66',
-        width: 5,
-        arrowLine: true,
-        dottedLine: false,
-        borderColor: '#FFFFFF',
-        borderWidth: 2
-      })
+  return { markers, polylines, coords: dayCoordinates }
+}
+
+const buildMapForDay = async (
+  dayItem: any,
+  dayNo: number,
+  lineColor: string,
+  metaStore?: Record<number, { title: string; address?: string; typeLabel?: string }>,
+  scenicIcon?: string,
+  foodIcon?: string
+): Promise<MapBuildResult> => {
+  const cityName = resolveRouteCityName(routeData.value)
+  const cityId = routeData.value?.route?.cityId
+  const intro = parseDayIntro(dayItem)
+  const aiStops = extractPlacesFromAiIntro(intro)
+  const sortedPois = getSortedDayPois(dayItem || { pois: [] })
+  const poiResult = buildDayMapData(sortedPois, dayNo, lineColor, scenicIcon, foodIcon, metaStore)
+
+  const backendStopCount = Array.isArray(dayItem?.mapStops) ? dayItem.mapStops.length : 0
+  if (backendStopCount >= 2 || aiStops.length >= 1) {
+    const resolved = await resolveAiMapStopsForDay(dayItem, cityName, cityId)
+    if (resolved.length >= 2) {
+      return buildStopsMapData(resolved, dayNo, lineColor, scenicIcon, foodIcon, metaStore)
     }
+    if (resolved.length > poiResult.coords.length) {
+      return buildStopsMapData(resolved, dayNo, lineColor, scenicIcon, foodIcon, metaStore)
+    }
+    if (resolved.length === 1 && poiResult.coords.length === 0) {
+      return buildStopsMapData(resolved, dayNo, lineColor, scenicIcon, foodIcon, metaStore)
+    }
+  }
 
-    // 计算地图中心点（所有点的中心）
-    if (dayCoordinates.length > 0) {
-      let sumLat = 0
-      let sumLng = 0
-      dayCoordinates.forEach(coord => {
-        sumLat += coord.latitude
-        sumLng += coord.longitude
-      })
-      mapCenter.value = {
-        latitude: sumLat / dayCoordinates.length,
-        longitude: sumLng / dayCoordinates.length
+  return poiResult
+}
+
+const refreshMapAfterMount = async () => {
+  activeMarkerCallout.value = null
+  activeMarkerId.value = null
+  if (activeTab.value === 'map') {
+    await updateFullMapData()
+  } else {
+    await updateMapData()
+  }
+}
+
+const resolveMarkerMeta = (markerId: number) => {
+  const meta = markerMetaMap.value[markerId]
+  if (meta) return meta
+
+  const marker = mapMarkers.value.find(
+    (item) => item.id === markerId || String(item.id) === String(markerId)
+  )
+  if (!marker) return null
+
+  if (marker.meta) return marker.meta
+
+  const title = String(marker.title || marker.callout?.content || '').trim()
+  if (!title) return null
+
+  const lines = title.split('\n')
+  return {
+    title: lines[0] || title,
+    address: lines[1] || '',
+    typeLabel: marker.label?.content === '餐' ? '美食' : '景点',
+  }
+}
+
+const showMarkerInfo = (markerId: number) => {
+  const meta = resolveMarkerMeta(markerId)
+  if (!meta) return
+  activeMarkerId.value = markerId
+  activeMarkerCallout.value = meta
+}
+
+const onMarkerTap = (e: any) => {
+  const markerId = Number(e?.detail?.markerId)
+  if (!Number.isFinite(markerId)) return
+  showMarkerInfo(markerId)
+}
+
+const onCalloutTap = (e: any) => {
+  const markerId = Number(e?.detail?.markerId)
+  if (!Number.isFinite(markerId)) return
+  showMarkerInfo(markerId)
+}
+
+const pendingMapFitCoords = ref<Array<{ latitude: number; longitude: number }> | null>(null)
+
+const onFullMapUpdated = () => {
+  if (activeTab.value !== 'map' || !pendingMapFitCoords.value?.length) return
+  fitMapBounds(pendingMapFitCoords.value, 'route-full-map')
+  pendingMapFitCoords.value = null
+}
+
+const focusMapPoi = (markerId: number) => {
+  const marker = mapMarkers.value.find((item) => item.id === markerId)
+  if (!marker) return
+  showMarkerInfo(markerId)
+  mapCenter.value = {
+    latitude: marker.latitude,
+    longitude: marker.longitude,
+  }
+  mapScale.value = 14
+  const mapId = activeTab.value === 'map' ? 'route-full-map' : 'route-day-map'
+  fitMapBounds([{ latitude: marker.latitude, longitude: marker.longitude }], mapId)
+}
+
+const fitMapBounds = (
+  coords: Array<{ latitude: number; longitude: number }>,
+  mapId: string
+) => {
+  if (!coords.length || !mapPageInstance) return
+  nextTick(() => {
+    setTimeout(() => {
+      try {
+        const ctx = uni.createMapContext(mapId, mapPageInstance as any)
+        ctx.includePoints({
+          points: coords.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
+          padding: [48, 48, 48, 48],
+        })
+      } catch {
+        // ignore
       }
-    }
-
-    // 更新地图数据
-    if (gen === mapUpdateGen) {
-      updateMapViewport(dayCoordinates)
-      mapMarkers.value = markers
-      mapPolyline.value = polylines
-    }
-  }).catch(() => {
-    // ignore
+    }, 120)
   })
 }
 
-const updateFullMapData = () => {
-  routeMapMode.value = 'full'
+type MapBuildResult = {
+  markers: any[]
+  polylines: any[]
+  coords: Array<{ latitude: number; longitude: number }>
+}
+
+const buildDayMapData = (
+  sortedPois: any[],
+  dayNo: number,
+  lineColor: string,
+  scenicIcon?: string,
+  foodIcon?: string,
+  metaStore?: Record<number, { title: string; address?: string; typeLabel?: string }>
+): MapBuildResult => {
+  const markers: any[] = []
+  const polylines: any[] = []
+  const dayCoordinates: Array<{ latitude: number; longitude: number }> = []
+  let poiOrder = 1
+
+  sortedPois.forEach((poiItem, poiIndex) => {
+    const detail = poiItem?.detail
+    if (!detail) return
+    const coord = extractPoiCoord(detail)
+    if (!coord) return
+    if (!isCoordInRouteCity(coord, routeData.value)) return
+
+    const isScenic = poiItem.poi?.poiType === 'scenic'
+    const orderLabel = isScenic ? `D${dayNo}-${poiOrder}` : ''
+    const poiName = getPoiName(poiItem)
+    const markerTitle = orderLabel ? `${orderLabel} ${poiName}` : poiName
+    const markerAddress = String(detail.address || '').trim()
+    const markerId = Number(poiItem?.poi?.id || dayNo * 1000 + poiIndex + 1)
+    const isFood = poiItem.poi?.poiType === 'food'
+    const calloutContent = markerAddress ? `${poiName}\n${markerAddress}` : poiName
+    const meta = {
+      title: poiName,
+      address: markerAddress,
+      typeLabel: isFood ? '美食' : '景点',
+    }
+    if (metaStore) {
+      metaStore[markerId] = meta
+    }
+
+    const marker: any = {
+      id: markerId,
+      latitude: coord.latitude,
+      longitude: coord.longitude,
+      title: markerTitle,
+      width: isFood ? 40 : 46,
+      height: isFood ? 40 : 46,
+      meta,
+      callout: {
+        content: calloutContent,
+        color: '#333333',
+        fontSize: 14,
+        borderRadius: 8,
+        bgColor: '#ffffff',
+        padding: 10,
+        display: 'BYCLICK',
+        textAlign: 'center',
+      },
+      label: {
+        content: isFood ? '餐' : String(poiOrder),
+        color: '#ffffff',
+        fontSize: 14,
+        anchorX: -5,
+        anchorY: -36,
+        bgColor: isFood ? '#3BA272' : '#5D92B0',
+        borderRadius: 12,
+        padding: 4,
+      },
+      joinCluster: false,
+    }
+    const icon = isFood ? foodIcon : scenicIcon
+    if (icon) marker.iconPath = icon
+
+    markers.push(marker)
+    dayCoordinates.push(coord)
+    if (isScenic) poiOrder++
+  })
+
+  if (dayCoordinates.length > 1) {
+    polylines.push({
+      points: dayCoordinates,
+      color: lineColor,
+      width: 5,
+      arrowLine: true,
+      dottedLine: false,
+      borderColor: '#FFFFFF',
+      borderWidth: 2,
+    })
+  }
+
+  return { markers, polylines, coords: dayCoordinates }
+}
+
+const getActiveMapId = () => (activeTab.value === 'map' ? 'route-full-map' : 'route-day-map')
+
+const applyMapBuildResult = (result: MapBuildResult, mapId?: string) => {
+  const targetMapId = mapId || getActiveMapId()
+  hasMapPoints.value = result.coords.length > 0
+  if (result.coords.length) {
+    updateMapViewport(result.coords)
+  }
+  mapMarkers.value = [...result.markers]
+  mapPolyline.value = [...result.polylines]
+  if (result.coords.length) {
+    if (targetMapId === 'route-full-map') {
+      pendingMapFitCoords.value = [...result.coords]
+    }
+    fitMapBounds(result.coords, targetMapId)
+  }
+}
+
+// 更新地图数据（根据选中的天数显示对应的路线）
+const updateMapData = async () => {
+  routeMapMode.value = 'day'
+  activeMarkerCallout.value = null
+  activeMarkerId.value = null
   const gen = ++mapUpdateGen
-  mapMarkers.value = []
-  mapPolyline.value = []
+  const nextMeta: Record<number, { title: string; address?: string; typeLabel?: string }> = {}
+
+  if (!routeData.value?.days?.length) {
+    mapMarkers.value = []
+    mapPolyline.value = []
+    markerMetaMap.value = {}
+    hasMapPoints.value = false
+    return
+  }
+
+  const dayItem = routeData.value.days[selectedDayIndex.value]
+  if (!dayItem) {
+    mapMarkers.value = []
+    mapPolyline.value = []
+    markerMetaMap.value = {}
+    hasMapPoints.value = false
+    return
+  }
+
+  const intro = parseDayIntro(dayItem)
+  if (!dayHasAiIntro(intro) && !(dayItem.pois?.length)) {
+    mapMarkers.value = []
+    mapPolyline.value = []
+    markerMetaMap.value = {}
+    hasMapPoints.value = false
+    return
+  }
+
+  const dayNo = dayItem.day?.dayNo || selectedDayIndex.value + 1
+
+  const result = await buildMapForDay(dayItem, dayNo, '#1F8F66', nextMeta)
+  if (gen !== mapUpdateGen) return
+  markerMetaMap.value = { ...nextMeta }
+  applyMapBuildResult(result)
+
+  Promise.all([createPoiMarkerIcon('scenic'), createPoiMarkerIcon('food')]).then(async ([scenicIcon, foodIcon]) => {
+    if (gen !== mapUpdateGen) return
+    const iconMeta: Record<number, { title: string; address?: string; typeLabel?: string }> = {}
+    const withIcons = await buildMapForDay(dayItem, dayNo, '#1F8F66', iconMeta, scenicIcon, foodIcon)
+    markerMetaMap.value = { ...iconMeta }
+    applyMapBuildResult(withIcons)
+  }).catch(() => {})
+}
+
+const updateFullMapData = async () => {
+  routeMapMode.value = 'full'
+  activeMarkerCallout.value = null
+  activeMarkerId.value = null
+  const gen = ++mapUpdateGen
 
   const days = routeData.value?.days || []
-  if (!days.length) return
+  if (!days.length) {
+    mapMarkers.value = []
+    mapPolyline.value = []
+    markerMetaMap.value = {}
+    hasMapPoints.value = false
+    return
+  }
 
-  Promise.all([createPoiMarkerIcon('scenic'), createPoiMarkerIcon('food')]).then(([scenicIcon, foodIcon]) => {
-    if (gen !== mapUpdateGen) return
+  const buildFull = async (
+    scenicIcon?: string,
+    foodIcon?: string,
+    metaStore?: Record<number, { title: string; address?: string; typeLabel?: string }>
+  ): Promise<MapBuildResult> => {
     const markers: any[] = []
     const polylines: any[] = []
     const allCoords: Array<{ latitude: number; longitude: number }> = []
 
-    days.forEach((dayItem, dayIdx) => {
-      const sortedPois = getSortedDayPois(dayItem)
+    for (let dayIdx = 0; dayIdx < days.length; dayIdx++) {
+      const dayItem = days[dayIdx]
       const dayNo = Number(dayItem?.day?.dayNo || dayIdx + 1)
-      const dayCoords: Array<{ latitude: number; longitude: number }> = []
-      let scenicSeq = 1
-
-      sortedPois.forEach((poiItem, poiIdx) => {
-        const detail = poiItem?.detail
-        const coord = extractPoiCoord(detail)
-        if (!coord) return
-        const isFood = poiItem.poi?.poiType === 'food'
-        const markerSeq = isFood ? poiIdx + 1 : scenicSeq
-        const markerTitle = `${isFood ? '食' : '景'} Day${dayNo}-${markerSeq} ${getPoiName(poiItem)}`
-        if (!isFood) scenicSeq++
-        const marker: any = {
-          id: dayNo * 10000 + poiIdx + 1,
-          latitude: coord.latitude,
-          longitude: coord.longitude,
-          title: markerTitle,
-          width: 40,
-          height: 40,
-          callout: {
-            content: markerTitle,
-            color: '#2d2d2d',
-            fontSize: 12,
-            borderRadius: 6,
-            bgColor: '#ffffff',
-            padding: 6,
-            display: 'BYCLICK',
-            textAlign: 'center',
-          },
-          label: {
-            content: isFood ? '餐' : String(markerSeq),
-            color: '#ffffff',
-            fontSize: 13,
-            anchorX: -5,
-            anchorY: -32,
-          },
-        }
-        const icon = isFood ? foodIcon : scenicIcon
-        if (icon) marker.iconPath = icon
-        markers.push(marker)
-        dayCoords.push(coord)
-        allCoords.push(coord)
-      })
-
-      if (dayCoords.length > 1) {
-        polylines.push({
-          points: dayCoords,
-          color: getDayLineColor(dayNo),
-          width: 5,
-          arrowLine: true,
-          dottedLine: false,
-        })
-      }
-    })
-
-    if (allCoords.length) {
-      let sumLat = 0
-      let sumLng = 0
-      allCoords.forEach((p) => {
-        sumLat += p.latitude
-        sumLng += p.longitude
-      })
-      mapCenter.value = {
-        latitude: sumLat / allCoords.length,
-        longitude: sumLng / allCoords.length,
-      }
+      const dayResult = await buildMapForDay(
+        dayItem,
+        dayNo,
+        getDayLineColor(dayNo),
+        metaStore,
+        scenicIcon,
+        foodIcon
+      )
+      markers.push(...dayResult.markers)
+      polylines.push(...dayResult.polylines)
+      allCoords.push(...dayResult.coords)
     }
 
-    if (gen === mapUpdateGen) {
-      updateMapViewport(allCoords)
-      mapMarkers.value = markers
-      mapPolyline.value = polylines
-    }
-  }).catch(() => {
-    // ignore
-  })
+    return { markers, polylines, coords: allCoords }
+  }
+
+  const nextMeta: Record<number, { title: string; address?: string; typeLabel?: string }> = {}
+  const base = await buildFull(undefined, undefined, nextMeta)
+  if (gen !== mapUpdateGen) return
+  markerMetaMap.value = { ...nextMeta }
+  pendingMapFitCoords.value = base.coords.length ? [...base.coords] : null
+  applyMapBuildResult(base, 'route-full-map')
+
+  Promise.all([createPoiMarkerIcon('scenic'), createPoiMarkerIcon('food')]).then(async ([scenicIcon, foodIcon]) => {
+    if (gen !== mapUpdateGen) return
+    const iconMeta: Record<number, { title: string; address?: string; typeLabel?: string }> = {}
+    const withIcons = await buildFull(scenicIcon, foodIcon, iconMeta)
+    markerMetaMap.value = { ...iconMeta }
+    pendingMapFitCoords.value = withIcons.coords.length ? [...withIcons.coords] : null
+    applyMapBuildResult(withIcons, 'route-full-map')
+  }).catch(() => {})
 }
 
 // 格式化当天内容（按照时间段分组：上午、中午、下午、晚上）
@@ -1568,14 +2061,6 @@ const getStationLabel = (index: number): string => {
 }
 
 
-// 获取POI名称
-const getPoiName = (poiItem: any) => {
-  if (poiItem.detail?.name) {
-    return poiItem.detail.name
-  }
-  return poiItem.poi?.note || '未知地点'
-}
-
 // 获取POI描述
 const getPoiDesc = (poiItem: any) => {
   const detail = poiItem.detail
@@ -1642,26 +2127,26 @@ const getDayDate = (dayIndex: number, dayNo?: number) => {
 // 处理天数切换
 const handleDayChange = (dayIndex: number) => {
   if (selectedDayIndex.value === dayIndex) {
-    updateMapData()
+    void updateMapData()
     return
   }
   selectedDayIndex.value = dayIndex
 }
 
 const showFullRouteMap = () => {
-  updateFullMapData()
+  routeMapMode.value = 'full'
+  void updateFullMapData()
 }
 
 const showMapDay = (dayIndex: number) => {
   selectedDayIndex.value = dayIndex
-  updateMapData()
+  routeMapMode.value = 'day'
+  void updateMapData()
 }
 
 // 查看完整地图
 const viewFullMap = () => {
   activeTab.value = 'map'
-  // 切换到地图视图时，展示全行程（所有天数）
-  updateFullMapData()
 }
 
 // 开始导航
@@ -1748,17 +2233,23 @@ onShow(() => {
 // 监听天数切换，自动更新地图
 watch(selectedDayIndex, () => {
   if (routeData.value && activeTab.value !== 'map') {
-    updateMapData()
+    void updateMapData()
   }
 })
 
 watch(activeTab, (tab) => {
   if (!routeData.value) return
-  if (tab === 'map') {
-    updateFullMapData()
-  } else {
-    updateMapData()
-  }
+  activeMarkerCallout.value = null
+  activeMarkerId.value = null
+  nextTick(async () => {
+    mapRenderKey.value += 1
+    await nextTick()
+    if (tab === 'map') {
+      await updateFullMapData()
+    } else {
+      await updateMapData()
+    }
+  })
 })
 </script>
 
@@ -1820,9 +2311,8 @@ watch(activeTab, (tab) => {
   border-radius: 2rpx;
 }
 
-/* 滚动内容 */
+/* 滚动内容（地图已移至 scroll-view 外） */
 .scroll-content {
-  margin-top: calc(80rpx + env(safe-area-inset-top));
   flex: 1;
   padding: 24rpx;
   padding-bottom: calc(200rpx + env(safe-area-inset-bottom));
@@ -1931,13 +2421,40 @@ watch(activeTab, (tab) => {
   margin-top: 16rpx;
 }
 
-/* 地图区域 */
+/* 地图区域（位于 scroll-view 外） */
+.map-section--outer {
+  margin-top: calc(80rpx + env(safe-area-inset-top));
+  padding: 0 24rpx;
+  box-sizing: border-box;
+}
+
 .map-section {
   width: 100%;
   margin-bottom: 24rpx;
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+.map-empty-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(247, 248, 250, 0.88);
+  pointer-events: none;
+}
+
+.map-empty-text {
+  font-size: 24rpx;
+  color: #647067;
+  padding: 0 32rpx;
+  text-align: center;
 }
 
 .map-container {
@@ -1992,6 +2509,131 @@ watch(activeTab, (tab) => {
   font-size: 24rpx;
   color: #333;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+}
+
+.map-marker-callout {
+  position: absolute;
+  left: 16rpx;
+  right: 16rpx;
+  bottom: 72rpx;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 16rpx;
+  padding: 18rpx 56rpx 18rpx 18rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.14);
+}
+
+.map-marker-callout--full {
+  bottom: 96rpx;
+}
+
+.map-marker-callout-title {
+  font-size: 26rpx;
+  color: #1f2a24;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.map-marker-callout-address {
+  font-size: 22rpx;
+  color: #647067;
+  line-height: 1.5;
+  margin-top: 6rpx;
+}
+
+.map-marker-callout-type {
+  font-size: 20rpx;
+  color: #3ba272;
+  font-weight: 600;
+  margin-top: 6rpx;
+}
+
+.map-marker-callout-close {
+  position: absolute;
+  top: 10rpx;
+  right: 14rpx;
+  font-size: 34rpx;
+  color: #999;
+  line-height: 1;
+  width: 40rpx;
+  text-align: center;
+}
+
+.map-poi-panel {
+  position: absolute;
+  left: 20rpx;
+  right: 20rpx;
+  bottom: 96rpx;
+  z-index: 14;
+  max-height: 280rpx;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 18rpx;
+  box-shadow: 0 8rpx 24rpx rgba(0, 0, 0, 0.14);
+  padding: 14rpx 12rpx 10rpx;
+}
+
+.map-poi-panel-title {
+  font-size: 22rpx;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+  padding: 0 6rpx;
+}
+
+.map-poi-scroll {
+  max-height: 220rpx;
+}
+
+.map-poi-item {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 12rpx 10rpx;
+  border-radius: 12rpx;
+}
+
+.map-poi-item.active {
+  background: #eef8f2;
+}
+
+.map-poi-item-index {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 22rpx;
+  background: #3ba272;
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 44rpx;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.map-poi-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.map-poi-item-name {
+  font-size: 24rpx;
+  color: #1f2a24;
+  font-weight: 600;
+}
+
+.map-poi-item-address {
+  font-size: 20rpx;
+  color: #647067;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-poi-item-type {
+  font-size: 20rpx;
+  color: #3ba272;
+  flex-shrink: 0;
 }
 
 /* 每日行程 */
@@ -2539,22 +3181,25 @@ watch(activeTab, (tab) => {
   color: #999;
 }
 
-/* 地图视图 */
-.map-view-section {
-  width: 100%;
-  height: calc(100vh - 200rpx);
+/* 全屏地图页 */
+.map-full-page {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
+  margin-top: calc(80rpx + env(safe-area-inset-top));
+  padding: 0 24rpx 24rpx;
+  padding-bottom: calc(24rpx + 120rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  height: calc(100vh - 80rpx - env(safe-area-inset-top));
+  min-height: 0;
 }
 
-.map-container-center {
-  width: 100%;
-  height: 100%;
+.map-full-map-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 420rpx;
   border-radius: 24rpx;
   overflow: hidden;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
-  position: relative;
 }
 
 .full-map {
@@ -2562,12 +3207,168 @@ watch(activeTab, (tab) => {
   height: 100%;
 }
 
-.full-map-toolbar {
-  position: absolute;
-  left: 20rpx;
-  right: 20rpx;
-  bottom: 24rpx;
-  z-index: 13;
+.map-full-marker-info {
+  flex-shrink: 0;
+  margin-top: 16rpx;
+  padding: 20rpx 24rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+}
+
+.map-full-marker-info-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.map-full-marker-info-title {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1f2a24;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.map-full-marker-info-close {
+  font-size: 36rpx;
+  color: #999;
+  line-height: 1;
+}
+
+.map-full-marker-info-type {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #3ba272;
+  font-weight: 600;
+}
+
+.map-full-marker-info-address {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #647067;
+  line-height: 1.5;
+}
+
+.map-full-toolbar {
+  flex-shrink: 0;
+  margin-top: 16rpx;
+}
+
+.map-full-legend {
+  flex-shrink: 0;
+  margin-top: 12rpx;
+  padding: 14rpx 16rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.06);
+}
+
+.map-full-legend-title {
+  font-size: 22rpx;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+}
+
+.map-full-legend-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx 20rpx;
+}
+
+.map-full-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.map-full-legend-color {
+  width: 24rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+}
+
+.map-full-legend-text {
+  font-size: 22rpx;
+  color: #555;
+}
+
+.map-full-poi-panel {
+  flex-shrink: 0;
+  margin-top: 12rpx;
+  padding: 14rpx 12rpx 10rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0, 0, 0, 0.06);
+  max-height: 240rpx;
+}
+
+.map-full-poi-panel-title {
+  font-size: 22rpx;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+  padding: 0 6rpx;
+}
+
+.map-full-poi-scroll {
+  max-height: 180rpx;
+}
+
+.map-full-poi-item {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 12rpx 8rpx;
+  border-radius: 12rpx;
+}
+
+.map-full-poi-item.active {
+  background: #eef8f2;
+}
+
+.map-full-poi-item-index {
+  min-width: 40rpx;
+  height: 40rpx;
+  border-radius: 20rpx;
+  background: #5d92b0;
+  color: #ffffff;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+  text-align: center;
+}
+
+.map-full-poi-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.map-full-poi-item-name {
+  display: block;
+  font-size: 24rpx;
+  color: #1f2a24;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.map-full-poi-item-address {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #647067;
+  line-height: 1.4;
+}
+
+.map-full-poi-item-type {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  color: #3ba272;
+  font-weight: 600;
 }
 
 .map-chip-scroll {

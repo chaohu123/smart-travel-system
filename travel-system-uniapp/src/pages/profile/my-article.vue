@@ -190,7 +190,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
   import { travelNoteApi, travelNoteInteractionApi } from '@/api/content'
   import { getImageUrl } from '@/utils/image'
-import { safeNavigateTo } from '@/utils/router'
+import { safeNavigateTo, safeNavigateBack } from '@/utils/router'
   import SkeletonCards from '@/components/SkeletonCards.vue'
   
   const store = useUserStore()
@@ -704,14 +704,21 @@ onLoad((options: any) => {
   }
 })
 
-// 页面显示时刷新数据
+let skipNextShowRefresh = true
+let lastMyArticleRefreshTime = 0
+const MY_ARTICLE_REFRESH_INTERVAL = 3000
+
+// 页面显示时刷新数据（审核状态变更后返回需看到最新状态）
 onShow(() => {
-  if (user.value && noteList.value.length === 0 && !loading.value) {
-    pageNum.value = 1
-    noteList.value = []
-    noMore.value = false
-    loadNotes()
+  if (!user.value) return
+  if (skipNextShowRefresh) {
+    skipNextShowRefresh = false
+    return
   }
+  const now = Date.now()
+  if (now - lastMyArticleRefreshTime < MY_ARTICLE_REFRESH_INTERVAL) return
+  lastMyArticleRefreshTime = now
+  loadNotes(true)
 })
 
 onMounted(() => {
@@ -720,7 +727,7 @@ onMounted(() => {
   } else {
     uni.showToast({ title: '请先登录', icon: 'none' })
     setTimeout(() => {
-      uni.navigateBack()
+      safeNavigateBack({ fallbackUrl: '/pages/profile/profile' })
     }, 1500)
   }
 })

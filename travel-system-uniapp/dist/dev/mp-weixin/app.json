@@ -71,6 +71,10 @@
       }
     ]
   },
+  "map": {
+    "provider": "amap",
+    "key": "b49d114eb175a158b25db7bf30156a3d"
+  },
   "permission": {
     "scope.userLocation": {
       "desc": "你的位置信息将用于小程序位置接口的效果展示和地图功能"

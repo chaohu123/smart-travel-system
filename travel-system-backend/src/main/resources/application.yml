@@ -37,6 +37,10 @@ upload:
   dir: uploads  # 上传目录（相对路径，相对于项目根目录）
   access-prefix: /uploads/  # 访问前缀
 
+# 高德 Web 服务 Key（地理编码）- 必须是「Web服务」类型，不能填小程序 Key
+amap:
+  web-key: cfc8ec019f37f42097752e05d6268e20
+
 # AI服务配置
 ai:
   enabled: true  # 是否启用AI服务（设置为true以启用）

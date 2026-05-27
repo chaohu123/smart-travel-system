@@ -83,7 +83,8 @@ const travelNoteApi = {
       url: "/travel/note/list",
       method: "GET",
       data: params || {},
-      showLoading: false
+      showLoading: false,
+      disableCache: true
     });
   },
   getDetail: (id, userId) => {
@@ -91,7 +92,8 @@ const travelNoteApi = {
       url: `/travel/note/${id}`,
       method: "GET",
       data: { userId },
-      showLoading: true
+      showLoading: true,
+      disableCache: true
     });
   },
   publish: (data) => {
@@ -122,7 +124,8 @@ const travelNoteApi = {
       url: "/travel/note/my/favorites",
       method: "GET",
       data: { userId, pageNum, pageSize },
-      needAuth: true
+      needAuth: true,
+      disableCache: true
     });
   },
   listMyNotes: (userId, pageNum = 1, pageSize = 10, status) => {
@@ -130,7 +133,8 @@ const travelNoteApi = {
       url: "/travel/note/my/list",
       method: "GET",
       data: { userId, pageNum, pageSize, status },
-      needAuth: true
+      needAuth: true,
+      disableCache: true
     });
   },
   setPrivate: (id, userId, isPrivate) => {

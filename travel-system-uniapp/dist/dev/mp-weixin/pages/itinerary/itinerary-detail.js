@@ -5,6 +5,8 @@ var store_user = require("../../store/user.js");
 var utils_storage = require("../../utils/storage.js");
 var utils_config = require("../../utils/config.js");
 var utils_image = require("../../utils/image.js");
+var utils_amapGeocode = require("../../utils/amapGeocode.js");
+var utils_aiMapLocations = require("../../utils/aiMapLocations.js");
 require("../../utils/http.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
@@ -198,6 +200,12 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const mapPolyline = common_vendor.ref([]);
     const mapScale = common_vendor.ref(12);
     const routeMapMode = common_vendor.ref("day");
+    const mapRenderKey = common_vendor.ref(0);
+    const hasMapPoints = common_vendor.ref(false);
+    const mapPageInstance = common_vendor.getCurrentInstance();
+    const activeMarkerCallout = common_vendor.ref(null);
+    const activeMarkerId = common_vendor.ref(null);
+    const markerMetaMap = common_vendor.ref({});
     const markerIconCache = common_vendor.ref({});
     let mapUpdateGen = 0;
     const DAY_LINE_COLORS = ["#3BA272", "#2F7DDB", "#F59E0B", "#EF4444", "#8B5CF6", "#14B8A6", "#EC4899"];
@@ -253,11 +261,30 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const currentMapSummary = common_vendor.computed(() => {
       var _a;
       const dayItem = currentDayData.value;
+      const markerCount = mapMarkers.value.length;
       const pois = getSortedDayPois(dayItem);
+      const validFromPoi = getValidPoiCoords(pois).length;
       return {
         dayNo: ((_a = dayItem == null ? void 0 : dayItem.day) == null ? void 0 : _a.dayNo) || selectedDayIndex.value + 1,
-        poiCount: getValidPoiCoords(pois).length
+        poiCount: markerCount || validFromPoi
       };
+    });
+    const currentMapPoiList = common_vendor.computed(() => {
+      const list = [];
+      mapMarkers.value.forEach((marker) => {
+        var _a;
+        const meta = markerMetaMap.value[marker.id] || marker.meta;
+        if (!meta)
+          return;
+        list.push({
+          markerId: marker.id,
+          orderLabel: ((_a = marker.label) == null ? void 0 : _a.content) ? String(marker.label.content) : "\xB7",
+          title: meta.title,
+          address: meta.address,
+          typeLabel: meta.typeLabel || "\u5730\u70B9"
+        });
+      });
+      return list;
     });
     const fullMapLegends = common_vendor.computed(() => {
       var _a, _b;
@@ -336,7 +363,8 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         if (res.statusCode === 200 && res.data.code === 200) {
           routeData.value = res.data.data;
           loadFavoriteStatus();
-          updateMapData();
+          await enrichRouteCoordinates(routeData.value);
+          mapRenderKey.value += 1;
         } else {
           common_vendor.index.showToast({ title: res.data.msg || "\u52A0\u8F7D\u5931\u8D25", icon: "none" });
         }
@@ -344,6 +372,10 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         common_vendor.index.showToast({ title: "\u7F51\u7EDC\u9519\u8BEF", icon: "none" });
       } finally {
         loading.value = false;
+        await common_vendor.nextTick();
+        if (routeData.value) {
+          refreshMapAfterMount();
+        }
       }
     };
     const loadFavoriteStatus = () => {
@@ -396,211 +428,563 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         return null;
       const latRaw = (_a = detail.latitude) != null ? _a : detail.lat;
       const lngRaw = (_c = (_b = detail.longitude) != null ? _b : detail.lng) != null ? _c : detail.lon;
-      const lat = toCoordNumber(latRaw);
-      const lng = toCoordNumber(lngRaw);
+      let lat = toCoordNumber(latRaw);
+      let lng = toCoordNumber(lngRaw);
       if (lat == null || lng == null)
         return null;
+      if (!isChinaCoord(lat, lng) && isChinaCoord(lng, lat)) {
+        const swappedLat = lng;
+        const swappedLng = lat;
+        lat = swappedLat;
+        lng = swappedLng;
+      }
       if (!isChinaCoord(lat, lng))
         return null;
       return { latitude: lat, longitude: lng };
     };
-    const updateMapData = () => {
+    const normalizeCityName = (value) => {
+      return String(value || "").trim().replace(/(特别行政区|自治州|地区|盟|市|省)$/u, "");
+    };
+    const resolveRouteCityName = (data) => {
       var _a, _b;
-      routeMapMode.value = "day";
-      const gen = ++mapUpdateGen;
-      mapMarkers.value = [];
-      mapPolyline.value = [];
-      if (!((_a = routeData.value) == null ? void 0 : _a.days) || routeData.value.days.length === 0)
-        return;
-      const dayItem = routeData.value.days[selectedDayIndex.value];
-      if (!dayItem || !dayItem.pois || dayItem.pois.length === 0) {
-        return;
+      if (!data)
+        return "";
+      if ((_a = data.city) == null ? void 0 : _a.cityName)
+        return normalizeCityName(data.city.cityName);
+      if (!((_b = data == null ? void 0 : data.days) == null ? void 0 : _b.length))
+        return "";
+      for (const dayItem of data.days) {
+        for (const poiItem of dayItem.pois || []) {
+          const detail = poiItem == null ? void 0 : poiItem.detail;
+          if (detail == null ? void 0 : detail.city)
+            return normalizeCityName(detail.city);
+          if (detail == null ? void 0 : detail.province)
+            return normalizeCityName(detail.province);
+        }
       }
+      return "";
+    };
+    const resolveRouteCityCenter = (data) => {
+      if (!(data == null ? void 0 : data.city))
+        return null;
+      const lat = toCoordNumber(data.city.latitude);
+      const lng = toCoordNumber(data.city.longitude);
+      if (lat == null || lng == null || !isChinaCoord(lat, lng))
+        return null;
+      return { latitude: lat, longitude: lng };
+    };
+    const isCoordInRouteCity = (coord, data) => {
+      if (!coord)
+        return false;
+      return utils_amapGeocode.isCoordNearCity(coord, resolveRouteCityCenter(data));
+    };
+    const geocodePoiDetail = async (detail, cityName, cityId, cityCenter) => {
+      const city = normalizeCityName(cityName || (detail == null ? void 0 : detail.city) || (detail == null ? void 0 : detail.province));
+      const address = String((detail == null ? void 0 : detail.address) || "").trim();
+      const name = String((detail == null ? void 0 : detail.name) || "").trim();
+      const cityLabel = city ? `${city}\u5E02` : "";
+      const candidates = Array.from(
+        new Set(
+          [
+            cityLabel && name ? `${cityLabel}${name}` : "",
+            city && name ? `${city}${name}` : "",
+            cityLabel && address ? `${cityLabel}${address}` : "",
+            city && address ? `${city}${address}` : "",
+            address,
+            name
+          ].filter(Boolean)
+        )
+      );
+      for (const query of candidates) {
+        const coord = await utils_amapGeocode.geocodeAddress(query, city || void 0, cityId, cityCenter);
+        if (coord)
+          return coord;
+      }
+      return null;
+    };
+    const getPoiName = (poiItem) => {
+      var _a, _b;
+      if ((_a = poiItem == null ? void 0 : poiItem.detail) == null ? void 0 : _a.name)
+        return poiItem.detail.name;
+      return ((_b = poiItem == null ? void 0 : poiItem.poi) == null ? void 0 : _b.note) || "\u672A\u77E5\u5730\u70B9";
+    };
+    const applyCoordToDetail = (detail, coord) => {
+      if (!detail)
+        return;
+      detail.latitude = coord.latitude;
+      detail.longitude = coord.longitude;
+    };
+    const enrichRouteCoordinates = async (data) => {
+      var _a, _b;
+      if (!((_a = data == null ? void 0 : data.days) == null ? void 0 : _a.length))
+        return;
+      const cityName = resolveRouteCityName(data);
+      const cityId = (_b = data == null ? void 0 : data.route) == null ? void 0 : _b.cityId;
+      const cityCenter = resolveRouteCityCenter(data);
+      const tasks = [];
+      for (const dayItem of data.days) {
+        for (const poiItem of dayItem.pois || []) {
+          const detail = poiItem == null ? void 0 : poiItem.detail;
+          if (!detail)
+            continue;
+          const existing = extractPoiCoord(detail);
+          if (existing && isCoordInRouteCity(existing, data))
+            continue;
+          if (existing && !isCoordInRouteCity(existing, data)) {
+            detail.latitude = void 0;
+            detail.longitude = void 0;
+          }
+          tasks.push(
+            geocodePoiDetail(detail, cityName, cityId, cityCenter).then((coord) => {
+              if (coord)
+                applyCoordToDetail(detail, coord);
+            })
+          );
+        }
+      }
+      if (tasks.length) {
+        await Promise.all(tasks);
+      }
+    };
+    const findPoiDetailByName = (dayItem, placeName) => {
+      var _a, _b;
+      const target = placeName.trim();
+      if (!target || !((_a = dayItem == null ? void 0 : dayItem.pois) == null ? void 0 : _a.length))
+        return null;
+      for (const poiItem of dayItem.pois) {
+        const name = String(((_b = poiItem == null ? void 0 : poiItem.detail) == null ? void 0 : _b.name) || "").trim();
+        if (!name)
+          continue;
+        if (name === target || name.includes(target) || target.includes(name)) {
+          return poiItem.detail;
+        }
+      }
+      return null;
+    };
+    const resolveAiMapStopsForDay = async (dayItem, cityName, cityId) => {
+      const cityCenter = resolveRouteCityCenter(routeData.value);
+      const backendStops = dayItem == null ? void 0 : dayItem.mapStops;
+      if (Array.isArray(backendStops) && backendStops.length > 0) {
+        return backendStops.map((stop, index) => {
+          const lat = toCoordNumber(stop == null ? void 0 : stop.latitude);
+          const lng = toCoordNumber(stop == null ? void 0 : stop.longitude);
+          if (lat == null || lng == null || !isChinaCoord(lat, lng))
+            return null;
+          const coord = { latitude: lat, longitude: lng };
+          if (!utils_amapGeocode.isCoordNearCity(coord, cityCenter))
+            return null;
+          return {
+            name: String((stop == null ? void 0 : stop.name) || ""),
+            period: "",
+            periodOrder: index + 1,
+            sortOrder: Number((stop == null ? void 0 : stop.sortOrder) || index + 1),
+            latitude: lat,
+            longitude: lng,
+            address: String((stop == null ? void 0 : stop.name) || "")
+          };
+        }).filter((item) => !!item && !!item.name);
+      }
+      const intro = parseDayIntro(dayItem);
+      const stops = utils_aiMapLocations.extractPlacesFromAiIntro(intro);
+      const resolved = [];
+      for (const stop of stops) {
+        const matchedDetail = findPoiDetailByName(dayItem, stop.name);
+        let coord = matchedDetail ? extractPoiCoord(matchedDetail) : null;
+        if (coord && !utils_amapGeocode.isCoordNearCity(coord, cityCenter)) {
+          coord = null;
+        }
+        const address = (matchedDetail == null ? void 0 : matchedDetail.address) ? String(matchedDetail.address) : stop.name;
+        if (!coord) {
+          coord = await geocodePoiDetail(
+            { name: stop.name, address: stop.name, city: cityName },
+            cityName,
+            cityId,
+            cityCenter
+          );
+        }
+        if (coord) {
+          resolved.push({
+            ...stop,
+            latitude: coord.latitude,
+            longitude: coord.longitude,
+            address
+          });
+        }
+      }
+      return resolved;
+    };
+    const buildStopsMapData = (stops, dayNo, lineColor, scenicIcon, foodIcon, metaStore) => {
       const markers = [];
       const polylines = [];
-      const sortedPois = getSortedDayPois(dayItem);
       const dayCoordinates = [];
-      const dayNo = ((_b = dayItem.day) == null ? void 0 : _b.dayNo) || selectedDayIndex.value + 1;
+      stops.forEach((stop, index) => {
+        const markerId = dayNo * 1e4 + stop.sortOrder;
+        const markerTitle = `${stop.period} \xB7 ${stop.name}`;
+        const meta = {
+          title: stop.name,
+          address: stop.address,
+          typeLabel: stop.period
+        };
+        if (metaStore) {
+          metaStore[markerId] = meta;
+        }
+        const marker = {
+          id: markerId,
+          latitude: stop.latitude,
+          longitude: stop.longitude,
+          title: markerTitle,
+          width: 46,
+          height: 46,
+          meta,
+          callout: {
+            content: stop.address ? `${stop.name}
+${stop.address}` : stop.name,
+            color: "#333333",
+            fontSize: 14,
+            borderRadius: 8,
+            bgColor: "#ffffff",
+            padding: 10,
+            display: "BYCLICK",
+            textAlign: "center"
+          },
+          label: {
+            content: String(index + 1),
+            color: "#ffffff",
+            fontSize: 14,
+            anchorX: -5,
+            anchorY: -36,
+            bgColor: "#5D92B0",
+            borderRadius: 12,
+            padding: 4
+          },
+          joinCluster: false
+        };
+        if (scenicIcon)
+          marker.iconPath = scenicIcon;
+        markers.push(marker);
+        dayCoordinates.push({ latitude: stop.latitude, longitude: stop.longitude });
+      });
+      if (dayCoordinates.length > 1) {
+        polylines.push({
+          points: dayCoordinates,
+          color: lineColor,
+          width: 5,
+          arrowLine: true,
+          dottedLine: false,
+          borderColor: "#FFFFFF",
+          borderWidth: 2
+        });
+      }
+      return { markers, polylines, coords: dayCoordinates };
+    };
+    const buildMapForDay = async (dayItem, dayNo, lineColor, metaStore, scenicIcon, foodIcon) => {
+      var _a, _b;
+      const cityName = resolveRouteCityName(routeData.value);
+      const cityId = (_b = (_a = routeData.value) == null ? void 0 : _a.route) == null ? void 0 : _b.cityId;
+      const intro = parseDayIntro(dayItem);
+      const aiStops = utils_aiMapLocations.extractPlacesFromAiIntro(intro);
+      const sortedPois = getSortedDayPois(dayItem || { pois: [] });
+      const poiResult = buildDayMapData(sortedPois, dayNo, lineColor, scenicIcon, foodIcon, metaStore);
+      const backendStopCount = Array.isArray(dayItem == null ? void 0 : dayItem.mapStops) ? dayItem.mapStops.length : 0;
+      if (backendStopCount >= 2 || aiStops.length >= 1) {
+        const resolved = await resolveAiMapStopsForDay(dayItem, cityName, cityId);
+        if (resolved.length >= 2) {
+          return buildStopsMapData(resolved, dayNo, lineColor, scenicIcon, foodIcon, metaStore);
+        }
+        if (resolved.length > poiResult.coords.length) {
+          return buildStopsMapData(resolved, dayNo, lineColor, scenicIcon, foodIcon, metaStore);
+        }
+        if (resolved.length === 1 && poiResult.coords.length === 0) {
+          return buildStopsMapData(resolved, dayNo, lineColor, scenicIcon, foodIcon, metaStore);
+        }
+      }
+      return poiResult;
+    };
+    const refreshMapAfterMount = async () => {
+      activeMarkerCallout.value = null;
+      activeMarkerId.value = null;
+      if (activeTab.value === "map") {
+        await updateFullMapData();
+      } else {
+        await updateMapData();
+      }
+    };
+    const resolveMarkerMeta = (markerId) => {
+      var _a, _b;
+      const meta = markerMetaMap.value[markerId];
+      if (meta)
+        return meta;
+      const marker = mapMarkers.value.find(
+        (item) => item.id === markerId || String(item.id) === String(markerId)
+      );
+      if (!marker)
+        return null;
+      if (marker.meta)
+        return marker.meta;
+      const title = String(marker.title || ((_a = marker.callout) == null ? void 0 : _a.content) || "").trim();
+      if (!title)
+        return null;
+      const lines = title.split("\n");
+      return {
+        title: lines[0] || title,
+        address: lines[1] || "",
+        typeLabel: ((_b = marker.label) == null ? void 0 : _b.content) === "\u9910" ? "\u7F8E\u98DF" : "\u666F\u70B9"
+      };
+    };
+    const showMarkerInfo = (markerId) => {
+      const meta = resolveMarkerMeta(markerId);
+      if (!meta)
+        return;
+      activeMarkerId.value = markerId;
+      activeMarkerCallout.value = meta;
+    };
+    const onMarkerTap = (e) => {
+      var _a;
+      const markerId = Number((_a = e == null ? void 0 : e.detail) == null ? void 0 : _a.markerId);
+      if (!Number.isFinite(markerId))
+        return;
+      showMarkerInfo(markerId);
+    };
+    const onCalloutTap = (e) => {
+      var _a;
+      const markerId = Number((_a = e == null ? void 0 : e.detail) == null ? void 0 : _a.markerId);
+      if (!Number.isFinite(markerId))
+        return;
+      showMarkerInfo(markerId);
+    };
+    const pendingMapFitCoords = common_vendor.ref(null);
+    const onFullMapUpdated = () => {
+      var _a;
+      if (activeTab.value !== "map" || !((_a = pendingMapFitCoords.value) == null ? void 0 : _a.length))
+        return;
+      fitMapBounds(pendingMapFitCoords.value, "route-full-map");
+      pendingMapFitCoords.value = null;
+    };
+    const focusMapPoi = (markerId) => {
+      const marker = mapMarkers.value.find((item) => item.id === markerId);
+      if (!marker)
+        return;
+      showMarkerInfo(markerId);
+      mapCenter.value = {
+        latitude: marker.latitude,
+        longitude: marker.longitude
+      };
+      mapScale.value = 14;
+      const mapId = activeTab.value === "map" ? "route-full-map" : "route-day-map";
+      fitMapBounds([{ latitude: marker.latitude, longitude: marker.longitude }], mapId);
+    };
+    const fitMapBounds = (coords, mapId) => {
+      if (!coords.length || !mapPageInstance)
+        return;
+      common_vendor.nextTick(() => {
+        setTimeout(() => {
+          try {
+            const ctx = common_vendor.index.createMapContext(mapId, mapPageInstance);
+            ctx.includePoints({
+              points: coords.map((p) => ({ latitude: p.latitude, longitude: p.longitude })),
+              padding: [48, 48, 48, 48]
+            });
+          } catch {
+          }
+        }, 120);
+      });
+    };
+    const buildDayMapData = (sortedPois, dayNo, lineColor, scenicIcon, foodIcon, metaStore) => {
+      const markers = [];
+      const polylines = [];
+      const dayCoordinates = [];
       let poiOrder = 1;
-      Promise.all([createPoiMarkerIcon("scenic"), createPoiMarkerIcon("food")]).then(([scenicIcon, foodIcon]) => {
+      sortedPois.forEach((poiItem, poiIndex) => {
+        var _a, _b, _c;
+        const detail = poiItem == null ? void 0 : poiItem.detail;
+        if (!detail)
+          return;
+        const coord = extractPoiCoord(detail);
+        if (!coord)
+          return;
+        if (!isCoordInRouteCity(coord, routeData.value))
+          return;
+        const isScenic = ((_a = poiItem.poi) == null ? void 0 : _a.poiType) === "scenic";
+        const orderLabel = isScenic ? `D${dayNo}-${poiOrder}` : "";
+        const poiName = getPoiName(poiItem);
+        const markerTitle = orderLabel ? `${orderLabel} ${poiName}` : poiName;
+        const markerAddress = String(detail.address || "").trim();
+        const markerId = Number(((_b = poiItem == null ? void 0 : poiItem.poi) == null ? void 0 : _b.id) || dayNo * 1e3 + poiIndex + 1);
+        const isFood = ((_c = poiItem.poi) == null ? void 0 : _c.poiType) === "food";
+        const calloutContent = markerAddress ? `${poiName}
+${markerAddress}` : poiName;
+        const meta = {
+          title: poiName,
+          address: markerAddress,
+          typeLabel: isFood ? "\u7F8E\u98DF" : "\u666F\u70B9"
+        };
+        if (metaStore) {
+          metaStore[markerId] = meta;
+        }
+        const marker = {
+          id: markerId,
+          latitude: coord.latitude,
+          longitude: coord.longitude,
+          title: markerTitle,
+          width: isFood ? 40 : 46,
+          height: isFood ? 40 : 46,
+          meta,
+          callout: {
+            content: calloutContent,
+            color: "#333333",
+            fontSize: 14,
+            borderRadius: 8,
+            bgColor: "#ffffff",
+            padding: 10,
+            display: "BYCLICK",
+            textAlign: "center"
+          },
+          label: {
+            content: isFood ? "\u9910" : String(poiOrder),
+            color: "#ffffff",
+            fontSize: 14,
+            anchorX: -5,
+            anchorY: -36,
+            bgColor: isFood ? "#3BA272" : "#5D92B0",
+            borderRadius: 12,
+            padding: 4
+          },
+          joinCluster: false
+        };
+        const icon = isFood ? foodIcon : scenicIcon;
+        if (icon)
+          marker.iconPath = icon;
+        markers.push(marker);
+        dayCoordinates.push(coord);
+        if (isScenic)
+          poiOrder++;
+      });
+      if (dayCoordinates.length > 1) {
+        polylines.push({
+          points: dayCoordinates,
+          color: lineColor,
+          width: 5,
+          arrowLine: true,
+          dottedLine: false,
+          borderColor: "#FFFFFF",
+          borderWidth: 2
+        });
+      }
+      return { markers, polylines, coords: dayCoordinates };
+    };
+    const getActiveMapId = () => activeTab.value === "map" ? "route-full-map" : "route-day-map";
+    const applyMapBuildResult = (result, mapId) => {
+      const targetMapId = mapId || getActiveMapId();
+      hasMapPoints.value = result.coords.length > 0;
+      if (result.coords.length) {
+        updateMapViewport(result.coords);
+      }
+      mapMarkers.value = [...result.markers];
+      mapPolyline.value = [...result.polylines];
+      if (result.coords.length) {
+        if (targetMapId === "route-full-map") {
+          pendingMapFitCoords.value = [...result.coords];
+        }
+        fitMapBounds(result.coords, targetMapId);
+      }
+    };
+    const updateMapData = async () => {
+      var _a, _b, _c, _d;
+      routeMapMode.value = "day";
+      activeMarkerCallout.value = null;
+      activeMarkerId.value = null;
+      const gen = ++mapUpdateGen;
+      const nextMeta = {};
+      if (!((_b = (_a = routeData.value) == null ? void 0 : _a.days) == null ? void 0 : _b.length)) {
+        mapMarkers.value = [];
+        mapPolyline.value = [];
+        markerMetaMap.value = {};
+        hasMapPoints.value = false;
+        return;
+      }
+      const dayItem = routeData.value.days[selectedDayIndex.value];
+      if (!dayItem) {
+        mapMarkers.value = [];
+        mapPolyline.value = [];
+        markerMetaMap.value = {};
+        hasMapPoints.value = false;
+        return;
+      }
+      const intro = parseDayIntro(dayItem);
+      if (!utils_aiMapLocations.dayHasAiIntro(intro) && !((_c = dayItem.pois) == null ? void 0 : _c.length)) {
+        mapMarkers.value = [];
+        mapPolyline.value = [];
+        markerMetaMap.value = {};
+        hasMapPoints.value = false;
+        return;
+      }
+      const dayNo = ((_d = dayItem.day) == null ? void 0 : _d.dayNo) || selectedDayIndex.value + 1;
+      const result = await buildMapForDay(dayItem, dayNo, "#1F8F66", nextMeta);
+      if (gen !== mapUpdateGen)
+        return;
+      markerMetaMap.value = { ...nextMeta };
+      applyMapBuildResult(result);
+      Promise.all([createPoiMarkerIcon("scenic"), createPoiMarkerIcon("food")]).then(async ([scenicIcon, foodIcon]) => {
         if (gen !== mapUpdateGen)
           return;
-        sortedPois.forEach((poiItem, poiIndex) => {
-          var _a2, _b2;
-          const detail = poiItem.detail;
-          if (!detail) {
-            return;
-          }
-          const coord = extractPoiCoord(detail);
-          if (coord) {
-            const lat = coord.latitude;
-            const lng = coord.longitude;
-            const isScenic = ((_a2 = poiItem.poi) == null ? void 0 : _a2.poiType) === "scenic";
-            const orderLabel = isScenic ? `D${dayNo}-${poiOrder}` : "";
-            const poiName = getPoiName(poiItem);
-            const markerTitle = orderLabel ? `${orderLabel} ${poiName}` : poiName;
-            const markerId = (dayNo || 1) * 1e3 + (poiIndex + 1);
-            const isFood = ((_b2 = poiItem.poi) == null ? void 0 : _b2.poiType) === "food";
-            const marker = {
-              id: markerId,
-              latitude: lat,
-              longitude: lng,
-              title: markerTitle,
-              width: 46,
-              height: 46,
-              callout: {
-                content: markerTitle,
-                color: "#333",
-                fontSize: 14,
-                borderRadius: 4,
-                bgColor: "#fff",
-                padding: 8,
-                display: "BYCLICK",
-                textAlign: "center"
-              },
-              label: {
-                content: isFood ? "\u9910" : String(poiOrder),
-                color: "#ffffff",
-                fontSize: 14,
-                anchorX: -5,
-                anchorY: -36
-              }
-            };
-            const icon = isFood ? foodIcon : scenicIcon;
-            if (icon)
-              marker.iconPath = icon;
-            markers.push(marker);
-            dayCoordinates.push({
-              latitude: lat,
-              longitude: lng
-            });
-            if (isScenic) {
-              poiOrder++;
-            }
-          }
-        });
-        if (dayCoordinates.length > 1) {
-          polylines.push({
-            points: dayCoordinates,
-            color: "#1F8F66",
-            width: 5,
-            arrowLine: true,
-            dottedLine: false,
-            borderColor: "#FFFFFF",
-            borderWidth: 2
-          });
-        }
-        if (dayCoordinates.length > 0) {
-          let sumLat = 0;
-          let sumLng = 0;
-          dayCoordinates.forEach((coord) => {
-            sumLat += coord.latitude;
-            sumLng += coord.longitude;
-          });
-          mapCenter.value = {
-            latitude: sumLat / dayCoordinates.length,
-            longitude: sumLng / dayCoordinates.length
-          };
-        }
-        if (gen === mapUpdateGen) {
-          updateMapViewport(dayCoordinates);
-          mapMarkers.value = markers;
-          mapPolyline.value = polylines;
-        }
+        const iconMeta = {};
+        const withIcons = await buildMapForDay(dayItem, dayNo, "#1F8F66", iconMeta, scenicIcon, foodIcon);
+        markerMetaMap.value = { ...iconMeta };
+        applyMapBuildResult(withIcons);
       }).catch(() => {
       });
     };
-    const updateFullMapData = () => {
+    const updateFullMapData = async () => {
       var _a;
       routeMapMode.value = "full";
+      activeMarkerCallout.value = null;
+      activeMarkerId.value = null;
       const gen = ++mapUpdateGen;
-      mapMarkers.value = [];
-      mapPolyline.value = [];
       const days = ((_a = routeData.value) == null ? void 0 : _a.days) || [];
-      if (!days.length)
+      if (!days.length) {
+        mapMarkers.value = [];
+        mapPolyline.value = [];
+        markerMetaMap.value = {};
+        hasMapPoints.value = false;
         return;
-      Promise.all([createPoiMarkerIcon("scenic"), createPoiMarkerIcon("food")]).then(([scenicIcon, foodIcon]) => {
-        if (gen !== mapUpdateGen)
-          return;
+      }
+      const buildFull = async (scenicIcon, foodIcon, metaStore) => {
+        var _a2;
         const markers = [];
         const polylines = [];
         const allCoords = [];
-        days.forEach((dayItem, dayIdx) => {
-          var _a2;
-          const sortedPois = getSortedDayPois(dayItem);
+        for (let dayIdx = 0; dayIdx < days.length; dayIdx++) {
+          const dayItem = days[dayIdx];
           const dayNo = Number(((_a2 = dayItem == null ? void 0 : dayItem.day) == null ? void 0 : _a2.dayNo) || dayIdx + 1);
-          const dayCoords = [];
-          let scenicSeq = 1;
-          sortedPois.forEach((poiItem, poiIdx) => {
-            var _a3;
-            const detail = poiItem == null ? void 0 : poiItem.detail;
-            const coord = extractPoiCoord(detail);
-            if (!coord)
-              return;
-            const isFood = ((_a3 = poiItem.poi) == null ? void 0 : _a3.poiType) === "food";
-            const markerSeq = isFood ? poiIdx + 1 : scenicSeq;
-            const markerTitle = `${isFood ? "\u98DF" : "\u666F"} Day${dayNo}-${markerSeq} ${getPoiName(poiItem)}`;
-            if (!isFood)
-              scenicSeq++;
-            const marker = {
-              id: dayNo * 1e4 + poiIdx + 1,
-              latitude: coord.latitude,
-              longitude: coord.longitude,
-              title: markerTitle,
-              width: 40,
-              height: 40,
-              callout: {
-                content: markerTitle,
-                color: "#2d2d2d",
-                fontSize: 12,
-                borderRadius: 6,
-                bgColor: "#ffffff",
-                padding: 6,
-                display: "BYCLICK",
-                textAlign: "center"
-              },
-              label: {
-                content: isFood ? "\u9910" : String(markerSeq),
-                color: "#ffffff",
-                fontSize: 13,
-                anchorX: -5,
-                anchorY: -32
-              }
-            };
-            const icon = isFood ? foodIcon : scenicIcon;
-            if (icon)
-              marker.iconPath = icon;
-            markers.push(marker);
-            dayCoords.push(coord);
-            allCoords.push(coord);
-          });
-          if (dayCoords.length > 1) {
-            polylines.push({
-              points: dayCoords,
-              color: getDayLineColor(dayNo),
-              width: 5,
-              arrowLine: true,
-              dottedLine: false
-            });
-          }
-        });
-        if (allCoords.length) {
-          let sumLat = 0;
-          let sumLng = 0;
-          allCoords.forEach((p) => {
-            sumLat += p.latitude;
-            sumLng += p.longitude;
-          });
-          mapCenter.value = {
-            latitude: sumLat / allCoords.length,
-            longitude: sumLng / allCoords.length
-          };
+          const dayResult = await buildMapForDay(
+            dayItem,
+            dayNo,
+            getDayLineColor(dayNo),
+            metaStore,
+            scenicIcon,
+            foodIcon
+          );
+          markers.push(...dayResult.markers);
+          polylines.push(...dayResult.polylines);
+          allCoords.push(...dayResult.coords);
         }
-        if (gen === mapUpdateGen) {
-          updateMapViewport(allCoords);
-          mapMarkers.value = markers;
-          mapPolyline.value = polylines;
-        }
+        return { markers, polylines, coords: allCoords };
+      };
+      const nextMeta = {};
+      const base = await buildFull(void 0, void 0, nextMeta);
+      if (gen !== mapUpdateGen)
+        return;
+      markerMetaMap.value = { ...nextMeta };
+      pendingMapFitCoords.value = base.coords.length ? [...base.coords] : null;
+      applyMapBuildResult(base, "route-full-map");
+      Promise.all([createPoiMarkerIcon("scenic"), createPoiMarkerIcon("food")]).then(async ([scenicIcon, foodIcon]) => {
+        if (gen !== mapUpdateGen)
+          return;
+        const iconMeta = {};
+        const withIcons = await buildFull(scenicIcon, foodIcon, iconMeta);
+        markerMetaMap.value = { ...iconMeta };
+        pendingMapFitCoords.value = withIcons.coords.length ? [...withIcons.coords] : null;
+        applyMapBuildResult(withIcons, "route-full-map");
       }).catch(() => {
       });
     };
@@ -981,13 +1365,6 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       }
       return `\u7B2C${index}\u7AD9`;
     };
-    const getPoiName = (poiItem) => {
-      var _a, _b;
-      if ((_a = poiItem.detail) == null ? void 0 : _a.name) {
-        return poiItem.detail.name;
-      }
-      return ((_b = poiItem.poi) == null ? void 0 : _b.note) || "\u672A\u77E5\u5730\u70B9";
-    };
     const toggleExpand = () => {
       isExpanded.value = !isExpanded.value;
     };
@@ -1004,21 +1381,22 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     };
     const handleDayChange = (dayIndex) => {
       if (selectedDayIndex.value === dayIndex) {
-        updateMapData();
+        void updateMapData();
         return;
       }
       selectedDayIndex.value = dayIndex;
     };
     const showFullRouteMap = () => {
-      updateFullMapData();
+      routeMapMode.value = "full";
+      void updateFullMapData();
     };
     const showMapDay = (dayIndex) => {
       selectedDayIndex.value = dayIndex;
-      updateMapData();
+      routeMapMode.value = "day";
+      void updateMapData();
     };
     const viewFullMap = () => {
       activeTab.value = "map";
-      updateFullMapData();
     };
     const startNavigation = () => {
       var _a;
@@ -1090,17 +1468,23 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     });
     common_vendor.watch(selectedDayIndex, () => {
       if (routeData.value && activeTab.value !== "map") {
-        updateMapData();
+        void updateMapData();
       }
     });
     common_vendor.watch(activeTab, (tab) => {
       if (!routeData.value)
         return;
-      if (tab === "map") {
-        updateFullMapData();
-      } else {
-        updateMapData();
-      }
+      activeMarkerCallout.value = null;
+      activeMarkerId.value = null;
+      common_vendor.nextTick(async () => {
+        mapRenderKey.value += 1;
+        await common_vendor.nextTick();
+        if (tab === "map") {
+          await updateFullMapData();
+        } else {
+          await updateMapData();
+        }
+      });
     });
     return (_ctx, _cache) => {
       var _a, _b, _c, _d, _e;
@@ -1109,43 +1493,126 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
         b: common_vendor.o(($event) => activeTab.value = "itinerary"),
         c: activeTab.value === "map" ? 1 : "",
         d: common_vendor.o(($event) => activeTab.value = "map"),
-        e: !loading.value && routeData.value
-      }, !loading.value && routeData.value ? common_vendor.e({
-        f: common_vendor.t(((_a = routeData.value.route) == null ? void 0 : _a.routeName) || "\u672A\u547D\u540D\u884C\u7A0B"),
-        g: common_vendor.f(common_vendor.unref(routeTags), (tag, index, i0) => {
+        e: !loading.value && routeData.value && activeTab.value === "itinerary"
+      }, !loading.value && routeData.value && activeTab.value === "itinerary" ? common_vendor.e({
+        f: activeMarkerCallout.value
+      }, activeMarkerCallout.value ? common_vendor.e({
+        g: common_vendor.t(activeMarkerCallout.value.title),
+        h: activeMarkerCallout.value.address
+      }, activeMarkerCallout.value.address ? {
+        i: common_vendor.t(activeMarkerCallout.value.address)
+      } : {}, {
+        j: activeMarkerCallout.value.typeLabel
+      }, activeMarkerCallout.value.typeLabel ? {
+        k: common_vendor.t(activeMarkerCallout.value.typeLabel)
+      } : {}, {
+        l: common_vendor.o(($event) => activeMarkerCallout.value = null)
+      }) : {}, {
+        m: "day-" + mapRenderKey.value,
+        n: mapCenter.value.latitude,
+        o: mapCenter.value.longitude,
+        p: mapScale.value,
+        q: mapMarkers.value,
+        r: mapPolyline.value,
+        s: common_vendor.o(onMarkerTap),
+        t: common_vendor.o(onCalloutTap),
+        v: !hasMapPoints.value
+      }, !hasMapPoints.value ? {} : {}, {
+        w: common_vendor.t(common_vendor.unref(currentMapSummary).dayNo),
+        x: common_vendor.t(common_vendor.unref(currentMapSummary).poiCount),
+        y: common_vendor.o(viewFullMap)
+      }) : {}, {
+        z: !loading.value && routeData.value && activeTab.value === "map"
+      }, !loading.value && routeData.value && activeTab.value === "map" ? common_vendor.e({
+        A: "full-" + mapRenderKey.value,
+        B: mapCenter.value.latitude,
+        C: mapCenter.value.longitude,
+        D: mapScale.value,
+        E: mapMarkers.value,
+        F: mapPolyline.value,
+        G: common_vendor.o(onMarkerTap),
+        H: common_vendor.o(onCalloutTap),
+        I: common_vendor.o(onMarkerTap),
+        J: common_vendor.o(onFullMapUpdated),
+        K: !hasMapPoints.value
+      }, !hasMapPoints.value ? {} : {}, {
+        L: activeMarkerCallout.value
+      }, activeMarkerCallout.value ? common_vendor.e({
+        M: common_vendor.t(activeMarkerCallout.value.title),
+        N: common_vendor.o(($event) => activeMarkerCallout.value = null),
+        O: activeMarkerCallout.value.typeLabel
+      }, activeMarkerCallout.value.typeLabel ? {
+        P: common_vendor.t(activeMarkerCallout.value.typeLabel)
+      } : {}, {
+        Q: activeMarkerCallout.value.address
+      }, activeMarkerCallout.value.address ? {
+        R: common_vendor.t(activeMarkerCallout.value.address)
+      } : {}) : {}, {
+        S: routeMapMode.value === "full" ? 1 : "",
+        T: common_vendor.o(showFullRouteMap),
+        U: common_vendor.f(routeData.value.days, (dayItem, dayIndex, i0) => {
+          var _a2, _b2;
+          return {
+            a: common_vendor.t(((_a2 = dayItem.day) == null ? void 0 : _a2.dayNo) || dayIndex + 1),
+            b: ((_b2 = dayItem.day) == null ? void 0 : _b2.id) || dayIndex,
+            c: routeMapMode.value === "day" && selectedDayIndex.value === dayIndex ? 1 : "",
+            d: common_vendor.o(($event) => showMapDay(dayIndex))
+          };
+        }),
+        V: common_vendor.unref(fullMapLegends).length > 0
+      }, common_vendor.unref(fullMapLegends).length > 0 ? {
+        W: common_vendor.f(common_vendor.unref(fullMapLegends), (item, k0, i0) => {
+          return {
+            a: item.color,
+            b: common_vendor.t(item.dayNo),
+            c: item.dayNo
+          };
+        })
+      } : {}, {
+        X: common_vendor.unref(currentMapPoiList).length > 0
+      }, common_vendor.unref(currentMapPoiList).length > 0 ? {
+        Y: common_vendor.t(common_vendor.unref(currentMapPoiList).length),
+        Z: common_vendor.f(common_vendor.unref(currentMapPoiList), (item, k0, i0) => {
+          return common_vendor.e({
+            a: common_vendor.t(item.orderLabel),
+            b: common_vendor.t(item.title),
+            c: item.address
+          }, item.address ? {
+            d: common_vendor.t(item.address)
+          } : {}, {
+            e: common_vendor.t(item.typeLabel),
+            f: item.markerId,
+            g: activeMarkerId.value === item.markerId ? 1 : "",
+            h: common_vendor.o(($event) => focusMapPoi(item.markerId))
+          });
+        })
+      } : {}) : {}, {
+        aa: !loading.value && routeData.value && activeTab.value === "itinerary"
+      }, !loading.value && routeData.value && activeTab.value === "itinerary" ? common_vendor.e({
+        ab: common_vendor.t(((_a = routeData.value.route) == null ? void 0 : _a.routeName) || "\u672A\u547D\u540D\u884C\u7A0B"),
+        ac: common_vendor.f(common_vendor.unref(routeTags), (tag, index, i0) => {
           return {
             a: common_vendor.t(tag),
             b: index
           };
         }),
-        h: common_vendor.unref(routeRating)
+        ad: common_vendor.unref(routeRating)
       }, common_vendor.unref(routeRating) ? {
-        i: common_vendor.t(common_vendor.unref(routeRating))
+        ae: common_vendor.t(common_vendor.unref(routeRating))
       } : {}, {
-        j: (_b = routeData.value.route) == null ? void 0 : _b.summary
+        af: (_b = routeData.value.route) == null ? void 0 : _b.summary
       }, ((_c = routeData.value.route) == null ? void 0 : _c.summary) ? common_vendor.e({
-        k: common_vendor.t(isExpanded.value ? "\u25BC" : "\u25B6"),
-        l: isExpanded.value ? 1 : "",
-        m: common_vendor.t(isExpanded.value ? "\u6536\u8D77" : "\u5C55\u5F00\u8BE6\u60C5"),
-        n: common_vendor.o(toggleExpand),
-        o: isExpanded.value
+        ag: common_vendor.t(isExpanded.value ? "\u25BC" : "\u25B6"),
+        ah: isExpanded.value ? 1 : "",
+        ai: common_vendor.t(isExpanded.value ? "\u6536\u8D77" : "\u5C55\u5F00\u8BE6\u60C5"),
+        aj: common_vendor.o(toggleExpand),
+        ak: isExpanded.value
       }, isExpanded.value ? {
-        p: common_vendor.t(routeData.value.route.summary)
+        al: common_vendor.t(routeData.value.route.summary)
       } : {}) : {}, {
-        q: activeTab.value === "itinerary"
-      }, activeTab.value === "itinerary" ? {
-        r: mapCenter.value.latitude,
-        s: mapCenter.value.longitude,
-        t: mapScale.value,
-        v: mapMarkers.value,
-        w: mapPolyline.value,
-        x: common_vendor.t(common_vendor.unref(currentMapSummary).dayNo),
-        y: common_vendor.t(common_vendor.unref(currentMapSummary).poiCount),
-        z: common_vendor.o(viewFullMap)
-      } : {}, {
-        A: activeTab.value === "itinerary" && routeData.value.days && routeData.value.days.length > 0
+        am: activeTab.value === "itinerary" && routeData.value.days && routeData.value.days.length > 0
       }, activeTab.value === "itinerary" && routeData.value.days && routeData.value.days.length > 0 ? common_vendor.e({
-        B: common_vendor.f(routeData.value.days, (dayItem, dayIndex, i0) => {
+        an: common_vendor.f(routeData.value.days, (dayItem, dayIndex, i0) => {
           var _a2, _b2;
           return {
             a: common_vendor.t(((_a2 = dayItem.day) == null ? void 0 : _a2.dayNo) || dayIndex + 1),
@@ -1154,13 +1621,13 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             d: common_vendor.o(($event) => handleDayChange(dayIndex))
           };
         }),
-        C: common_vendor.unref(currentDayData)
+        ao: common_vendor.unref(currentDayData)
       }, common_vendor.unref(currentDayData) ? common_vendor.e({
-        D: common_vendor.t(((_d = common_vendor.unref(currentDayData).day) == null ? void 0 : _d.dayNo) || selectedDayIndex.value + 1),
-        E: common_vendor.t(getDayDate(selectedDayIndex.value, (_e = common_vendor.unref(currentDayData).day) == null ? void 0 : _e.dayNo)),
-        F: common_vendor.unref(useAiTimelineOnly)
+        ap: common_vendor.t(((_d = common_vendor.unref(currentDayData).day) == null ? void 0 : _d.dayNo) || selectedDayIndex.value + 1),
+        aq: common_vendor.t(getDayDate(selectedDayIndex.value, (_e = common_vendor.unref(currentDayData).day) == null ? void 0 : _e.dayNo)),
+        ar: common_vendor.unref(useAiTimelineOnly)
       }, common_vendor.unref(useAiTimelineOnly) ? {
-        G: common_vendor.f(common_vendor.unref(aiTimelineBlocks), (block, blockIndex, i0) => {
+        as: common_vendor.f(common_vendor.unref(aiTimelineBlocks), (block, blockIndex, i0) => {
           return common_vendor.e({
             a: common_vendor.t(block.label),
             b: block.fields.rawFallback
@@ -1187,7 +1654,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         })
       } : {
-        H: common_vendor.f(formatDayContent(common_vendor.unref(currentDayData)), (timeGroup, timeIndex, i0) => {
+        at: common_vendor.f(formatDayContent(common_vendor.unref(currentDayData)), (timeGroup, timeIndex, i0) => {
           return common_vendor.e({
             a: common_vendor.t(timeGroup.timeLabel),
             b: timeGroup.description
@@ -1284,9 +1751,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         })
       }, {
-        I: !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayScenics).length > 0
+        av: !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayScenics).length > 0
       }, !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayScenics).length > 0 ? {
-        J: common_vendor.f(common_vendor.unref(currentDayScenics), (scenic, k0, i0) => {
+        aw: common_vendor.f(common_vendor.unref(currentDayScenics), (scenic, k0, i0) => {
           return common_vendor.e({
             a: scenic.imageUrl ? common_vendor.unref(utils_image.getImageUrl)(scenic.imageUrl) : common_vendor.unref(utils_config.defaultScenicImage),
             b: common_vendor.t(scenic.name),
@@ -1307,9 +1774,9 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           });
         })
       } : {}, {
-        K: !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayFoods).length > 0
+        ax: !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayFoods).length > 0
       }, !common_vendor.unref(useAiTimelineOnly) && common_vendor.unref(currentDayFoods).length > 0 ? {
-        L: common_vendor.f(common_vendor.unref(currentDayFoods), (food, k0, i0) => {
+        ay: common_vendor.f(common_vendor.unref(currentDayFoods), (food, k0, i0) => {
           return common_vendor.e({
             a: food.imageUrl ? common_vendor.unref(utils_image.getImageUrl)(food.imageUrl) : common_vendor.unref(utils_config.defaultFoodImage),
             b: common_vendor.t(food.name),
@@ -1329,42 +1796,14 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
             j: common_vendor.o(($event) => onViewFood(food))
           });
         })
-      } : {}) : {}) : {}, {
-        M: activeTab.value === "map"
-      }, activeTab.value === "map" ? common_vendor.e({
-        N: mapCenter.value.latitude,
-        O: mapCenter.value.longitude,
-        P: mapScale.value,
-        Q: mapMarkers.value,
-        R: mapPolyline.value,
-        S: routeMapMode.value === "full" ? 1 : "",
-        T: common_vendor.o(showFullRouteMap),
-        U: common_vendor.f(routeData.value.days, (dayItem, dayIndex, i0) => {
-          var _a2, _b2;
-          return {
-            a: common_vendor.t(((_a2 = dayItem.day) == null ? void 0 : _a2.dayNo) || dayIndex + 1),
-            b: ((_b2 = dayItem.day) == null ? void 0 : _b2.id) || dayIndex,
-            c: routeMapMode.value === "day" && selectedDayIndex.value === dayIndex ? 1 : "",
-            d: common_vendor.o(($event) => showMapDay(dayIndex))
-          };
-        }),
-        V: common_vendor.unref(fullMapLegends).length > 0
-      }, common_vendor.unref(fullMapLegends).length > 0 ? {
-        W: common_vendor.f(common_vendor.unref(fullMapLegends), (item, k0, i0) => {
-          return {
-            a: item.color,
-            b: common_vendor.t(item.dayNo),
-            c: item.dayNo
-          };
-        })
-      } : {}) : {}) : {}, {
-        X: loading.value
+      } : {}) : {}) : {}) : {}, {
+        az: loading.value
       }, loading.value ? {} : {}, {
-        Y: common_vendor.t(isFavorite.value ? "\u2665" : "\u2661"),
-        Z: isFavorite.value ? 1 : "",
-        aa: common_vendor.o(toggleFavorite),
-        ab: common_vendor.o(startNavigation),
-        ac: common_vendor.o(enableItinerary)
+        aA: common_vendor.t(isFavorite.value ? "\u2665" : "\u2661"),
+        aB: isFavorite.value ? 1 : "",
+        aC: common_vendor.o(toggleFavorite),
+        aD: common_vendor.o(startNavigation),
+        aE: common_vendor.o(enableItinerary)
       });
     };
   }

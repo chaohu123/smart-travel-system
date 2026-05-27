@@ -2,6 +2,7 @@
 var common_vendor = require("../../common/vendor.js");
 var store_user = require("../../store/user.js");
 var utils_image = require("../../utils/image.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
@@ -142,7 +143,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       });
     };
     const goBack = () => {
-      common_vendor.index.navigateBack();
+      utils_router.safeNavigateBack({ fallbackUrl: "/pages/profile/messages" });
     };
     common_vendor.onMounted(() => {
       const pages = getCurrentPages();

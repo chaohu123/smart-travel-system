@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 /**
  * AI服务实现
  * 支持对接多种AI服务：OpenAI、百度文心、阿里通义等
- */
+ */ 
 @Service
 public class AiServiceImpl implements AiService {
 
@@ -235,7 +235,7 @@ public class AiServiceImpl implements AiService {
         conn.setRequestProperty("Authorization", "Bearer " + apiKey);
         conn.setDoOutput(true);
         conn.setConnectTimeout(5000);
-        conn.setReadTimeout(20000);
+        conn.setReadTimeout(40000);
 
         // 构建请求体
         Map<String, Object> requestBody = new HashMap<>();

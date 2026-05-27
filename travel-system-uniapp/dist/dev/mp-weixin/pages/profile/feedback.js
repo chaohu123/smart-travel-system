@@ -1,5 +1,6 @@
 "use strict";
 var common_vendor = require("../../common/vendor.js");
+var utils_router = require("../../utils/router.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
   setup(__props) {
     const statusBarHeight = common_vendor.ref(0);
@@ -35,7 +36,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
     const submitting = common_vendor.ref(false);
     const canSubmit = common_vendor.computed(() => form.content.trim().length >= 10);
     const goBack = () => {
-      common_vendor.index.navigateBack();
+      utils_router.safeNavigateBack({ fallbackUrl: "/pages/profile/profile" });
     };
     const chooseImage = () => {
       const remain = maxImages - form.images.length;
@@ -79,7 +80,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           duration: 2e3
         });
         setTimeout(() => {
-          common_vendor.index.navigateBack();
+          utils_router.safeNavigateBack({ fallbackUrl: "/pages/profile/profile" });
         }, 2e3);
       } catch {
         common_vendor.index.showToast({ title: "\u63D0\u4EA4\u5931\u8D25\uFF0C\u8BF7\u7A0D\u540E\u91CD\u8BD5", icon: "none" });

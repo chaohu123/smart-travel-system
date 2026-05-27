@@ -3,6 +3,7 @@ var common_vendor = require("../../common/vendor.js");
 var api_activity = require("../../api/activity.js");
 var utils_image = require("../../utils/image.js");
 var utils_config = require("../../utils/config.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
@@ -274,7 +275,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
           icon: "none"
         });
         setTimeout(() => {
-          common_vendor.index.navigateBack();
+          utils_router.safeNavigateBack({ fallbackUrl: "/pages/checkin/checkin" });
         }, 1500);
       }
     });

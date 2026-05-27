@@ -114,6 +114,7 @@ import { onShow, onPullDownRefresh } from '@dcloudio/uni-app'
 import { checkinApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
 import { fetchDistrictRings } from '@/utils/amapDistrict'
+import { safeNavigateBack } from '@/utils/router'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -287,7 +288,7 @@ const findCityCoordinates = (cityName: string): { latitude: number; longitude: n
 }
 
 const goBack = () => {
-  uni.navigateBack()
+  safeNavigateBack({ fallbackUrl: '/pages/profile/profile' })
 }
 
 const onRegionChange = () => {}

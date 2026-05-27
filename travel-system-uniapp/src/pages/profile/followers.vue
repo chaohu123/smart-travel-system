@@ -78,7 +78,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { userApi } from '@/api/user'
 import { useUserStore } from '@/store/user'
-import { safeNavigateTo, resetNavigationState } from '@/utils/router'
+import { safeNavigateTo, resetNavigationState, safeNavigateBack } from '@/utils/router'
 import { getImageUrl } from '@/utils/image'
 
 const store = useUserStore()
@@ -113,7 +113,7 @@ const loadFollowers = async (reset = false) => {
   if (!userId) {
     uni.showToast({ title: '用户不存在', icon: 'none' })
     setTimeout(() => {
-      uni.navigateBack()
+      safeNavigateBack({ fallbackUrl: '/pages/profile/profile' })
     }, 1500)
     return
   }
@@ -208,7 +208,7 @@ const toggleFollow = async (follower: any) => {
 
 // 返回
 const goBack = () => {
-  uni.navigateBack()
+  safeNavigateBack({ fallbackUrl: '/pages/profile/profile' })
 }
 
 onMounted(() => {

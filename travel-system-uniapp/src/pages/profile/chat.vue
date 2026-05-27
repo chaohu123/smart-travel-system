@@ -74,6 +74,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { useUserStore } from '@/store/user'
 import { getImageUrl } from '@/utils/image'
+import { safeNavigateBack } from '@/utils/router'
 
 const store = useUserStore()
 const currentUser = computed(() => store.state.profile)
@@ -266,7 +267,7 @@ const viewUserProfile = () => {
 
 // 返回
 const goBack = () => {
-  uni.navigateBack()
+  safeNavigateBack({ fallbackUrl: '/pages/profile/messages' })
 }
 
 onMounted(() => {

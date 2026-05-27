@@ -89,6 +89,7 @@ import { scenicSpotApi, cityApi, type ApiResponse } from '@/api/content'
 import { defaultScenicImage } from '@/utils/config'
 import { getImageUrl } from '@/utils/image'
 import { syncSelectedCityName } from '@/utils/selectedCity'
+import { safeNavigateBack } from '@/utils/router'
 
 interface ScenicItem {
   id: number
@@ -121,7 +122,7 @@ const pageSize = ref(6)
 const lastCityApplyTs = ref(0)
 
 const goBack = () => {
-  uni.navigateBack()
+  safeNavigateBack({ fallbackUrl: '/pages/home/home' })
 }
 
 const filteredList = computed(() => {

@@ -62,6 +62,7 @@ import { ref, computed, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { cityApi, type ApiResponse } from '@/api/content'
 import { getImageUrl } from '@/utils/image'
+import { safeNavigateBack } from '@/utils/router'
 
 interface CityItem {
   id: number
@@ -185,7 +186,7 @@ const selectCity = (city: CityItem) => {
   if (eventChannel) {
     eventChannel.emit('citySelected', selectedCity)
   }
-  uni.navigateBack()
+  safeNavigateBack({ fallbackUrl: '/pages/recommend/interest' })
 }
 
 onLoad(() => {

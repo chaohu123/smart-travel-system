@@ -2,6 +2,7 @@
 var common_vendor = require("../../common/vendor.js");
 var api_content = require("../../api/content.js");
 var utils_image = require("../../utils/image.js");
+var utils_router = require("../../utils/router.js");
 require("../../utils/http.js");
 require("../../utils/storage.js");
 require("../../utils/config.js");
@@ -101,7 +102,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent({
       if (eventChannel) {
         eventChannel.emit("citySelected", selectedCity);
       }
-      common_vendor.index.navigateBack();
+      utils_router.safeNavigateBack({ fallbackUrl: "/pages/recommend/interest" });
     };
     common_vendor.onLoad(() => {
       try {

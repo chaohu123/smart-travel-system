@@ -18,6 +18,8 @@ import com.smarttravel.route.mapper.TravelRoutePoiMapper;
 import com.smarttravel.route.mapper.UserRouteFavoriteMapper;
 import com.smarttravel.route.service.AiService;
 import com.smarttravel.route.service.RoutePlanService;
+import com.smarttravel.common.map.AmapGeocodeService;
+import com.smarttravel.common.map.AiIntroPlaceParser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -59,9 +61,12 @@ public class RoutePlanServiceImpl implements RoutePlanService {
 
     @Resource
     private AiService aiService;
-
+ 
     @Resource
     private UserRouteFavoriteMapper userRouteFavoriteMapper;
+
+    @Resource
+    private AmapGeocodeService amapGeocodeService;
 
     @Override
     @Transactional
@@ -652,6 +657,25 @@ public class RoutePlanServiceImpl implements RoutePlanService {
         Map<String, Object> result = new HashMap<>();
         result.put("route", route);
 
+        String routeCityName = null;
+        if (route.getCityId() != null) {
+            City city = cityMapper.selectById(route.getCityId());
+            if (city != null) {
+                routeCityName = city.getCityName();
+                Map<String, Object> cityMap = new HashMap<>();
+                cityMap.put("id", city.getId());
+                cityMap.put("cityName", city.getCityName());
+                cityMap.put("province", city.getProvince());
+                if (city.getLatitude() != null) {
+                    cityMap.put("latitude", city.getLatitude().doubleValue());
+                }
+                if (city.getLongitude() != null) {
+                    cityMap.put("longitude", city.getLongitude().doubleValue());
+                }
+                result.put("city", cityMap);
+            }
+        }
+
         List<TravelRouteDay> days = routeDayMapper.selectByRouteId(routeId);
         List<Map<String, Object>> dayDetails = new ArrayList<>();
 
@@ -693,10 +717,14 @@ public class RoutePlanServiceImpl implements RoutePlanService {
 
                 if ("scenic".equals(poi.getPoiType())) {
                     ScenicSpot spot = scenicSpotMapper.selectById(poi.getPoiId());
-                    poiMap.put("detail", spot);
+                    Map<String, Object> detailMap = toScenicDetailMap(spot);
+                    amapGeocodeService.enrichDetailCoords(detailMap, routeCityName, route.getCityId());
+                    poiMap.put("detail", detailMap);
                 } else if ("food".equals(poi.getPoiType())) {
                     Food food = foodMapper.selectById(poi.getPoiId());
-                    poiMap.put("detail", food);
+                    Map<String, Object> detailMap = toFoodDetailMap(food);
+                    amapGeocodeService.enrichDetailCoords(detailMap, routeCityName, route.getCityId());
+                    poiMap.put("detail", detailMap);
                 }
 
                 // 添加路线信息（从前一个POI到当前POI）
@@ -712,6 +740,7 @@ public class RoutePlanServiceImpl implements RoutePlanService {
             }
 
             dayMap.put("pois", poiDetails);
+            dayMap.put("mapStops", buildMapStops(day.getIntro(), route.getCityId(), routeCityName));
             dayDetails.add(dayMap);
         }
 
@@ -846,6 +875,81 @@ public class RoutePlanServiceImpl implements RoutePlanService {
         }
 
         return routeInfo;
+    }
+
+    private Map<String, Object> toScenicDetailMap(ScenicSpot spot) {
+        Map<String, Object> detail = new HashMap<>();
+        if (spot == null) {
+            return detail;
+        }
+        detail.put("id", spot.getId());
+        detail.put("name", spot.getName());
+        detail.put("province", spot.getProvince());
+        detail.put("city", spot.getCity());
+        detail.put("cityId", spot.getCityId());
+        detail.put("address", spot.getAddress());
+        if (spot.getLatitude() != null) {
+            detail.put("latitude", spot.getLatitude().doubleValue());
+        }
+        if (spot.getLongitude() != null) {
+            detail.put("longitude", spot.getLongitude().doubleValue());
+        }
+        detail.put("intro", spot.getIntro());
+        detail.put("openTime", spot.getOpenTime());
+        detail.put("ticketInfo", spot.getTicketInfo());
+        detail.put("price", spot.getPrice());
+        detail.put("imageUrl", spot.getImageUrl());
+        detail.put("isWorldHeritage", spot.getIsWorldHeritage());
+        detail.put("suggestedVisitTime", spot.getSuggestedVisitTime());
+        detail.put("score", spot.getScore());
+        detail.put("hotScore", spot.getHotScore());
+        detail.put("isRecommend", spot.getIsRecommend());
+        detail.put("freeNotice", spot.getFreeNotice());
+        return detail;
+    }
+
+    private Map<String, Object> toFoodDetailMap(Food food) {
+        Map<String, Object> detail = new HashMap<>();
+        if (food == null) {
+            return detail;
+        }
+        detail.put("id", food.getId());
+        detail.put("name", food.getName());
+        detail.put("cityId", food.getCityId());
+        detail.put("address", food.getAddress());
+        if (food.getLatitude() != null) {
+            detail.put("latitude", food.getLatitude().doubleValue());
+        }
+        if (food.getLongitude() != null) {
+            detail.put("longitude", food.getLongitude().doubleValue());
+        }
+        detail.put("foodType", food.getFoodType());
+        detail.put("avgPrice", food.getAvgPrice());
+        detail.put("intro", food.getIntro());
+        detail.put("imageUrl", food.getImageUrl());
+        detail.put("score", food.getScore());
+        detail.put("hotScore", food.getHotScore());
+        detail.put("isRecommend", food.getIsRecommend());
+        return detail;
+    }
+
+    private List<Map<String, Object>> buildMapStops(String intro, Long cityId, String cityName) {
+        List<String> names = AiIntroPlaceParser.extractPlaceNames(intro);
+        List<Map<String, Object>> stops = new ArrayList<>();
+        int sortOrder = 1;
+        for (String name : names) {
+            double[] coord = amapGeocodeService.geocode(name, cityName, cityId);
+            if (coord == null) {
+                continue;
+            }
+            Map<String, Object> stop = new HashMap<>();
+            stop.put("name", name);
+            stop.put("sortOrder", sortOrder++);
+            stop.put("latitude", coord[0]);
+            stop.put("longitude", coord[1]);
+            stops.add(stop);
+        }
+        return stops;
     }
 
     /**
@@ -1456,32 +1560,47 @@ public class RoutePlanServiceImpl implements RoutePlanService {
                 }
             }
             
-            // 如果intro中提到的景点数量 > 0，且存在未提到的景点，则移除未提到的景点
-            // 确保前端显示的景点与intro描述一致
+            // 若 intro 中提到了部分景点，仅调整顺序，不再删除未提及的 POI（避免地图/行程只剩单点）
             if (!mentionedScenics.isEmpty() && !notMentionedScenics.isEmpty()) {
-                for (TravelRoutePoi poi : notMentionedScenics) {
-                    // 标记为删除
-                    poi.setDelFlag(1);
-                    routePoiMapper.update(poi);
-                }
-                
-                // 重新分配剩余POI的sort值
                 List<TravelRoutePoi> remainingPois = routePoiMapper.selectByRouteDayId(routeDayId);
                 remainingPois = remainingPois.stream()
                     .filter(p -> p.getDelFlag() == null || p.getDelFlag() == 0)
                     .sorted(Comparator.comparing(TravelRoutePoi::getSort))
                     .collect(Collectors.toList());
-                
-                int newSort = 1;
+
+                List<TravelRoutePoi> reordered = new ArrayList<>();
+                reordered.addAll(mentionedScenics);
+                Set<Long> reorderedIds = new HashSet<>();
+                for (TravelRoutePoi poi : mentionedScenics) {
+                    if (poi.getId() != null) {
+                        reorderedIds.add(poi.getId());
+                    }
+                }
                 for (TravelRoutePoi poi : remainingPois) {
-                    if (poi.getSort() != newSort) {
+                    if (poi.getId() != null && reorderedIds.contains(poi.getId())) {
+                        continue;
+                    }
+                    reordered.add(poi);
+                    if (poi.getId() != null) {
+                        reorderedIds.add(poi.getId());
+                    }
+                }
+                for (TravelRoutePoi poi : notMentionedScenics) {
+                    if (poi.getId() != null && !reorderedIds.contains(poi.getId())) {
+                        reordered.add(poi);
+                        reorderedIds.add(poi.getId());
+                    }
+                }
+
+                int newSort = 1;
+                for (TravelRoutePoi poi : reordered) {
+                    if (poi.getSort() == null || poi.getSort() != newSort) {
                         poi.setSort(newSort);
                         routePoiMapper.update(poi);
                     }
                     newSort++;
                 }
-                
-                // 重新计算并保存路线信息
+
                 calculateAndSaveRouteInfo(routeDayId);
             }
         } catch (Exception e) {

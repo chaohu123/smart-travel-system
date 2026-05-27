@@ -77,6 +77,7 @@ import { userApi } from '@/api/user'
 import { uploadApi } from '@/api/content'
 import { useUserStore } from '@/store/user'
 import { getImageUrl } from '@/utils/image'
+import { safeNavigateBack } from '@/utils/router'
 
 const store = useUserStore()
 const user = computed(() => store.state.profile)
@@ -106,7 +107,7 @@ const loadUserInfo = async () => {
   if (!user.value?.id) {
     uni.showToast({ title: '请先登录', icon: 'none' })
     setTimeout(() => {
-      uni.navigateBack()
+      safeNavigateBack({ fallbackUrl: '/pages/profile/profile' })
     }, 1500)
     return
   }
@@ -211,7 +212,7 @@ const saveProfile = async () => {
       
       uni.showToast({ title: '保存成功', icon: 'success' })
       setTimeout(() => {
-        uni.navigateBack()
+        safeNavigateBack({ fallbackUrl: '/pages/profile/profile' })
       }, 1500)
     } else {
       uni.showToast({ title: res.data.msg || '保存失败', icon: 'none' })
@@ -225,7 +226,7 @@ const saveProfile = async () => {
 
 // 返回
 const goBack = () => {
-  uni.navigateBack()
+  safeNavigateBack({ fallbackUrl: '/pages/profile/profile' })
 }
 
 onMounted(() => {
